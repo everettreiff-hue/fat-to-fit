@@ -15,6 +15,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root {
     --bg: #0f1117;
@@ -331,6 +332,7 @@
   <button onclick="showPage('measurements')">Measurements</button>
   <button onclick="showPage('import')">Import</button>
   <button onclick="saveJSON()" style="margin-left:auto;color:var(--accent2);border-bottom-color:transparent">📦 Save JSON</button>
+  <button class="drive-sync-status" onclick="driveConnectClick()" style="color:var(--muted);border-bottom-color:transparent;font-size:12px;white-space:nowrap" title="Connect or re-sync Google Drive">☁️ Drive: tap to connect</button>
 </nav>
 
 <!-- Bottom nav — mobile only -->
@@ -786,6 +788,7 @@
   <button onclick="showLiftPage('lifthistory')">History</button>
   <button onclick="showLiftPage('liftexercises')">Exercises</button>
   <button onclick="saveJSON()" style="margin-left:auto;color:var(--accent2);border-bottom-color:transparent">📦 Save JSON</button>
+  <button class="drive-sync-status" onclick="driveConnectClick()" style="color:var(--muted);border-bottom-color:transparent;font-size:12px;white-space:nowrap" title="Connect or re-sync Google Drive">☁️ Drive: tap to connect</button>
 </nav>
 
 <!-- Bottom nav — mobile only -->
@@ -952,16 +955,18 @@ function getData() {
 }
 function saveData(entries) {
   localStorage.setItem('ht_entries', JSON.stringify(entries));
+  scheduleDriveSync();
 }
 function getPhotos() {
   try { return JSON.parse(localStorage.getItem('ht_photos') || '[]'); } catch { return []; }
 }
-function savePhotos(p) { localStorage.setItem('ht_photos', JSON.stringify(p)); }
+function savePhotos(p) { localStorage.setItem('ht_photos', JSON.stringify(p)); scheduleDriveSync(); }
 function getInBody() {
   try { return JSON.parse(localStorage.getItem('ht_inbody') || '[]'); } catch { return []; }
 }
 function saveInBody(scans) {
   localStorage.setItem('ht_inbody', JSON.stringify(scans));
+  scheduleDriveSync();
 }
 
 // ===== SEED INBODY DATA (from June 17, 2026 scan) =====
@@ -1042,11 +1047,11 @@ const LIFT_CATEGORIES = ['Upper','Lower','Core'];
 function getLiftExercises() {
   try { return JSON.parse(localStorage.getItem('ht_lift_exercises') || '[]'); } catch { return []; }
 }
-function saveLiftExercises(list) { localStorage.setItem('ht_lift_exercises', JSON.stringify(list)); }
+function saveLiftExercises(list) { localStorage.setItem('ht_lift_exercises', JSON.stringify(list)); scheduleDriveSync(); }
 function getLiftWorkouts() {
   try { return JSON.parse(localStorage.getItem('ht_lift_workouts') || '[]'); } catch { return []; }
 }
-function saveLiftWorkouts(list) { localStorage.setItem('ht_lift_workouts', JSON.stringify(list)); }
+function saveLiftWorkouts(list) { localStorage.setItem('ht_lift_workouts', JSON.stringify(list)); scheduleDriveSync(); }
 function slugify(name) { return name.toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''); }
 function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
 function setMaxWeight(sets) { return sets.reduce((m,s)=>Math.max(m, Number(s.weight)||0), 0); }
@@ -1706,6 +1711,7 @@ function renderBigCharts() {
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('log-date').value = isoDate(new Date());
   renderDashboard();
+  initDriveSync();
 
   // Inject PWA manifest as inline data URL
   const manifest = {
@@ -2680,6 +2686,183 @@ function addNewExercise() {
   document.getElementById('new-ex-name').value = '';
   renderLiftExercisesPage();
   showMsg('new-ex-msg', `✓ Added "${name}" to your library.`, 'good');
+}
+
+// ===== GOOGLE DRIVE AUTO-SYNC =====
+const DRIVE_CLIENT_ID = '880084817221-f8vldpdh1ojab2p496qufn5dffe4ggu0.apps.googleusercontent.com';
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const DRIVE_FILE_NAME = 'fat-to-fit-data.json';
+
+let driveTokenClient = null;
+let driveAccessToken = null;
+let driveTokenExpiry = 0;
+let driveSyncTimer = null;
+let driveBusy = false;
+
+function setDriveStatus(text) {
+  document.querySelectorAll('.drive-sync-status').forEach(el => el.textContent = text);
+}
+
+function initDriveSync() {
+  if (!window.google || !window.google.accounts || !window.google.accounts.oauth2) {
+    setTimeout(initDriveSync, 300);
+    return;
+  }
+  if (driveTokenClient) return;
+  driveTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: DRIVE_CLIENT_ID,
+    scope: DRIVE_SCOPE,
+    callback: handleDriveToken,
+    error_callback: () => { setDriveStatus('☁️ Drive: tap to connect'); }
+  });
+  if (localStorage.getItem('ht_drive_connected') === '1') {
+    setDriveStatus('☁️ Drive: connecting…');
+    try { driveTokenClient.requestAccessToken({ prompt: '' }); }
+    catch { setDriveStatus('☁️ Drive: tap to connect'); }
+  } else {
+    setDriveStatus('☁️ Drive: tap to connect');
+  }
+}
+
+function driveConnectClick() {
+  if (!driveTokenClient) { initDriveSync(); return; }
+  driveTokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+function handleDriveToken(resp) {
+  if (!resp || resp.error) { setDriveStatus('☁️ Drive: tap to connect'); return; }
+  driveAccessToken = resp.access_token;
+  driveTokenExpiry = Date.now() + (Number(resp.expires_in) || 3600) * 1000 - 60000;
+  localStorage.setItem('ht_drive_connected', '1');
+  setDriveStatus('☁️ Drive: syncing…');
+  driveInitialSync();
+}
+
+function ensureDriveToken() {
+  if (driveAccessToken && Date.now() < driveTokenExpiry) return driveAccessToken;
+  return null;
+}
+
+async function driveFindFile(token) {
+  const q = encodeURIComponent(`name='${DRIVE_FILE_NAME}' and trashed=false`);
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&spaces=drive`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!res.ok) throw new Error('drive find failed');
+  const data = await res.json();
+  return (data.files && data.files.length) ? data.files[0] : null;
+}
+
+async function driveCreateFile(token) {
+  const res = await fetch('https://www.googleapis.com/drive/v3/files', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: DRIVE_FILE_NAME, mimeType: 'application/json' })
+  });
+  if (!res.ok) throw new Error('drive create failed');
+  const data = await res.json();
+  return data.id;
+}
+
+async function driveUpdateContent(token, fileId, contentObj) {
+  const res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(contentObj)
+  });
+  if (!res.ok) throw new Error('drive update failed');
+}
+
+async function driveGetContent(token, fileId) {
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!res.ok) return null;
+  try { return await res.json(); } catch { return null; }
+}
+
+function getAllAppData() {
+  return {
+    updatedAt: new Date().toISOString(),
+    entries: getData(),
+    photos: getPhotos(),
+    inbody: getInBody(),
+    liftExercises: getLiftExercises(),
+    liftWorkouts: getLiftWorkouts()
+  };
+}
+
+function applyAllAppData(remote) {
+  if (Array.isArray(remote.entries)) localStorage.setItem('ht_entries', JSON.stringify(remote.entries));
+  if (Array.isArray(remote.photos)) localStorage.setItem('ht_photos', JSON.stringify(remote.photos));
+  if (Array.isArray(remote.inbody)) localStorage.setItem('ht_inbody', JSON.stringify(remote.inbody));
+  if (Array.isArray(remote.liftExercises)) localStorage.setItem('ht_lift_exercises', JSON.stringify(remote.liftExercises));
+  if (Array.isArray(remote.liftWorkouts)) localStorage.setItem('ht_lift_workouts', JSON.stringify(remote.liftWorkouts));
+}
+
+function markLocalChange() {
+  localStorage.setItem('ht_last_modified', String(Date.now()));
+}
+
+function scheduleDriveSync() {
+  markLocalChange();
+  if (driveSyncTimer) clearTimeout(driveSyncTimer);
+  driveSyncTimer = setTimeout(() => { pushToDrive(); }, 1500);
+}
+
+async function driveInitialSync() {
+  const token = ensureDriveToken();
+  if (!token || driveBusy) return;
+  driveBusy = true;
+  try {
+    let fileMeta = await driveFindFile(token);
+    let fileId = fileMeta ? fileMeta.id : (localStorage.getItem('ht_drive_file_id') || null);
+
+    if (fileId) {
+      localStorage.setItem('ht_drive_file_id', fileId);
+      const remote = await driveGetContent(token, fileId);
+      const localTs = Number(localStorage.getItem('ht_last_modified') || 0);
+      const remoteTs = remote && remote.updatedAt ? new Date(remote.updatedAt).getTime() : 0;
+      if (remote && remoteTs > localTs) {
+        applyAllAppData(remote);
+        localStorage.setItem('ht_last_modified', String(remoteTs));
+        setDriveStatus('☁️ Drive: synced ✓');
+        driveBusy = false;
+        location.reload();
+        return;
+      }
+    } else {
+      fileId = await driveCreateFile(token);
+      localStorage.setItem('ht_drive_file_id', fileId);
+    }
+    await pushToDrive();
+  } catch (e) {
+    console.warn('Drive initial sync failed', e);
+    setDriveStatus('☁️ Drive: error, tap to retry');
+  } finally {
+    driveBusy = false;
+  }
+}
+
+async function pushToDrive() {
+  const token = ensureDriveToken();
+  if (!token) return;
+  setDriveStatus('☁️ Drive: syncing…');
+  try {
+    let fileId = localStorage.getItem('ht_drive_file_id');
+    if (!fileId) {
+      const found = await driveFindFile(token);
+      fileId = found ? found.id : await driveCreateFile(token);
+      localStorage.setItem('ht_drive_file_id', fileId);
+    }
+    const data = getAllAppData();
+    await driveUpdateContent(token, fileId, data);
+    localStorage.setItem('ht_last_modified', String(new Date(data.updatedAt).getTime()));
+    setDriveStatus('☁️ Drive: synced ✓');
+  } catch (e) {
+    console.warn('Drive push failed', e);
+    setDriveStatus('☁️ Drive: error, tap to retry');
+  }
 }
 </script>
 </body>
