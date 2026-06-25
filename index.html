@@ -950,7 +950,7 @@
 </main>
 </div><!-- /wrap-lift -->
 
-<script>
+<script type="text/plain" id="ht-app-source">
 // ===== TEMP DIAGNOSTIC: visible error overlay (helps debug blank-screen
 // issues on real devices where we can't see the console). Safe to remove
 // once mobile rendering is confirmed stable. =====
@@ -3017,6 +3017,27 @@ async function pushToDrive() {
     setDriveStatus('☁️ Drive: error, tap to retry');
   }
 }
+</script>
+<script>
+// ===== TEMP DIAGNOSTIC RUNNER: the big app script above is type="text/plain"
+// so the browser won't auto-parse/execute it. Instead we eval() it here
+// inside a try/catch, so that even a SyntaxError anywhere in that ~100KB
+// blob (which would otherwise silently kill the whole script with zero
+// visible error on some engines) gets caught and shown on screen. Safe to
+// revert (just change the script type back and delete this block) once
+// mobile rendering is confirmed stable. =====
+(function() {
+  try {
+    var srcEl = document.getElementById('ht-app-source');
+    var code = srcEl ? srcEl.textContent : '';
+    (0, eval)(code);
+  } catch (e) {
+    var div = document.createElement('div');
+    div.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#b00020;color:#fff;font-size:11px;line-height:1.4;padding:10px;z-index:999999;white-space:pre-wrap;max-height:80vh;overflow:auto;font-family:monospace;';
+    div.textContent = 'PARSE/EXEC ERROR: ' + (e && e.stack ? e.stack : String(e));
+    (document.body || document.documentElement).appendChild(div);
+  }
+})();
 </script>
 </body>
 </html>
