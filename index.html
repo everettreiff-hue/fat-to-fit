@@ -922,6 +922,14 @@
 </div><!-- /wrap-lift -->
 
 <script>
+// Drive sync state (declared early so seed/init code that fires before the
+// Drive sync block below can safely call scheduleDriveSync without a TDZ error)
+let driveTokenClient = null;
+let driveAccessToken = null;
+let driveTokenExpiry = 0;
+let driveSyncTimer = null;
+let driveBusy = false;
+
 // ===== ZOOM HELPER =====
 const ZOOM_OPTS = {
   zoom: { wheel:{ enabled:true }, pinch:{ enabled:true }, mode:'x' },
@@ -2693,15 +2701,12 @@ const DRIVE_CLIENT_ID = '880084817221-f8vldpdh1ojab2p496qufn5dffe4ggu0.apps.goog
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const DRIVE_FILE_NAME = 'fat-to-fit-data.json';
 
-let driveTokenClient = null;
-let driveAccessToken = null;
-let driveTokenExpiry = 0;
-let driveSyncTimer = null;
-let driveBusy = false;
-
 function setDriveStatus(text) {
   document.querySelectorAll('.drive-sync-status').forEach(el => el.textContent = text);
 }
+
+let driveSilentRetries = 0;
+let driveProactiveRefreshTimer = null;
 
 function initDriveSync() {
   if (!window.google || !window.google.accounts || !window.google.accounts.oauth2) {
@@ -2713,12 +2718,29 @@ function initDriveSync() {
     client_id: DRIVE_CLIENT_ID,
     scope: DRIVE_SCOPE,
     callback: handleDriveToken,
-    error_callback: () => { setDriveStatus('☁️ Drive: tap to connect'); }
+    error_callback: handleDriveTokenError
   });
   if (localStorage.getItem('ht_drive_connected') === '1') {
-    setDriveStatus('☁️ Drive: connecting…');
-    try { driveTokenClient.requestAccessToken({ prompt: '' }); }
-    catch { setDriveStatus('☁️ Drive: tap to connect'); }
+    driveSilentRetries = 0;
+    attemptSilentConnect();
+  } else {
+    setDriveStatus('☁️ Drive: tap to connect');
+  }
+}
+
+function attemptSilentConnect() {
+  setDriveStatus('☁️ Drive: connecting…');
+  try { driveTokenClient.requestAccessToken({ prompt: '' }); }
+  catch { handleDriveTokenError(); }
+}
+
+// Silent reconnect can fail transiently (GIS iframe not ready yet, brief
+// third-party-cookie hiccup, etc). Retry a couple of times with backoff
+// before falling back to requiring a manual tap.
+function handleDriveTokenError() {
+  if (localStorage.getItem('ht_drive_connected') === '1' && driveSilentRetries < 3) {
+    driveSilentRetries++;
+    setTimeout(attemptSilentConnect, 1200 * driveSilentRetries);
   } else {
     setDriveStatus('☁️ Drive: tap to connect');
   }
@@ -2730,17 +2752,64 @@ function driveConnectClick() {
 }
 
 function handleDriveToken(resp) {
-  if (!resp || resp.error) { setDriveStatus('☁️ Drive: tap to connect'); return; }
+  if (!resp || resp.error) { handleDriveTokenError(); return; }
+  driveSilentRetries = 0;
   driveAccessToken = resp.access_token;
   driveTokenExpiry = Date.now() + (Number(resp.expires_in) || 3600) * 1000 - 60000;
   localStorage.setItem('ht_drive_connected', '1');
   setDriveStatus('☁️ Drive: syncing…');
+  scheduleProactiveTokenRefresh();
   driveInitialSync();
+}
+
+// Refresh the token shortly before it expires so a long-running open tab
+// never has to wait for an edit to discover the token is stale.
+function scheduleProactiveTokenRefresh() {
+  if (driveProactiveRefreshTimer) clearTimeout(driveProactiveRefreshTimer);
+  const delay = Math.max(driveTokenExpiry - Date.now() - 30000, 30000);
+  driveProactiveRefreshTimer = setTimeout(() => {
+    if (driveTokenClient) {
+      try { driveTokenClient.requestAccessToken({ prompt: '' }); }
+      catch { /* will retry next time a sync is attempted */ }
+    }
+  }, delay);
 }
 
 function ensureDriveToken() {
   if (driveAccessToken && Date.now() < driveTokenExpiry) return driveAccessToken;
   return null;
+}
+
+// Async variant: if the in-memory token is missing/expired but the user has
+// previously connected, try a silent reacquire before giving up. Used by
+// sync paths so a stale token doesn't silently stop syncing.
+function ensureDriveTokenAsync() {
+  const existing = ensureDriveToken();
+  if (existing) return Promise.resolve(existing);
+  if (localStorage.getItem('ht_drive_connected') !== '1' || !driveTokenClient) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (token) => { if (!settled) { settled = true; resolve(token); } };
+    const timeoutId = setTimeout(() => finish(null), 6000);
+    try {
+      driveTokenClient.requestAccessToken({
+        prompt: '',
+        callback: (resp) => {
+          clearTimeout(timeoutId);
+          if (resp && resp.access_token) {
+            driveAccessToken = resp.access_token;
+            driveTokenExpiry = Date.now() + (Number(resp.expires_in) || 3600) * 1000 - 60000;
+            localStorage.setItem('ht_drive_connected', '1');
+            scheduleProactiveTokenRefresh();
+            finish(driveAccessToken);
+          } else {
+            finish(null);
+          }
+        },
+        error_callback: () => { clearTimeout(timeoutId); finish(null); }
+      });
+    } catch { clearTimeout(timeoutId); finish(null); }
+  });
 }
 
 async function driveFindFile(token) {
@@ -2811,8 +2880,9 @@ function scheduleDriveSync() {
 }
 
 async function driveInitialSync() {
-  const token = ensureDriveToken();
-  if (!token || driveBusy) return;
+  if (driveBusy) return;
+  const token = await ensureDriveTokenAsync();
+  if (!token) return;
   driveBusy = true;
   try {
     let fileMeta = await driveFindFile(token);
@@ -2845,7 +2915,7 @@ async function driveInitialSync() {
 }
 
 async function pushToDrive() {
-  const token = ensureDriveToken();
+  const token = await ensureDriveTokenAsync();
   if (!token) return;
   setDriveStatus('☁️ Drive: syncing…');
   try {
