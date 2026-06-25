@@ -951,6 +951,24 @@
 </div><!-- /wrap-lift -->
 
 <script>
+// ===== TEMP DIAGNOSTIC: visible error overlay (helps debug blank-screen
+// issues on real devices where we can't see the console). Safe to remove
+// once mobile rendering is confirmed stable. =====
+window.addEventListener('error', function(e) {
+  try {
+    var msg = (e.error && e.error.stack) ? e.error.stack
+      : ((e.message || 'Unknown error') + ' @ ' + (e.filename || '') + ':' + (e.lineno || '') + ':' + (e.colno || ''));
+    var show = function() {
+      var div = document.createElement('div');
+      div.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#b00020;color:#fff;font-size:11px;line-height:1.4;padding:10px;z-index:999999;white-space:pre-wrap;max-height:60vh;overflow:auto;font-family:monospace;';
+      div.textContent = 'JS ERROR: ' + msg;
+      (document.body || document.documentElement).appendChild(div);
+    };
+    if (document.body) show();
+    else document.addEventListener('DOMContentLoaded', show);
+  } catch (_) {}
+});
+
 // Drive sync state (declared early so seed/init code that fires before the
 // Drive sync block below can safely call scheduleDriveSync without a TDZ error)
 let driveTokenClient = null;
