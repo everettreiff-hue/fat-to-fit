@@ -1060,10 +1060,11 @@ function saveInBody(scans) {
     saveInBody(seed);
   } else {
     const dates = new Set(existing.map(e => e.date));
-    const merged = [...existing];
-    seed.forEach(e => { if (!dates.has(e.date)) merged.push(e); });
-    merged.sort((a,b) => a.date.localeCompare(b.date));
-    saveInBody(merged);
+    const missing = seed.filter(e => !dates.has(e.date));
+    if (missing.length) {
+      const merged = [...existing, ...missing].sort((a,b) => a.date.localeCompare(b.date));
+      saveInBody(merged);
+    }
   }
 })();
 
