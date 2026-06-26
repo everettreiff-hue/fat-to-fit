@@ -986,15 +986,6 @@
       add('UNHANDLED PROMISE REJECTION', msg);
     } catch (_) {}
   });
-  var origError = console.error, origWarn = console.warn;
-  console.error = function() {
-    try { add('console.error', Array.prototype.slice.call(arguments).map(String).join(' ')); } catch (_) {}
-    return origError.apply(console, arguments);
-  };
-  console.warn = function() {
-    try { add('console.warn', Array.prototype.slice.call(arguments).map(String).join(' ')); } catch (_) {}
-    return origWarn.apply(console, arguments);
-  };
 })();
 
 // Drive sync state (declared early so seed/init code that fires before the
