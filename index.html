@@ -1419,19 +1419,20 @@ function renderProgressChart(canvasId, entries, field, baselineVal, goalVal, uni
   const actualEntries = entries.filter(e=>e[field]!=null).sort((a,b)=>a.date.localeCompare(b.date));
   const actualDates = new Set(actualEntries.map(e=>e.date));
 
-  // Add goal line anchor dates (start, every ~30d, end, today+30d buffer)
+  // Build a uniform daily date axis (start through goal date + buffer) so
+  // points are evenly spaced by real calendar time, not bunched up wherever
+  // actual entries happen to be dense vs. sparse.
   const daysFromStart = daysBetween(BASELINE.date, isoDate(today));
   const axisLen = Math.max(totalDays + 30, daysFromStart + 30);
-  const refDates = new Set();
-  for (let d=0; d<=axisLen; d+=Math.max(7, Math.floor(axisLen/20))) {
+  const allDates = [];
+  for (let d=0; d<=axisLen; d++) {
     const dt = new Date(START_DATE); dt.setDate(dt.getDate()+d);
-    refDates.add(isoDate(dt));
+    allDates.push(isoDate(dt));
   }
-  // Always include goal date
-  refDates.add(GOAL.date);
-
-  // Merge and sort all dates
-  const allDates = [...new Set([...actualDates, ...refDates])].sort();
+  // Include any actual entry dates that fall outside the generated range
+  // (e.g. backfilled data before START_DATE), then keep everything sorted.
+  actualDates.forEach(d => { if (!allDates.includes(d)) allDates.push(d); });
+  allDates.sort();
 
   // Build per-date data
   const actualMap = {}, rollingMap = {};
@@ -1607,18 +1608,19 @@ function makeBigProgressChart(canvasId, entries, field, baselineVal, goalVal, un
   const totalDays = daysBetween(BASELINE.date, GOAL.date);
   const today = new Date();
 
-  // Same approach as dashboard: merge actual dates + sparse ref dates
+  // Same approach as dashboard: a uniform daily date axis so points are
+  // evenly spaced by real calendar time.
   const actualEntries = entries.filter(e=>e[field]!=null).sort((a,b)=>a.date.localeCompare(b.date));
   const actualDates = new Set(actualEntries.map(e=>e.date));
   const daysFromStart = daysBetween(BASELINE.date, isoDate(today));
   const axisLen = Math.max(totalDays + 30, daysFromStart + 30);
-  const refDates = new Set();
-  for (let d=0; d<=axisLen; d+=Math.max(5, Math.floor(axisLen/30))) {
+  const allDates = [];
+  for (let d=0; d<=axisLen; d++) {
     const dt = new Date(START_DATE); dt.setDate(dt.getDate()+d);
-    refDates.add(isoDate(dt));
+    allDates.push(isoDate(dt));
   }
-  refDates.add(GOAL.date);
-  const allDates = [...new Set([...actualDates,...refDates])].sort();
+  actualDates.forEach(d => { if (!allDates.includes(d)) allDates.push(d); });
+  allDates.sort();
 
   const actualMap = {}, rollingMap = {};
   const rolling = rollingAvg(actualEntries, field, 7);
