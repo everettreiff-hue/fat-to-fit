@@ -102,7 +102,7 @@
   tr:hover td { background: var(--surface2); }
 
   /* CHART WRAPPER */
-  .chart-wrap { position: relative; height: 220px; }
+  .chart-wrap { position: relative; height: 290px; }
   .chart-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
   .chart-header h3 { margin-bottom:0; }
 
@@ -300,7 +300,7 @@
     .grid-5, .grid-6 { grid-template-columns: 1fr 1fr; }
 
     /* Charts */
-    .chart-wrap { height: 180px; }
+    .chart-wrap { height: 230px; }
 
     /* Stat tiles */
     .stat { padding: 12px 14px; }
@@ -709,19 +709,19 @@
   <div class="section-title">Detailed Charts</div>
   <div class="card" style="margin-bottom:20px">
     <div class="chart-header"><h3>Weight (lbs)</h3><button class="btn btn-sm btn-secondary" onclick="resetChart('big-chart-weight')">Reset Zoom</button></div>
-    <div style="position:relative;height:400px"><canvas id="big-chart-weight"></canvas></div>
+    <div style="position:relative;height:480px"><canvas id="big-chart-weight"></canvas></div>
   </div>
   <div class="card" style="margin-bottom:20px">
     <div class="chart-header"><h3>Body Fat %</h3><button class="btn btn-sm btn-secondary" onclick="resetChart('big-chart-bf')">Reset Zoom</button></div>
-    <div style="position:relative;height:400px"><canvas id="big-chart-bf"></canvas></div>
+    <div style="position:relative;height:480px"><canvas id="big-chart-bf"></canvas></div>
   </div>
   <div class="card" style="margin-bottom:20px">
     <div class="chart-header"><h3>Muscle Mass %</h3><button class="btn btn-sm btn-secondary" onclick="resetChart('big-chart-mm')">Reset Zoom</button></div>
-    <div style="position:relative;height:400px"><canvas id="big-chart-mm"></canvas></div>
+    <div style="position:relative;height:480px"><canvas id="big-chart-mm"></canvas></div>
   </div>
   <div class="card" style="margin-bottom:20px">
     <div class="chart-header"><h3>Subcutaneous Fat %</h3><button class="btn btn-sm btn-secondary" onclick="resetChart('big-chart-sf')">Reset Zoom</button></div>
-    <div style="position:relative;height:400px"><canvas id="big-chart-sf"></canvas></div>
+    <div style="position:relative;height:480px"><canvas id="big-chart-sf"></canvas></div>
   </div>
 </div>
 
@@ -1419,19 +1419,18 @@ function renderProgressChart(canvasId, entries, field, baselineVal, goalVal, uni
   const actualEntries = entries.filter(e=>e[field]!=null).sort((a,b)=>a.date.localeCompare(b.date));
   const actualDates = new Set(actualEntries.map(e=>e.date));
 
-  // Build a uniform daily date axis (start through goal date + buffer) so
-  // points are evenly spaced by real calendar time, not bunched up wherever
-  // actual entries happen to be dense vs. sparse.
-  const daysFromStart = daysBetween(BASELINE.date, isoDate(today));
-  const axisLen = Math.max(totalDays + 30, daysFromStart + 30);
+  // Build a uniform daily date axis from start through the goal date — no
+  // further — so points are evenly spaced by real calendar time and the
+  // chart doesn't run past the goal.
+  const axisLen = totalDays;
   const allDates = [];
   for (let d=0; d<=axisLen; d++) {
     const dt = new Date(START_DATE); dt.setDate(dt.getDate()+d);
     allDates.push(isoDate(dt));
   }
-  // Include any actual entry dates that fall outside the generated range
-  // (e.g. backfilled data before START_DATE), then keep everything sorted.
-  actualDates.forEach(d => { if (!allDates.includes(d)) allDates.push(d); });
+  // Include any actual entry dates that fall before the generated range
+  // (e.g. backfilled data before START_DATE); drop anything past the goal date.
+  actualDates.forEach(d => { if (!allDates.includes(d) && d <= allDates[allDates.length-1]) allDates.push(d); });
   allDates.sort();
 
   // Build per-date data
@@ -1468,7 +1467,7 @@ function renderProgressChart(canvasId, entries, field, baselineVal, goalVal, uni
       labels,
       datasets:[
         { label:'Goal Pace', data:goalLine, borderColor:'rgba(248,113,113,.6)', borderDash:[6,4], borderWidth:2, pointRadius:0, fill:false, tension:0 },
-        { label:'Actual', data:actualData, borderColor:color, backgroundColor:color+'33', borderWidth:2.5, pointRadius: ctx=>ctx.dataset.data[ctx.dataIndex]!=null?4:0, pointHoverRadius:6, fill:false, tension:.3, spanGaps:false },
+        { label:'Actual', data:actualData, borderColor:color, backgroundColor:color+'33', borderWidth:2.5, pointRadius:0, pointHoverRadius:6, fill:false, tension:.3, spanGaps:false },
         { label:'7-Day Avg', data:rollingData, borderColor:color+'aa', borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:.3, spanGaps:false },
         { label:'Projected', data:projData, borderColor:'rgba(52,211,153,.7)', borderDash:[4,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0, spanGaps:false },
       ]
@@ -1608,18 +1607,18 @@ function makeBigProgressChart(canvasId, entries, field, baselineVal, goalVal, un
   const totalDays = daysBetween(BASELINE.date, GOAL.date);
   const today = new Date();
 
-  // Same approach as dashboard: a uniform daily date axis so points are
-  // evenly spaced by real calendar time.
+  // Same approach as dashboard: a uniform daily date axis, capped at the
+  // goal date, so points are evenly spaced by real calendar time and the
+  // chart doesn't run past the goal.
   const actualEntries = entries.filter(e=>e[field]!=null).sort((a,b)=>a.date.localeCompare(b.date));
   const actualDates = new Set(actualEntries.map(e=>e.date));
-  const daysFromStart = daysBetween(BASELINE.date, isoDate(today));
-  const axisLen = Math.max(totalDays + 30, daysFromStart + 30);
+  const axisLen = totalDays;
   const allDates = [];
   for (let d=0; d<=axisLen; d++) {
     const dt = new Date(START_DATE); dt.setDate(dt.getDate()+d);
     allDates.push(isoDate(dt));
   }
-  actualDates.forEach(d => { if (!allDates.includes(d)) allDates.push(d); });
+  actualDates.forEach(d => { if (!allDates.includes(d) && d <= allDates[allDates.length-1]) allDates.push(d); });
   allDates.sort();
 
   const actualMap = {}, rollingMap = {};
@@ -1654,7 +1653,7 @@ function makeBigProgressChart(canvasId, entries, field, baselineVal, goalVal, un
       datasets:[
         { label:'Goal Pace', data:goalLine, borderColor:'rgba(248,113,113,.6)', borderDash:[6,4], borderWidth:2, pointRadius:0, fill:false, tension:0,
           datalabels:{ display:false } },
-        { label:'Actual', data:actualData, borderColor:color, backgroundColor:color+'22', borderWidth:2.5, pointRadius: ctx=>ctx.dataset.data[ctx.dataIndex]!=null?5:0, pointHoverRadius:8, fill:true, tension:.3, spanGaps:false,
+        { label:'Actual', data:actualData, borderColor:color, backgroundColor:color+'22', borderWidth:2.5, pointRadius:0, pointHoverRadius:8, fill:true, tension:.3, spanGaps:false,
           datalabels:{ display: ctx=>ctx.dataset.data[ctx.dataIndex]!=null, align:'top', anchor:'top', color:color, font:{size:11,weight:'600'}, formatter:v=>v!=null?v.toFixed(1)+unit:null, padding:4 } },
         { label:'7-Day Avg', data:rollingData, borderColor:color+'88', borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:.3, spanGaps:false,
           datalabels:{ display:false } },
