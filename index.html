@@ -2049,7 +2049,7 @@ function renderBigCharts() {
 }
 
 // ===== LOG ENTRY =====
-document.addEventListener('DOMContentLoaded', () => {
+function _initApp() {
   document.getElementById('log-date').value = isoDate(new Date());
   renderDashboard();
   initDriveSync();
@@ -2071,7 +2071,13 @@ document.addEventListener('DOMContentLoaded', () => {
   const blob = new Blob([JSON.stringify(manifest)], {type:'application/json'});
   const el = document.getElementById('pwa-manifest');
   if (el) el.href = URL.createObjectURL(blob);
-});
+}
+// iOS Safari may fire DOMContentLoaded before eval() runs — guard with readyState
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', _initApp);
+} else {
+  _initApp();
+}
 
 function prefillToday() {
   const entries = getData().sort((a,b)=>a.date.localeCompare(b.date));
