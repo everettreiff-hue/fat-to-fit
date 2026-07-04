@@ -382,7 +382,7 @@
 <main>
 
 <!-- ===== DASHBOARD ===== -->
-<div id="page-dashboard" class="page active">
+<div id="page-dashboard" class="page active" style="background:#0f1117">
 
   <div style="margin:12px 0;padding:16px;background:#7c3aed;color:#ffffff;border-radius:12px;font-size:16px;font-weight:700;text-align:center">
   ✅ HTML renders OK — if you see this, layout works
@@ -2091,15 +2091,22 @@ function _initApp() {
       var ms = document.querySelector(".app-mode-switch");
       var st = document.getElementById("headline-stats");
       var cs = d ? window.getComputedStyle(d) : null;
+      var tb = document.getElementById("vis-test");
+      var tbs = tb ? window.getComputedStyle(tb) : null;
+      var dbr = d ? d.getBoundingClientRect() : null;
+      var mbr = m ? m.getBoundingClientRect() : null;
       _diagStep(
         "POST-RENDER:\n" +
         "dashboard h=" + (d?d.offsetHeight:"null") + " display=" + (cs?cs.display:"?") + "\n" +
-        "main h=" + (m?m.offsetHeight:"null") + "\n" +
-        "wrap-body display=" + (wb?(wb.style.display||"auto"):"null") + " h=" + (wb?wb.offsetHeight:"null") + "\n" +
-        "mode-switch h=" + (ms?ms.offsetHeight:"null") + "\n" +
+        "  opacity=" + (cs?cs.opacity:"?") + " vis=" + (cs?cs.visibility:"?") + "\n" +
+        "  rect=" + (dbr?Math.round(dbr.top)+","+Math.round(dbr.left)+","+Math.round(dbr.width)+"x"+Math.round(dbr.height):"null") + "\n" +
+        "main h=" + (m?m.offsetHeight:"null") + " scrollTop=" + (m?m.scrollTop:"null") + "\n" +
+        "  rect=" + (mbr?Math.round(mbr.top)+","+Math.round(mbr.left)+"->"+Math.round(mbr.bottom):"null") + "\n" +
+        "body-bg=" + window.getComputedStyle(document.body).backgroundColor + "\n" +
+        "vis-test h=" + (tb?tb.offsetHeight:"null") + " display=" + (tbs?tbs.display:"null") + "\n" +
+        "  rect-top=" + (tb?Math.round(tb.getBoundingClientRect().top):"null") + "\n" +
         "stats len=" + (st?st.innerHTML.length:"null") + "\n" +
         "color=" + (cs?cs.color:"?") + "\n" +
-        "bg=" + (cs?cs.backgroundColor:"?") + "\n" +
         "scrollY=" + window.scrollY + " vp=" + window.innerWidth + "x" + window.innerHeight
       );
     } catch(e2) { _diagErr("post-check", e2); }
