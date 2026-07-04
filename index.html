@@ -2388,16 +2388,11 @@ function renderLiftExerciseChecklist(type) {
   const exList = type === 'Upper' ? UPPER_EXERCISES : LOWER_EXERCISES;
   const date = document.getElementById('lift-log-date').value;
   const existing = getLiftWorkouts().find(w => w.date === date && w.type === type);
-  const last = getLiftWorkouts().filter(w => w.type === type && w.date < date)
-    .sort((a,b) => b.date.localeCompare(a.date))[0];
-  const lastMap = {};
-  if (last) last.exercises.forEach(ex => { lastMap[ex.name] = ex.sets; });
   const container = document.getElementById('lift-log-exercises');
   container.innerHTML = exList.map(name => {
     const exData = existing ? existing.exercises.find(e => e.name === name) : null;
-    const lastSets = lastMap[name] || [];
     const checked = !!exData;
-    const sets = exData ? exData.sets : (lastSets.length ? lastSets : [{weight:'',reps:''}]);
+    const sets = exData ? exData.sets : [{weight:'',reps:''}];
     return `<div class="lift-ex-block" id="leb-${CSS.escape(name)}" style="margin-bottom:16px;border-top:1px solid var(--border);padding-top:12px">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;font-weight:600;font-size:14px">
         <input type="checkbox" class="lift-ex-check" onchange="toggleLiftExercise('${name.replace(/'/g,"\'")}', this.checked)" ${checked?'checked':''} style="width:16px;height:16px;accent-color:var(--accent)">
