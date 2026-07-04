@@ -811,144 +811,40 @@
 <div id="wrap-lift" style="display:none">
 <nav class="top-nav">
   <div class="brand">🏋️ Lifting</div>
-  <button class="active" onclick="showLiftPage('liftdash')">Dashboard</button>
-  <button onclick="showLiftPage('liftlog')">Log Workout</button>
-  <button onclick="showLiftPage('liftprogress')">Progress</button>
+  <button class="active" onclick="showLiftPage('liftlog')">Log</button>
   <button onclick="showLiftPage('lifthistory')">History</button>
-  <button onclick="showLiftPage('liftexercises')">Exercises</button>
   <button onclick="saveJSON()" style="margin-left:auto;color:var(--accent2);border-bottom-color:transparent">📦 Save JSON</button>
   <button class="drive-sync-status" onclick="driveConnectClick()" style="color:var(--muted);border-bottom-color:transparent;font-size:12px;white-space:nowrap" title="Connect or re-sync Google Drive">☁️ Drive: tap to connect</button>
 </nav>
-
-<!-- Bottom nav — mobile only -->
 <nav class="bottom-nav" style="display:none">
-  <button class="active" onclick="showLiftPage('liftdash')"><span class="nav-icon">📊</span>Dash</button>
-  <button onclick="showLiftPage('liftlog')"><span class="nav-icon">✏️</span>Log</button>
-  <button onclick="showLiftPage('liftprogress')"><span class="nav-icon">📈</span>Progress</button>
+  <button class="active" onclick="showLiftPage('liftlog')"><span class="nav-icon">✏️</span>Log</button>
   <button onclick="showLiftPage('lifthistory')"><span class="nav-icon">🕘</span>History</button>
-  <button onclick="showLiftPage('liftexercises')"><span class="nav-icon">🗂️</span>Exercises</button>
 </nav>
-
 <main>
-
-<!-- ===== LIFT DASHBOARD ===== -->
-<div id="page-liftdash" class="page active">
-  <div class="section-title">Weight Lifting Dashboard</div>
-  <div class="grid grid-4" id="lift-dash-stats" style="margin-bottom:24px"></div>
-  <div class="grid grid-2" style="margin-bottom:24px">
-    <div class="card">
-      <div class="card-section-title"><div class="dot" style="background:#a855f7"></div>Muscle Group Breakdown (30 days)</div>
-      <div class="chart-wrap" style="height:240px"><canvas id="chart-lift-musclegroup"></canvas></div>
-    </div>
-    <div class="card">
-      <div class="card-section-title"><div class="dot" style="background:#f59e0b"></div>Upper / Lower / Core Split (30 days)</div>
-      <div class="chart-wrap" style="height:240px"><canvas id="chart-lift-split"></canvas></div>
-    </div>
-  </div>
-  <div class="card" style="overflow:auto">
-    <h3>Recent Workouts</h3>
-    <div id="lift-dash-recent"></div>
-  </div>
-</div>
-
-<!-- ===== LOG WORKOUT ===== -->
-<div id="page-liftlog" class="page">
+<div id="page-liftlog" class="page active">
   <div class="section-title">Log Workout</div>
-  <div class="card" style="margin-bottom:20px">
-    <div class="form-grid">
-      <div class="field"><label>Date</label><input type="date" id="lift-log-date"></div>
+  <div class="card" style="margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+      <input type="date" id="lift-log-date" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px">
+      <div style="display:flex;gap:8px">
+        <button id="lift-type-upper" class="btn btn-primary" onclick="selectLiftType('Upper')">Upper Day</button>
+        <button id="lift-type-lower" class="btn btn-secondary" onclick="selectLiftType('Lower')">Lower Day</button>
+      </div>
     </div>
     <div id="lift-log-exercises"></div>
-    <div class="btn-row" style="margin-top:6px">
-      <button class="btn btn-secondary" onclick="addLiftExerciseRow()">＋ Add Exercise</button>
-    </div>
-    <div class="btn-row" style="margin-top:18px">
+    <div id="lift-log-msg" style="margin-top:10px;font-size:13px;color:var(--accent2)"></div>
+    <div class="btn-row" style="margin-top:16px">
       <button class="btn btn-primary" onclick="saveLiftWorkout()">💾 Save Workout</button>
     </div>
-    <div id="lift-log-msg" style="margin-top:10px;font-size:13px"></div>
   </div>
 </div>
-
-<!-- ===== PROGRESS ===== -->
-<div id="page-liftprogress" class="page">
-  <div class="section-title">Lifting Progress</div>
-  <div class="card" style="margin-bottom:16px">
-    <div class="form-grid">
-      <div class="field">
-        <label>Exercise</label>
-        <select id="lift-prog-exercise" class="lift-input" onchange="renderLiftProgress()"></select>
-      </div>
-      <div class="field">
-        <label>Metric</label>
-        <select id="lift-prog-metric" onchange="renderLiftProgress()">
-          <option value="maxWeight">Max Weight</option>
-          <option value="volume">Total Volume (Weight × Reps)</option>
-        </select>
-      </div>
-    </div>
-  </div>
-
-  <div class="card" style="margin-bottom:16px">
-    <div class="chart-header"><div class="card-section-title" id="lift-prog-chart-title"><div class="dot" style="background:var(--accent)"></div>Progress</div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-lift-progress')">Reset Zoom</button></div>
-    <div class="chart-wrap" style="height:320px"><canvas id="chart-lift-progress"></canvas></div>
-  </div>
-
-  <div class="grid grid-3" style="margin-bottom:24px" id="lift-prog-summary"></div>
-
-  <div class="card" style="overflow:auto">
-    <h3>Data Points</h3>
-    <div id="lift-prog-table"></div>
-  </div>
-</div>
-
-<!-- ===== HISTORY ===== -->
 <div id="page-lifthistory" class="page">
   <div class="section-title">Workout History</div>
   <div id="lift-history-list"></div>
 </div>
-
-<!-- ===== EXERCISES ===== -->
-<div id="page-liftexercises" class="page">
-  <div class="section-title">Manage Exercises</div>
-  <div class="card" style="margin-bottom:20px">
-    <h3>Add New Exercise</h3>
-    <div class="form-grid">
-      <div class="field">
-        <label>Name</label>
-        <input type="text" id="new-ex-name" class="lift-input" placeholder="e.g. Barbell Squat">
-      </div>
-      <div class="field">
-        <label>Muscle Group</label>
-        <select id="new-ex-group" class="lift-input" onchange="onNewExGroupChange()">
-          <option value="Chest">Chest</option>
-          <option value="Back">Back</option>
-          <option value="Shoulders">Shoulders</option>
-          <option value="Arms">Arms</option>
-          <option value="Legs">Legs</option>
-          <option value="Core">Core</option>
-          <option value="Other">Other</option>
-        </select>
-      </div>
-      <div class="field">
-        <label>Category</label>
-        <select id="new-ex-cat" class="lift-input">
-          <option value="Upper">Upper</option>
-          <option value="Lower">Lower</option>
-          <option value="Core">Core</option>
-        </select>
-      </div>
-    </div>
-    <div class="btn-row"><button class="btn btn-primary" onclick="addNewExercise()">＋ Add Exercise</button></div>
-    <div id="new-ex-msg" style="margin-top:10px;font-size:13px"></div>
-  </div>
-  <div class="card" style="overflow:auto">
-    <h3>Exercise Library</h3>
-    <div id="lift-exercises-table"></div>
-  </div>
-</div>
-
 </main>
 </div><!-- /wrap-lift -->
+
 
 <script type="text/plain" id="ht-app-source">
 // ===== TEMP DIAGNOSTIC: visible error overlay (helps debug blank-screen
@@ -1093,52 +989,104 @@ function switchAppMode(mode) {
   document.getElementById('mode-btn-body').classList.toggle('active', mode === 'body');
   document.getElementById('mode-btn-lift').classList.toggle('active', mode === 'lift');
   window.scrollTo(0, 0);
-  if (mode === 'lift') renderLiftDashboard();
+  if (mode === 'lift') initLiftLogPage();
 }
 
 // ===== LIFT NAVIGATION =====
 function showLiftPage(name) {
   const scope = document.getElementById('wrap-lift');
   scope.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  scope.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-  document.getElementById('page-' + name).classList.add('active');
-  const labels = ['liftdash','liftlog','liftprogress','lifthistory','liftexercises'];
-  const idx = labels.indexOf(name);
-  scope.querySelectorAll('nav.top-nav button').forEach((b,i) => { if (i === idx) b.classList.add('active'); });
-  const botLabels = ['liftdash','liftlog','liftprogress','lifthistory','liftexercises'];
-  const botIdx = botLabels.indexOf(name);
-  scope.querySelectorAll('nav.bottom-nav button').forEach((b,i) => { if (i === botIdx) b.classList.add('active'); });
-  window.scrollTo(0, 0);
-  if (name === 'liftdash') renderLiftDashboard();
-  if (name === 'liftlog') initLiftLogPage();
-  if (name === 'liftprogress') initLiftProgressPage();
+  const pg = scope.querySelector('#page-'+name);
+  if (pg) pg.classList.add('active');
+  const labels = ['liftlog','lifthistory'];
+  scope.querySelectorAll('nav.top-nav button').forEach((b,i) => b.classList.toggle('active', labels[i]===name));
+  scope.querySelectorAll('nav.bottom-nav button').forEach((b,i) => b.classList.toggle('active', labels[i]===name));
+  window.scrollTo(0,0);
   if (name === 'lifthistory') renderLiftHistory();
-  if (name === 'liftexercises') renderLiftExercisesPage();
+  if (name === 'liftlog') initLiftLogPage();
 }
 
+
 // ===== LIFT DATA STORE =====
-const MUSCLE_GROUPS = ['Chest','Back','Shoulders','Arms','Legs','Core','Other'];
-const LIFT_CATEGORIES = ['Upper','Lower','Core'];
-function getLiftExercises() {
-  try { return JSON.parse(localStorage.getItem('ht_lift_exercises') || '[]'); } catch { return []; }
-}
-function saveLiftExercises(list) { localStorage.setItem('ht_lift_exercises', JSON.stringify(list)); scheduleDriveSync(); }
+const UPPER_EXERCISES = [
+  'Pectoral Fly','Rear Deltoid','Inclined Bend (SMITH)','Lat Pulldown',
+  'Lower Chest Pull Down','Preacher Bar Curls','Bull Testicals',
+  'Dumbbell Curls','Behind Head Tricep Raises','Flat Bench (SMITH)',
+  'Seated Row','High-Low Cross Over (Lower Pec)','Shoulder Press',
+  'Chest Press','Bench','Declined Press (Berry)','Tricep Press','Bicep Curl'
+];
+const LOWER_EXERCISES = [
+  'Seated Leg Curl','Leg Extension','Calf Raises (Squat Machine)',
+  'Calf Raises (SMITH)','Seated Leg Press (Machine)','Back Extension','Calf Extension'
+];
 function getLiftWorkouts() {
   try { return JSON.parse(localStorage.getItem('ht_lift_workouts') || '[]'); } catch { return []; }
 }
 function saveLiftWorkouts(list) { localStorage.setItem('ht_lift_workouts', JSON.stringify(list)); scheduleDriveSync(); }
-function slugify(name) { return name.toLowerCase().trim().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,''); }
 function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
-function setMaxWeight(sets) { return sets.reduce((m,s)=>Math.max(m, Number(s.weight)||0), 0); }
-function setVolume(sets) { return sets.reduce((v,s)=>v + (Number(s.weight)||0) * (Number(s.reps)||0), 0); }
 
-// ===== SEED LIFT DATA (from Lifting Tracker Google Sheet, 6/21–6/22/2026) =====
+// ===== SEED LIFT DATA (from Lifting Google Sheet, Jun-Jul 2026) =====
 (function() {
   if (localStorage.getItem('ht_lift_workouts') !== null) return;
-  const seedExercises = [];
-  const seedWorkouts = [];
-  saveLiftExercises(seedExercises);
-  saveLiftWorkouts(seedWorkouts);
+  const seed = [
+    { date:'2026-06-21', type:'Upper', exercises:[
+      { name:'Pectoral Fly', sets:[{weight:160,reps:8},{weight:160,reps:8},{weight:160,reps:8}] },
+      { name:'Rear Deltoid', sets:[{weight:115,reps:8},{weight:100,reps:8},{weight:100,reps:6}] },
+      { name:'Inclined Bend (SMITH)', sets:[{weight:50,reps:8},{weight:70,reps:8},{weight:70,reps:6}] },
+      { name:'Lat Pulldown', sets:[{weight:100,reps:8},{weight:115,reps:8},{weight:115,reps:8}] },
+      { name:'Lower Chest Pull Down', sets:[{weight:15,reps:8},{weight:20,reps:8},{weight:15,reps:8}] },
+      { name:'Preacher Bar Curls', sets:[{weight:55,reps:8},{weight:60,reps:8},{weight:60,reps:8},{weight:60,reps:8}] },
+      { name:'Bull Testicals', sets:[{weight:42.5,reps:8},{weight:50,reps:8},{weight:50,reps:8},{weight:50,reps:6}] },
+      { name:'Dumbbell Curls', sets:[{weight:27.5,reps:8},{weight:30,reps:8}] },
+      { name:'Behind Head Tricep Raises', sets:[{weight:50,reps:8},{weight:50,reps:8}] }
+    ]},
+    { date:'2026-06-23', type:'Lower', exercises:[
+      { name:'Seated Leg Curl', sets:[{weight:80,reps:8},{weight:90,reps:8},{weight:90,reps:8}] },
+      { name:'Leg Extension', sets:[{weight:110,reps:8},{weight:120,reps:8},{weight:120,reps:8},{weight:130,reps:8}] },
+      { name:'Calf Raises (Squat Machine)', sets:[{weight:200,reps:8},{weight:260,reps:15},{weight:280,reps:15}] }
+    ]},
+    { date:'2026-06-24', type:'Upper', exercises:[
+      { name:'Lat Pulldown', sets:[{weight:110,reps:8},{weight:90,reps:8},{weight:90,reps:8}] },
+      { name:'Flat Bench (SMITH)', sets:[{weight:90,reps:8},{weight:100,reps:8},{weight:100,reps:8},{weight:90,reps:5}] },
+      { name:'Seated Row', sets:[{weight:95,reps:8},{weight:110,reps:8},{weight:110,reps:8}] },
+      { name:'High-Low Cross Over (Lower Pec)', sets:[{weight:22.5,reps:8},{weight:17.5,reps:8},{weight:17.5,reps:8}] },
+      { name:'Shoulder Press', sets:[{weight:90,reps:8},{weight:80,reps:6},{weight:70,reps:6}] },
+      { name:'Chest Press', sets:[{weight:100,reps:6},{weight:90,reps:6}] }
+    ]},
+    { date:'2026-06-25', type:'Lower', exercises:[
+      { name:'Seated Leg Curl', sets:[{weight:90,reps:8},{weight:90,reps:8},{weight:90,reps:15}] },
+      { name:'Leg Extension', sets:[{weight:130,reps:8},{weight:140,reps:8},{weight:140,reps:8},{weight:140,reps:8}] },
+      { name:'Calf Raises (SMITH)', sets:[{weight:90,reps:12},{weight:140,reps:10},{weight:140,reps:12}] }
+    ]},
+    { date:'2026-06-27', type:'Upper', exercises:[
+      { name:'Pectoral Fly', sets:[{weight:175,reps:6},{weight:175,reps:6},{weight:175,reps:6}] },
+      { name:'Rear Deltoid', sets:[{weight:100,reps:8},{weight:100,reps:8},{weight:100,reps:8}] },
+      { name:'Lat Pulldown', sets:[{weight:115,reps:8},{weight:115,reps:8},{weight:115,reps:8}] },
+      { name:'Chest Press', sets:[{weight:100,reps:8},{weight:85,reps:8},{weight:85,reps:7}] }
+    ]},
+    { date:'2026-06-28', type:'Lower', exercises:[
+      { name:'Seated Leg Press (Machine)', sets:[{weight:205,reps:8},{weight:220,reps:8},{weight:220,reps:8}] },
+      { name:'Back Extension', sets:[{weight:175,reps:8},{weight:205,reps:8},{weight:235,reps:8}] }
+    ]},
+    { date:'2026-07-02', type:'Upper', exercises:[
+      { name:'Lat Pulldown', sets:[{weight:90,reps:8},{weight:115,reps:8},{weight:115,reps:8}] },
+      { name:'Seated Row', sets:[{weight:120,reps:8},{weight:120,reps:8},{weight:120,reps:8}] },
+      { name:'Bench', sets:[{weight:110,reps:8},{weight:130,reps:8},{weight:130,reps:8}] },
+      { name:'Declined Press (Berry)', sets:[{weight:90,reps:8},{weight:110,reps:8},{weight:110,reps:5}] }
+    ]},
+    { date:'2026-07-03', type:'Upper', exercises:[
+      { name:'Shoulder Press', sets:[{weight:85,reps:8},{weight:85,reps:7},{weight:70,reps:8}] },
+      { name:'Tricep Press', sets:[{weight:175,reps:8},{weight:190,reps:8},{weight:205,reps:8},{weight:205,reps:8}] },
+      { name:'Bicep Curl', sets:[{weight:95,reps:8},{weight:95,reps:8},{weight:95,reps:8}] }
+    ]},
+    { date:'2026-07-03', type:'Lower', exercises:[
+      { name:'Seated Leg Curl', sets:[{weight:110,reps:8},{weight:115,reps:8},{weight:120,reps:12}] },
+      { name:'Leg Extension', sets:[{weight:130,reps:8},{weight:145,reps:8},{weight:145,reps:10}] },
+      { name:'Seated Leg Press (Machine)', sets:[{weight:220,reps:8},{weight:235,reps:8},{weight:235,reps:8}] },
+      { name:'Calf Extension', sets:[{weight:130,reps:12},{weight:145,reps:8},{weight:160,reps:12},{weight:175,reps:8}] }
+    ]}
+  ];
+  saveLiftWorkouts(seed);
 })();
 
 // ===== UTILS =====
@@ -2257,7 +2205,6 @@ async function saveJSON() {
     entries: getData(),
     photos: getPhotos(),
     inbody: getInBody(),
-    liftExercises: getLiftExercises(),
     liftWorkouts: getLiftWorkouts()
   };
   const json = JSON.stringify(payload, null, 2);
@@ -2311,7 +2258,6 @@ function loadJSON(text) {
     saveData(payload.entries || []);
     savePhotos(payload.photos || []);
     if (payload.inbody) saveInBody(payload.inbody);
-    if (payload.liftExercises) saveLiftExercises(payload.liftExercises);
     if (payload.liftWorkouts) saveLiftWorkouts(payload.liftWorkouts);
     showMsg('json-msg', `✓ Restored ${payload.entries.length} entries${payload.photos?.length ? ' and ' + payload.photos.length + ' photos' : ''}.`, 'good');
   } catch(e) {
@@ -2322,7 +2268,6 @@ async function saveApp() {
   const entries = getData();
   const photos = getPhotos();
   const inbody = getInBody();
-  const liftExercises = getLiftExercises();
   const liftWorkouts = getLiftWorkouts();
   const dataScript = `<script id="__ht_seed__">
 (function(){
@@ -2330,7 +2275,6 @@ async function saveApp() {
     if(!localStorage.getItem('ht_entries')) localStorage.setItem('ht_entries', ${JSON.stringify(JSON.stringify(entries))});
     if(!localStorage.getItem('ht_photos'))  localStorage.setItem('ht_photos',  ${JSON.stringify(JSON.stringify(photos))});
     if(!localStorage.getItem('ht_inbody'))  localStorage.setItem('ht_inbody',  ${JSON.stringify(JSON.stringify(inbody))});
-    if(!localStorage.getItem('ht_lift_exercises')) localStorage.setItem('ht_lift_exercises', ${JSON.stringify(JSON.stringify(liftExercises))});
     if(!localStorage.getItem('ht_lift_workouts'))  localStorage.setItem('ht_lift_workouts',  ${JSON.stringify(JSON.stringify(liftWorkouts))});
   } catch(e){}
   var s=document.getElementById('__ht_seed__'); if(s) s.remove();
@@ -2371,397 +2315,155 @@ function resetData() {
   localStorage.removeItem('ht_entries');
   localStorage.removeItem('ht_photos');
   localStorage.removeItem('ht_inbody');
-  localStorage.removeItem('ht_lift_exercises');
   localStorage.removeItem('ht_lift_workouts');
   showMsg('import-msg','All data cleared.','neutral');
 }
 
-// ===== LIFT: DASHBOARD =====
-function renderLiftDashboard() {
-  const workouts = getLiftWorkouts();
-  const exercises = getLiftExercises();
-  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 30);
-  const recent = workouts.filter(w => new Date(w.date) >= cutoff);
-  const totalVolume30 = recent.reduce((sum,w)=> sum + w.exercises.reduce((s,ex)=>s+setVolume(ex.sets),0), 0);
-  const lastWorkout = workouts.slice().sort((a,b)=>b.date.localeCompare(a.date))[0];
-
-  document.getElementById('lift-dash-stats').innerHTML = `
-    <div class="stat accent-blue"><div class="label">Workouts Logged</div><div class="value">${workouts.length}</div><div class="sub">all time</div></div>
-    <div class="stat accent-purple"><div class="label">Exercises Tracked</div><div class="value">${exercises.length}</div><div class="sub">in your library</div></div>
-    <div class="stat accent-green"><div class="label">Volume (30 days)</div><div class="value" style="font-size:24px">${Math.round(totalVolume30).toLocaleString()}<span class="unit">lbs</span></div><div class="sub">${recent.length} workout${recent.length!==1?'s':''}</div></div>
-    <div class="stat accent-orange"><div class="label">Last Workout</div><div class="value" style="font-size:20px">${lastWorkout ? fmtDate(lastWorkout.date) : '—'}</div><div class="sub">${lastWorkout ? lastWorkout.exercises.length + ' exercises' : 'no workouts yet'}</div></div>
-  `;
-
-  const groupCounts = {};
-  recent.forEach(w => w.exercises.forEach(ex => { groupCounts[ex.muscleGroup] = (groupCounts[ex.muscleGroup]||0) + 1; }));
-  const groupLabels = Object.keys(groupCounts);
-  makeChart('chart-lift-musclegroup', {
-    type: 'doughnut',
-    data: {
-      labels: groupLabels.length ? groupLabels : ['No data'],
-      datasets: [{ data: groupLabels.length ? groupLabels.map(g=>groupCounts[g]) : [1],
-        backgroundColor: groupLabels.length ? ['rgba(79,142,247,.8)','rgba(168,85,247,.8)','rgba(251,146,60,.8)','rgba(52,211,153,.8)','rgba(250,204,21,.8)','rgba(248,113,113,.8)','rgba(148,163,184,.8)'] : ['rgba(148,163,184,.3)'],
-        borderColor: 'transparent', borderWidth: 0 }]
-    },
-    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right',labels:{color:'#8892a4',font:{size:11},boxWidth:10}}} }
-  });
-
-  const splitCounts = { Upper:0, Lower:0, Core:0 };
-  recent.forEach(w => w.exercises.forEach(ex => { if (splitCounts[ex.category]!=null) splitCounts[ex.category]++; }));
-  makeChart('chart-lift-split', {
-    type: 'doughnut',
-    data: {
-      labels: ['Upper','Lower','Core'],
-      datasets: [{ data: [splitCounts.Upper, splitCounts.Lower, splitCounts.Core],
-        backgroundColor: ['rgba(168,85,247,.8)','rgba(251,146,60,.8)','rgba(250,204,21,.8)'],
-        borderColor: 'transparent', borderWidth: 0 }]
-    },
-    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right',labels:{color:'#8892a4',font:{size:11},boxWidth:10}}} }
-  });
-
-  const recentList = workouts.slice().sort((a,b)=>b.date.localeCompare(a.date)).slice(0,5);
-  document.getElementById('lift-dash-recent').innerHTML = recentList.length ? `<table>
-    <thead><tr><th>Date</th><th>Exercises</th><th>Categories</th><th>Volume</th></tr></thead>
-    <tbody>${recentList.map(w => {
-      const cats = [...new Set(w.exercises.map(ex=>ex.category))];
-      const badgeClass = c => c==='Upper'?'badge-upper':c==='Lower'?'badge-lower':'badge-core';
-      const vol = w.exercises.reduce((s,ex)=>s+setVolume(ex.sets),0);
-      return `<tr><td>${fmtDate(w.date)}</td><td>${w.exercises.map(ex=>escapeHtml(ex.name)).join(', ')}</td><td>${cats.map(c=>`<span class="badge ${badgeClass(c)}">${c}</span>`).join(' ')}</td><td>${Math.round(vol).toLocaleString()} lbs</td></tr>`;
-    }).join('')}</tbody>
-  </table>` : '<p style="color:var(--muted);font-size:13px;padding:8px 0">No workouts logged yet. Head to Log Workout to get started.</p>';
-}
-
 // ===== LIFT: LOG WORKOUT =====
+var _liftType = 'Upper';
+
 function initLiftLogPage() {
-  const dateInput = document.getElementById('lift-log-date');
-  if (!dateInput.value) dateInput.value = new Date().toISOString().split('T')[0];
-  document.getElementById('lift-log-exercises').innerHTML = '';
-  document.getElementById('lift-log-msg').textContent = '';
-  addLiftExerciseRow();
+  const dateEl = document.getElementById('lift-log-date');
+  if (!dateEl.value) dateEl.value = isoDate(new Date());
+  selectLiftType(_liftType);
 }
-function addLiftExerciseRow(prefill) {
+
+function selectLiftType(type) {
+  _liftType = type;
+  document.getElementById('lift-type-upper').className = type === 'Upper' ? 'btn btn-primary' : 'btn btn-secondary';
+  document.getElementById('lift-type-lower').className = type === 'Lower' ? 'btn btn-primary' : 'btn btn-secondary';
+  renderLiftExerciseChecklist(type);
+}
+
+function renderLiftExerciseChecklist(type) {
+  const exList = type === 'Upper' ? UPPER_EXERCISES : LOWER_EXERCISES;
+  const date = document.getElementById('lift-log-date').value;
+  const existing = getLiftWorkouts().find(w => w.date === date && w.type === type);
+  const last = getLiftWorkouts().filter(w => w.type === type && w.date < date)
+    .sort((a,b) => b.date.localeCompare(a.date))[0];
+  const lastMap = {};
+  if (last) last.exercises.forEach(ex => { lastMap[ex.name] = ex.sets; });
   const container = document.getElementById('lift-log-exercises');
-  const blockId = 'lift-ex-' + Math.random().toString(36).slice(2,9);
-  const exercises = getLiftExercises().slice().sort((a,b)=>a.name.localeCompare(b.name));
-  const block = document.createElement('div');
-  block.className = 'card lift-exercise-block';
-  block.id = blockId;
-  block.innerHTML = `
-    <div class="form-grid">
-      <div class="field">
-        <label>Exercise</label>
-        <select class="lift-input lift-ex-select" onchange="onLiftExerciseSelect('${blockId}', this)">
-          <option value="">— Select —</option>
-          ${exercises.map(e=>`<option value="${e.id}">${escapeHtml(e.name)}</option>`).join('')}
-          <option value="__new__">＋ New Exercise…</option>
-        </select>
+  container.innerHTML = exList.map(name => {
+    const exData = existing ? existing.exercises.find(e => e.name === name) : null;
+    const lastSets = lastMap[name] || [];
+    const checked = !!exData;
+    const sets = exData ? exData.sets : (lastSets.length ? lastSets : [{weight:'',reps:''}]);
+    return `<div class="lift-ex-block" id="leb-${CSS.escape(name)}" style="margin-bottom:16px;border-top:1px solid var(--border);padding-top:12px">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;font-weight:600;font-size:14px">
+        <input type="checkbox" class="lift-ex-check" onchange="toggleLiftExercise('${name.replace(/'/g,"\'")}', this.checked)" ${checked?'checked':''} style="width:16px;height:16px;accent-color:var(--accent)">
+        ${escapeHtml(name)}
+      </label>
+      <div class="lift-sets-wrap" style="${checked?'':'display:none'}">
+        ${sets.map((s,i) => liftSetRowHtml(name, i, s.weight, s.reps)).join('')}
+        <button class="btn btn-sm btn-secondary" style="margin-top:4px" onclick="addLiftSet('${name.replace(/'/g,"\'")}')">+ Add Set</button>
       </div>
-      <div class="field lift-ex-newname" style="display:none">
-        <label>New Exercise Name</label>
-        <input type="text" class="lift-input" placeholder="e.g. Leg Press">
-      </div>
-      <div class="field">
-        <label>Muscle Group</label>
-        <select class="lift-input lift-ex-group">
-          ${MUSCLE_GROUPS.map(g=>`<option value="${g}">${g}</option>`).join('')}
-        </select>
-      </div>
-      <div class="field">
-        <label>Category</label>
-        <select class="lift-input lift-ex-cat">
-          ${LIFT_CATEGORIES.map(c=>`<option value="${c}">${c}</option>`).join('')}
-        </select>
-      </div>
-    </div>
-    <div class="lift-sets"></div>
-    <div class="btn-row" style="margin-top:6px">
-      <button class="btn btn-sm btn-secondary" onclick="addLiftSetRow('${blockId}')">＋ Add Set</button>
-      <button class="btn btn-sm btn-danger" onclick="removeLiftExerciseRow('${blockId}')">Remove Exercise</button>
-    </div>
-  `;
-  container.appendChild(block);
-  if (prefill) {
-    block.querySelector('.lift-ex-select').value = prefill.exerciseId || '';
-    block.querySelector('.lift-ex-group').value = prefill.muscleGroup || 'Chest';
-    block.querySelector('.lift-ex-cat').value = prefill.category || 'Upper';
-    (prefill.sets || []).forEach(s => addLiftSetRow(blockId, s));
-  } else {
-    addLiftSetRow(blockId);
+    </div>`;
+  }).join('');
+}
+
+function liftSetRowHtml(name, idx, weight, reps) {
+  return `<div class="lift-set-row" style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+    <span style="color:var(--muted);font-size:12px;min-width:40px">Set ${idx+1}</span>
+    <input type="number" placeholder="lbs" value="${weight||''}" step="2.5" min="0"
+      style="width:70px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px">
+    <input type="number" placeholder="reps" value="${reps||''}" min="1"
+      style="width:60px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px">
+    <button onclick="this.closest('.lift-set-row').remove()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0 4px">x</button>
+  </div>`;
+}
+
+function toggleLiftExercise(name, checked) {
+  const block = document.getElementById('leb-' + CSS.escape(name));
+  const wrap = block.querySelector('.lift-sets-wrap');
+  wrap.style.display = checked ? '' : 'none';
+}
+
+function addLiftSet(name) {
+  const block = document.getElementById('leb-' + CSS.escape(name));
+  const wrap = block.querySelector('.lift-sets-wrap');
+  const btn = wrap.querySelector('button');
+  const rows = wrap.querySelectorAll('.lift-set-row');
+  const idx = rows.length;
+  let w = '', r = '';
+  if (rows.length) {
+    const inputs = rows[rows.length-1].querySelectorAll('input');
+    w = inputs[0].value; r = inputs[1].value;
   }
+  const div = document.createElement('div');
+  div.innerHTML = liftSetRowHtml(name, idx, w, r);
+  wrap.insertBefore(div.firstElementChild, btn);
+  wrap.querySelectorAll('.lift-set-row').forEach((row, i) => {
+    row.querySelector('span').textContent = 'Set ' + (i+1);
+  });
 }
-function onLiftExerciseSelect(blockId, sel) {
-  const block = document.getElementById(blockId);
-  const newNameField = block.querySelector('.lift-ex-newname');
-  if (sel.value === '__new__') {
-    newNameField.style.display = '';
-  } else {
-    newNameField.style.display = 'none';
-    const ex = getLiftExercises().find(e => e.id === sel.value);
-    if (ex) {
-      block.querySelector('.lift-ex-group').value = ex.muscleGroup;
-      block.querySelector('.lift-ex-cat').value = ex.category;
-    }
-  }
-}
-function addLiftSetRow(blockId, prefillSet) {
-  const block = document.getElementById(blockId);
-  const setsContainer = block.querySelector('.lift-sets');
-  const row = document.createElement('div');
-  row.className = 'lift-set-row';
-  const setNum = setsContainer.children.length + 1;
-  row.innerHTML = `
-    <span class="lift-set-label">Set ${setNum}</span>
-    <input type="number" step="any" class="lift-input lift-set-weight" placeholder="Weight (lbs)" value="${prefillSet?.weight ?? ''}">
-    <input type="number" step="1" class="lift-input lift-set-reps" placeholder="Reps" value="${prefillSet?.reps ?? ''}">
-    <button class="btn btn-sm btn-danger" onclick="removeLiftSetRow(this)">✕</button>
-  `;
-  setsContainer.appendChild(row);
-}
-function removeLiftSetRow(btn) {
-  const row = btn.closest('.lift-set-row');
-  const setsContainer = row.parentElement;
-  row.remove();
-  // Renumber remaining sets
-  [...setsContainer.children].forEach((r,i) => { r.querySelector('.lift-set-label').textContent = 'Set ' + (i+1); });
-}
-function removeLiftExerciseRow(blockId) {
-  const block = document.getElementById(blockId);
-  if (block) block.remove();
-}
+
 function saveLiftWorkout() {
   const date = document.getElementById('lift-log-date').value;
-  if (!date) { showMsg('lift-log-msg', 'Please select a date.', 'bad'); return; }
-  const blocks = document.querySelectorAll('#lift-log-exercises .lift-exercise-block');
-  if (!blocks.length) { showMsg('lift-log-msg', 'Add at least one exercise.', 'bad'); return; }
-
-  const exercises = getLiftExercises();
-  const workoutExercises = [];
-
-  for (const block of blocks) {
-    const sel = block.querySelector('.lift-ex-select');
-    const newNameInput = block.querySelector('.lift-ex-newname input');
-    const muscleGroup = block.querySelector('.lift-ex-group').value;
-    const category = block.querySelector('.lift-ex-cat').value;
-    let exerciseId, name;
-
-    if (sel.value === '__new__') {
-      name = newNameInput.value.trim();
-      if (!name) { showMsg('lift-log-msg', 'Enter a name for the new exercise.', 'bad'); return; }
-      exerciseId = slugify(name);
-      if (!exercises.some(e => e.id === exerciseId)) {
-        exercises.push({ id: exerciseId, name, muscleGroup, category });
-      }
-    } else if (sel.value) {
-      exerciseId = sel.value;
-      const existing = exercises.find(e => e.id === exerciseId);
-      name = existing ? existing.name : exerciseId;
-      if (existing) { existing.muscleGroup = muscleGroup; existing.category = category; }
-    } else {
-      showMsg('lift-log-msg', 'Select an exercise for each block (or add a new one).', 'bad');
-      return;
-    }
-
-    const setRows = block.querySelectorAll('.lift-set-row');
+  if (!date) { document.getElementById('lift-log-msg').textContent = 'Please select a date.'; return; }
+  const type = _liftType;
+  const exList = type === 'Upper' ? UPPER_EXERCISES : LOWER_EXERCISES;
+  const exercises = [];
+  exList.forEach(name => {
+    const block = document.getElementById('leb-' + CSS.escape(name));
+    if (!block) return;
+    const checkbox = block.querySelector('.lift-ex-check');
+    if (!checkbox.checked) return;
+    const rows = block.querySelectorAll('.lift-set-row');
     const sets = [];
-    setRows.forEach(row => {
-      const weight = parseFloat(row.querySelector('.lift-set-weight').value);
-      const reps = parseInt(row.querySelector('.lift-set-reps').value, 10);
-      if (!isNaN(weight) || !isNaN(reps)) sets.push({ weight: isNaN(weight)?null:weight, reps: isNaN(reps)?null:reps });
+    rows.forEach(row => {
+      const inputs = row.querySelectorAll('input');
+      const w = parseFloat(inputs[0].value);
+      const r = parseInt(inputs[1].value);
+      if (!isNaN(w) && !isNaN(r)) sets.push({ weight: w, reps: r });
     });
-    if (!sets.length) { showMsg('lift-log-msg', `Add at least one set for ${name}.`, 'bad'); return; }
-
-    workoutExercises.push({ exerciseId, name, muscleGroup, category, sets });
-  }
-
-  saveLiftExercises(exercises);
-
-  const workouts = getLiftWorkouts();
-  const idx = workouts.findIndex(w => w.date === date);
-  if (idx >= 0) {
-    if (!confirm(`You already have a workout logged for ${fmtDate(date)}. Overwrite it?`)) return;
-    workouts[idx] = { date, exercises: workoutExercises };
-  } else {
-    workouts.push({ date, exercises: workoutExercises });
-  }
-  saveLiftWorkouts(workouts);
-
-  showMsg('lift-log-msg', `✓ Saved workout for ${fmtDate(date)} (${workoutExercises.length} exercises).`, 'good');
-  setTimeout(() => { initLiftLogPage(); }, 900);
-}
-
-// ===== LIFT: PROGRESS =====
-function initLiftProgressPage() {
-  const names = getLiftExercises().map(e=>e.name).sort((a,b)=>a.localeCompare(b));
-  const sel = document.getElementById('lift-prog-exercise');
-  const prevValue = sel.value;
-  sel.innerHTML = names.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
-  if (prevValue && names.includes(prevValue)) {
-    sel.value = prevValue;
-  } else {
-    // Default to the most recently logged exercise, if any
-    const workouts = getLiftWorkouts().slice().sort((a,b)=>b.date.localeCompare(a.date));
-    const mostRecentName = workouts.length ? workouts[0].exercises[0]?.name : null;
-    sel.value = (mostRecentName && names.includes(mostRecentName)) ? mostRecentName : (names[0] || '');
-  }
-  renderLiftProgress();
-}
-function renderLiftProgress() {
-  const metric = document.getElementById('lift-prog-metric')?.value || 'maxWeight';
-  const exNameRaw = document.getElementById('lift-prog-exercise')?.value || '';
-  const exName = exNameRaw.trim();
-  const workouts = getLiftWorkouts().slice().sort((a,b)=>a.date.localeCompare(b.date));
-
-  let dataPoints = [];
-  const title = exName || 'Select an Exercise';
-  const color = '#a855f7';
-
-  if (exName) {
-    workouts.forEach(w => {
-      const ex = w.exercises.find(e => e.name.toLowerCase() === exName.toLowerCase());
-      if (!ex) return;
-      const val = metric === 'maxWeight' ? setMaxWeight(ex.sets) : setVolume(ex.sets);
-      dataPoints.push({ date: w.date, value: val });
-    });
-  }
-
-  document.getElementById('lift-prog-chart-title').innerHTML = `<div class="dot" style="background:${color}"></div>${escapeHtml(title)} — ${metric === 'maxWeight' ? 'Max Weight (lbs)' : 'Total Volume (lbs)'}`;
-
-  if (!dataPoints.length) {
-    makeChart('chart-lift-progress', { type:'line', data:{labels:['No data yet'],datasets:[{data:[null]}]},
-      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, datalabels:{display:false}} } });
-    document.getElementById('lift-prog-summary').innerHTML = '';
-    document.getElementById('lift-prog-table').innerHTML = `<p style="color:var(--muted);font-size:13px;padding:8px 0">${exName ? 'No logged sets found for "' + escapeHtml(exName) + '".' : 'Type or select an exercise above to see its progress.'}</p>`;
-    return;
-  }
-
-  const labels = dataPoints.map(p => fmtDate(p.date).split(',')[0]);
-  const values = dataPoints.map(p => p.value);
-  const unit = metric === 'maxWeight' ? ' lbs' : ' lbs vol';
-
-  makeChart('chart-lift-progress', {
-    type: 'line',
-    data: { labels, datasets: [
-      { label: title, data: values, borderColor: color, backgroundColor: color + '22', borderWidth: 2.5, pointRadius: 5, pointHoverRadius: 8, fill: true, tension: .3,
-        datalabels: { display: true, align: 'top', anchor: 'top', color: color, font: {size:11,weight:'600'}, formatter: v => v != null ? Math.round(v).toLocaleString()+unit : null, padding: 4 } }
-    ]},
-    options: {
-      responsive: true, maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      plugins: { legend: {display:false}, datalabels: {}, zoom: ZOOM_OPTS },
-      scales: {
-        y: { ticks: { color: '#8892a4', font:{size:11} }, grid: { color: 'rgba(255,255,255,.05)' } },
-        x: { ticks: { color: '#8892a4', font:{size:11}, maxRotation:45, autoSkip:true, maxTicksLimit:16 }, grid: { display:false } }
-      }
-    }
+    if (sets.length) exercises.push({ name, sets });
   });
-
-  const first = values[0], last = values[values.length-1];
-  const change = last - first;
-  const pctChange = first !== 0 ? (change/first*100) : 0;
-  document.getElementById('lift-prog-summary').innerHTML = `
-    <div class="stat accent-blue"><div class="label">First Logged</div><div class="value" style="font-size:22px">${Math.round(first).toLocaleString()}<span class="unit">${metric==='maxWeight'?'lbs':'vol'}</span></div><div class="sub">${fmtDate(dataPoints[0].date)}</div></div>
-    <div class="stat accent-green"><div class="label">Latest</div><div class="value" style="font-size:22px">${Math.round(last).toLocaleString()}<span class="unit">${metric==='maxWeight'?'lbs':'vol'}</span></div><div class="sub">${fmtDate(dataPoints[dataPoints.length-1].date)}</div></div>
-    <div class="stat ${change>=0?'accent-green':'accent-orange'}"><div class="label">Change</div><div class="value" style="font-size:22px">${change>=0?'+':''}${Math.round(change).toLocaleString()}</div><div class="sub">${change>=0?'+':''}${pctChange.toFixed(1)}%</div></div>
-  `;
-
-  document.getElementById('lift-prog-table').innerHTML = `<table>
-    <thead><tr><th>Date</th><th>${metric==='maxWeight'?'Max Weight':'Total Volume'}</th></tr></thead>
-    <tbody>${dataPoints.slice().reverse().map(p=>`<tr><td>${fmtDate(p.date)}</td><td>${Math.round(p.value).toLocaleString()}${unit}</td></tr>`).join('')}</tbody>
-  </table>`;
+  if (!exercises.length) { document.getElementById('lift-log-msg').textContent = 'Select at least one exercise with sets.'; return; }
+  const workouts = getLiftWorkouts();
+  const idx = workouts.findIndex(w => w.date === date && w.type === type);
+  if (idx >= 0) workouts[idx] = { date, type, exercises };
+  else workouts.push({ date, type, exercises });
+  saveLiftWorkouts(workouts);
+  document.getElementById('lift-log-msg').textContent = 'Saved!';
+  setTimeout(() => { document.getElementById('lift-log-msg').textContent = ''; }, 2000);
 }
 
 // ===== LIFT: HISTORY =====
 function renderLiftHistory() {
-  const workouts = getLiftWorkouts().slice().sort((a,b)=>b.date.localeCompare(a.date));
+  const workouts = getLiftWorkouts().slice().sort((a,b) => {
+    const dc = b.date.localeCompare(a.date);
+    if (dc !== 0) return dc;
+    return (a.type === 'Upper' ? 0 : 1) - (b.type === 'Upper' ? 0 : 1);
+  });
   const el = document.getElementById('lift-history-list');
   if (!workouts.length) { el.innerHTML = '<p style="color:var(--muted);font-size:13px;padding:8px 0">No workouts logged yet.</p>'; return; }
-  const badgeClass = c => c === 'Upper' ? 'badge-upper' : c === 'Lower' ? 'badge-lower' : 'badge-core';
   el.innerHTML = workouts.map(w => {
-    const cats = [...new Set(w.exercises.map(ex => ex.category))];
-    const totalVol = w.exercises.reduce((s,ex) => s + setVolume(ex.sets), 0);
-    return `<div class="card" style="margin-bottom:14px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <strong>${fmtDate(w.date)}</strong>
-          ${cats.map(c => `<span class="badge ${badgeClass(c)}">${c}</span>`).join('')}
-          <span style="font-size:12px;color:var(--muted)">${w.exercises.length} exercise${w.exercises.length!==1?'s':''} · ${Math.round(totalVol).toLocaleString()} lbs volume</span>
-        </div>
+    const typeColor = w.type === 'Upper' ? '#a855f7' : '#34d399';
+    const sets = w.exercises.map(ex =>
+      `<div style="margin-bottom:8px">
+        <div style="font-weight:600;font-size:13px;color:var(--text);margin-bottom:3px">${escapeHtml(ex.name)}</div>
+        <div style="font-size:12px;color:var(--muted)">${ex.sets.map((s,i)=>i+1+': '+s.weight+'x'+s.reps).join(' &nbsp;·&nbsp; ')}</div>
+      </div>`
+    ).join('');
+    return `<div class="card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <div>
-          <button class="btn btn-sm btn-danger" onclick="deleteLiftWorkout('${w.date}')">✕ Delete</button>
+          <span style="font-weight:700;font-size:15px">${fmtDate(w.date)}</span>
+          <span style="display:inline-block;margin-left:8px;padding:2px 8px;border-radius:99px;font-size:11px;font-weight:600;background:${typeColor}22;color:${typeColor}">${w.type}</span>
         </div>
+        <button class="btn btn-sm btn-secondary" onclick="deleteLiftWorkout('${w.date}','${w.type}')" style="color:#f87171">Delete</button>
       </div>
-      <table>
-        <thead><tr><th>Exercise</th><th>Muscle Group</th><th>Sets</th><th>Max Weight</th><th>Volume</th></tr></thead>
-        <tbody>${w.exercises.map(ex => `<tr>
-          <td>${escapeHtml(ex.name)}</td>
-          <td>${ex.muscleGroup}</td>
-          <td>${ex.sets.map(s => `${s.weight ?? '—'}×${s.reps ?? '—'}`).join(', ')}</td>
-          <td>${setMaxWeight(ex.sets)} lbs</td>
-          <td>${Math.round(setVolume(ex.sets)).toLocaleString()} lbs</td>
-        </tr>`).join('')}</tbody>
-      </table>
+      ${sets}
     </div>`;
   }).join('');
 }
-function deleteLiftWorkout(date) {
-  if (!confirm(`Delete the workout logged for ${fmtDate(date)}? This cannot be undone.`)) return;
-  const workouts = getLiftWorkouts().filter(w => w.date !== date);
+
+function deleteLiftWorkout(date, type) {
+  if (!confirm('Delete this workout?')) return;
+  const workouts = getLiftWorkouts().filter(w => !(w.date === date && w.type === type));
   saveLiftWorkouts(workouts);
   renderLiftHistory();
-}
-
-// ===== LIFT: EXERCISES =====
-function renderLiftExercisesPage() {
-  const exercises = getLiftExercises().slice().sort((a,b) => a.name.localeCompare(b.name));
-  const workouts = getLiftWorkouts();
-  const el = document.getElementById('lift-exercises-table');
-  if (!exercises.length) { el.innerHTML = '<p style="color:var(--muted);font-size:13px;padding:8px 0">No exercises yet. Add one above or log a workout.</p>'; return; }
-  el.innerHTML = `<table>
-    <thead><tr><th>Name</th><th>Muscle Group</th><th>Category</th><th>Times Logged</th><th></th></tr></thead>
-    <tbody>${exercises.map(ex => {
-      const timesLogged = workouts.filter(w => w.exercises.some(e => e.exerciseId === ex.id)).length;
-      return `<tr>
-        <td>${escapeHtml(ex.name)}</td>
-        <td><select class="lift-input" onchange="updateExerciseField('${ex.id}','muscleGroup',this.value)">${MUSCLE_GROUPS.map(g=>`<option value="${g}" ${ex.muscleGroup===g?'selected':''}>${g}</option>`).join('')}</select></td>
-        <td><select class="lift-input" onchange="updateExerciseField('${ex.id}','category',this.value)">${LIFT_CATEGORIES.map(c=>`<option value="${c}" ${ex.category===c?'selected':''}>${c}</option>`).join('')}</select></td>
-        <td>${timesLogged}</td>
-        <td><button class="btn btn-sm btn-danger" onclick="deleteExercise('${ex.id}')">✕</button></td>
-      </tr>`;
-    }).join('')}</tbody>
-  </table>`;
-}
-function updateExerciseField(id, field, value) {
-  const exercises = getLiftExercises();
-  const ex = exercises.find(e => e.id === id);
-  if (!ex) return;
-  ex[field] = value;
-  saveLiftExercises(exercises);
-}
-function deleteExercise(id) {
-  if (!confirm('Remove this exercise from your library? Past logged workouts will keep their data.')) return;
-  const exercises = getLiftExercises().filter(e => e.id !== id);
-  saveLiftExercises(exercises);
-  renderLiftExercisesPage();
-}
-function onNewExGroupChange() {
-  const sel = document.getElementById('new-ex-group');
-  const catSel = document.getElementById('new-ex-cat');
-  const defaults = { Chest:'Upper', Back:'Upper', Shoulders:'Upper', Arms:'Upper', Legs:'Lower', Core:'Core', Other:'Upper' };
-  catSel.value = defaults[sel.value] || 'Upper';
-}
-function addNewExercise() {
-  const name = document.getElementById('new-ex-name').value.trim();
-  if (!name) { showMsg('new-ex-msg', 'Enter an exercise name.', 'bad'); return; }
-  const muscleGroup = document.getElementById('new-ex-group').value;
-  const category = document.getElementById('new-ex-cat').value;
-  const id = slugify(name);
-  const exercises = getLiftExercises();
-  if (exercises.some(e => e.id === id)) { showMsg('new-ex-msg', 'That exercise already exists.', 'bad'); return; }
-  exercises.push({ id, name, muscleGroup, category });
-  saveLiftExercises(exercises);
-  document.getElementById('new-ex-name').value = '';
-  renderLiftExercisesPage();
-  showMsg('new-ex-msg', `✓ Added "${name}" to your library.`, 'good');
 }
 
 // ===== GOOGLE DRIVE AUTO-SYNC =====
@@ -2932,7 +2634,6 @@ function getAllAppData() {
     entries: getData(),
     photos: getPhotos(),
     inbody: getInBody(),
-    liftExercises: getLiftExercises(),
     liftWorkouts: getLiftWorkouts()
   };
 }
@@ -2941,7 +2642,6 @@ function applyAllAppData(remote) {
   if (Array.isArray(remote.entries)) localStorage.setItem('ht_entries', JSON.stringify(remote.entries));
   if (Array.isArray(remote.photos)) localStorage.setItem('ht_photos', JSON.stringify(remote.photos));
   if (Array.isArray(remote.inbody)) localStorage.setItem('ht_inbody', JSON.stringify(remote.inbody));
-  if (Array.isArray(remote.liftExercises)) localStorage.setItem('ht_lift_exercises', JSON.stringify(remote.liftExercises));
   if (Array.isArray(remote.liftWorkouts)) localStorage.setItem('ht_lift_workouts', JSON.stringify(remote.liftWorkouts));
 }
 
