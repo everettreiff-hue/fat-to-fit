@@ -2382,7 +2382,7 @@ function toggleLiftExercise(name, checked) {
 function addLiftSet(name) {
   const block = document.getElementById('leb-' + CSS.escape(name));
   const wrap = block.querySelector('.lift-sets-wrap');
-  const btn = wrap.querySelector('button');
+  const btn = wrap.querySelector(':scope > button');
   const rows = wrap.querySelectorAll('.lift-set-row');
   const idx = rows.length;
   let w = '', r = '';
