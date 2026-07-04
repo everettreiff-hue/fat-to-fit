@@ -813,12 +813,14 @@
   <div class="brand">🏋️ Lifting</div>
   <button class="active" onclick="showLiftPage('liftlog')">Log</button>
   <button onclick="showLiftPage('lifthistory')">History</button>
+  <button onclick="showLiftPage('liftprogress')">Progress</button>
   <button onclick="saveJSON()" style="margin-left:auto;color:var(--accent2);border-bottom-color:transparent">📦 Save JSON</button>
   <button class="drive-sync-status" onclick="driveConnectClick()" style="color:var(--muted);border-bottom-color:transparent;font-size:12px;white-space:nowrap" title="Connect or re-sync Google Drive">☁️ Drive: tap to connect</button>
 </nav>
 <nav class="bottom-nav" style="display:none">
   <button class="active" onclick="showLiftPage('liftlog')"><span class="nav-icon">✏️</span>Log</button>
   <button onclick="showLiftPage('lifthistory')"><span class="nav-icon">🕘</span>History</button>
+  <button onclick="showLiftPage('liftprogress')"><span class="nav-icon">📈</span>Progress</button>
 </nav>
 <main>
 <div id="page-liftlog" class="page active">
@@ -848,6 +850,29 @@
 <div id="page-lifthistory" class="page">
   <div class="section-title">Workout History</div>
   <div id="lift-history-list"></div>
+</div>
+
+<!-- ===== PROGRESS ===== -->
+<div id="page-liftprogress" class="page">
+  <div class="section-title">Exercise Progress</div>
+
+  <!-- Overall summary -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title" style="margin-bottom:12px">Overall Progress</div>
+    <div id="lift-overall-stats"><p style="color:var(--muted);font-size:13px">Loading…</p></div>
+  </div>
+
+  <!-- Per-exercise -->
+  <div class="card">
+    <div style="margin-bottom:14px">
+      <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px">Select Exercise</label>
+      <select id="lift-ex-select" onchange="renderLiftExerciseProgress(this.value)"
+        style="width:100%;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;outline:none">
+        <option value="">Select an exercise…</option>
+      </select>
+    </div>
+    <div id="lift-ex-progress"></div>
+  </div>
 </div>
 </main>
 </div><!-- /wrap-lift -->
@@ -999,18 +1024,261 @@ function switchAppMode(mode) {
   if (mode === 'lift') initLiftLogPage();
 }
 
+// ===== LIFT: PROGRESS TAB =====
+var _liftProgressChart = null;
+
+function getLiftExerciseData(workouts) {
+  const data = {};
+  workouts.forEach(function(w) {
+    w.exercises.forEach(function(ex) {
+      if (!ex.sets || !ex.sets.length) return;
+      if (!data[ex.name]) data[ex.name] = [];
+      var weights = ex.sets.map(function(s){ return parseFloat(s.weight)||0; });
+      var reps    = ex.sets.map(function(s){ return parseInt(s.reps)||0; });
+      var maxW    = Math.max.apply(null, weights);
+      var maxR    = Math.max.apply(null, reps);
+      var totalR  = reps.reduce(function(a,b){return a+b;},0);
+      var totalVol= ex.sets.reduce(function(acc,s){return acc+(parseFloat(s.weight)||0)*(parseInt(s.reps)||0);},0);
+      data[ex.name].push({ date: w.date, sets: ex.sets, maxWeight: isFinite(maxW)?maxW:0, maxReps: isFinite(maxR)?maxR:0, totalReps: totalR, totalVolume: totalVol });
+    });
+  });
+  Object.values(data).forEach(function(arr){ arr.sort(function(a,b){return a.date.localeCompare(b.date);}); });
+  return data;
+}
+
+function renderLiftProgress() {
+  var workouts = getLiftWorkouts().sort(function(a,b){return a.date.localeCompare(b.date);});
+  renderLiftOverallStats(workouts);
+  populateLiftExDropdown(workouts);
+  // Auto-select first populated exercise
+  var sel = document.getElementById('lift-ex-select');
+  if (sel && !sel.value && sel.options.length > 1) {
+    sel.value = sel.options[1].value;
+    renderLiftExerciseProgress(sel.value);
+  } else if (sel && sel.value) {
+    renderLiftExerciseProgress(sel.value);
+  }
+}
+
+function renderLiftOverallStats(workouts) {
+  var el = document.getElementById('lift-overall-stats');
+  if (!el) return;
+  if (!workouts.length) {
+    el.innerHTML = '<p style="color:var(--muted);font-size:13px">No workout data yet.</p>';
+    return;
+  }
+  var exData = getLiftExerciseData(workouts);
+  var progresses = [];
+  Object.keys(exData).forEach(function(name) {
+    var sessions = exData[name];
+    if (sessions.length >= 2) {
+      var first = sessions[0].maxWeight;
+      var last  = sessions[sessions.length-1].maxWeight;
+      if (first > 0) {
+        progresses.push({ name: name, pct: (last-first)/first*100, first: first, last: last });
+      }
+    }
+  });
+  progresses.sort(function(a,b){return b.pct-a.pct;});
+
+  var avgPct = progresses.length ? progresses.reduce(function(s,p){return s+p.pct;},0)/progresses.length : 0;
+  var mostImproved = progresses[0];
+  var totalSets = workouts.reduce(function(s,w){return s+w.exercises.reduce(function(ss,e){return ss+e.sets.length;},0);},0);
+  var upperCount = workouts.filter(function(w){return w.type==='Upper';}).length;
+  var lowerCount = workouts.filter(function(w){return w.type==='Lower';}).length;
+
+  var barMax = progresses.length ? Math.max.apply(null, progresses.map(function(p){return Math.abs(p.pct);})) : 1;
+
+  el.innerHTML =
+    '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:18px">' +
+      '<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center">' +
+        '<div style="font-size:22px;font-weight:700;color:var(--accent2)">' + (avgPct>=0?'+':'') + avgPct.toFixed(1) + '%</div>' +
+        '<div style="font-size:10px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.05em">Avg Weight Gain</div>' +
+      '</div>' +
+      '<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center">' +
+        '<div style="font-size:22px;font-weight:700;color:var(--text)">' + workouts.length + '</div>' +
+        '<div style="font-size:10px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.05em">Workouts</div>' +
+      '</div>' +
+      '<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center">' +
+        '<div style="font-size:22px;font-weight:700;color:var(--text)">' + totalSets + '</div>' +
+        '<div style="font-size:10px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.05em">Total Sets</div>' +
+      '</div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">' +
+      '<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center">' +
+        '<div style="font-size:18px;font-weight:700;color:var(--text)">' + upperCount + ' Upper / ' + lowerCount + ' Lower</div>' +
+        '<div style="font-size:10px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.05em">Workout Split</div>' +
+      '</div>' +
+      (mostImproved ?
+      '<div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center">' +
+        '<div style="font-size:13px;font-weight:700;color:var(--accent2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + escapeHtml(mostImproved.name) + '</div>' +
+        '<div style="font-size:10px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.05em">Most Improved (+' + mostImproved.pct.toFixed(0) + '%)</div>' +
+      '</div>' : '<div></div>') +
+    '</div>' +
+    (progresses.length ?
+      '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:10px">Exercise Ranking</div>' +
+      progresses.map(function(p) {
+        var barPct = Math.min(100, (Math.abs(p.pct)/barMax)*100);
+        var col = p.pct >= 0 ? 'var(--accent2)' : '#f87171';
+        return '<div style="margin-bottom:10px">' +
+          '<div style="display:flex;justify-content:space-between;margin-bottom:3px">' +
+            '<span style="font-size:13px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:65%">' + escapeHtml(p.name) + '</span>' +
+            '<span style="font-size:12px;font-weight:700;color:' + col + ';white-space:nowrap">' + (p.pct>=0?'+':'') + p.pct.toFixed(1) + '% &nbsp;<span style="color:var(--muted);font-weight:400">' + p.first + '→' + p.last + ' lbs</span></span>' +
+          '</div>' +
+          '<div style="height:5px;background:var(--border);border-radius:3px">' +
+            '<div style="height:5px;border-radius:3px;background:' + col + ';width:' + barPct + '%"></div>' +
+          '</div>' +
+        '</div>';
+      }).join('') : '');
+}
+
+function populateLiftExDropdown(workouts) {
+  var sel = document.getElementById('lift-ex-select');
+  if (!sel) return;
+  var exData = getLiftExerciseData(workouts);
+  var names = Object.keys(exData).sort();
+  var current = sel.value;
+  sel.innerHTML = '<option value="">Select an exercise…</option>' +
+    names.map(function(n) {
+      var sessions = exData[n];
+      return '<option value="' + escapeHtml(n) + '"' + (n===current?' selected':'') + '>' +
+        escapeHtml(n) + ' (' + sessions.length + ' session' + (sessions.length===1?'':'s') + ')' +
+        '</option>';
+    }).join('');
+  if (!sel.value && names.length) sel.value = names[0];
+}
+
+function renderLiftExerciseProgress(name) {
+  var el = document.getElementById('lift-ex-progress');
+  if (!el) return;
+  if (!name) { el.innerHTML = ''; return; }
+
+  var workouts = getLiftWorkouts().sort(function(a,b){return a.date.localeCompare(b.date);});
+  var exData   = getLiftExerciseData(workouts);
+  var sessions = exData[name] || [];
+
+  if (!sessions.length) {
+    el.innerHTML = '<p style="color:var(--muted);font-size:13px;margin-top:12px">No data for this exercise.</p>';
+    return;
+  }
+
+  var pr = Math.max.apply(null, sessions.map(function(s){return s.maxWeight;}));
+  var prReps = 0;
+  sessions.forEach(function(s){ if (s.maxWeight===pr) prReps = Math.max(prReps, s.maxReps); });
+  var firstMax = sessions[0].maxWeight;
+  var lastMax  = sessions[sessions.length-1].maxWeight;
+  var pctChange = firstMax > 0 ? (lastMax-firstMax)/firstMax*100 : 0;
+  var totalSets = sessions.reduce(function(s,sess){return s+sess.sets.length;},0);
+  var totalVol  = sessions.reduce(function(s,sess){return s+sess.totalVolume;},0);
+  var pctCol = pctChange >= 0 ? 'var(--accent2)' : '#f87171';
+
+  // Trend: compare last 2 sessions
+  var trend = '';
+  if (sessions.length >= 2) {
+    var diff = lastMax - sessions[sessions.length-2].maxWeight;
+    trend = diff > 0 ? '↑ ' + diff + ' lbs from last session' : diff < 0 ? '↓ ' + Math.abs(diff) + ' lbs from last session' : '→ Same as last session';
+  }
+
+  el.innerHTML =
+    '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:4px 0 16px">' +
+      '<div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center">' +
+        '<div style="font-size:17px;font-weight:700;color:var(--accent)">' + pr + ' <span style="font-size:10px;font-weight:400">lbs</span></div>' +
+        '<div style="font-size:10px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.05em">PR</div>' +
+      '</div>' +
+      '<div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center">' +
+        '<div style="font-size:17px;font-weight:700;color:' + pctCol + '">' + (pctChange>=0?'+':'') + pctChange.toFixed(1) + '%</div>' +
+        '<div style="font-size:10px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Weight Δ</div>' +
+      '</div>' +
+      '<div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center">' +
+        '<div style="font-size:17px;font-weight:700;color:var(--text)">' + sessions.length + '</div>' +
+        '<div style="font-size:10px;color:var(--muted);margin-top:2px;text-transform:uppercase;letter-spacing:.05em">Sessions</div>' +
+      '</div>' +
+    '</div>' +
+    (trend ? '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;text-align:center">' + escapeHtml(trend) + '</div>' : '') +
+    '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Max Weight Over Time</div>' +
+    '<div style="height:210px;position:relative;margin-bottom:20px">' +
+      '<canvas id="lift-progress-canvas"></canvas>' +
+    '</div>' +
+    '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Recent Sessions</div>' +
+    sessions.slice().reverse().slice(0,6).map(function(sess) {
+      return '<div style="border-top:1px solid var(--border);padding:9px 0">' +
+        '<div style="display:flex;justify-content:space-between;margin-bottom:5px">' +
+          '<span style="font-weight:600;font-size:13px">' + fmtDate(sess.date) + '</span>' +
+          '<span style="color:var(--accent);font-weight:600;font-size:13px">' + sess.maxWeight + ' lbs max</span>' +
+        '</div>' +
+        '<div style="color:var(--muted);font-size:12px">' +
+          sess.sets.map(function(s,i){return 'S'+(i+1)+': '+(s.weight||'—')+'×'+(s.reps||'—');}).join(' · ') +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+  // Render Chart.js line chart
+  if (_liftProgressChart) { try { _liftProgressChart.destroy(); } catch(e){} _liftProgressChart = null; }
+  var canvas = document.getElementById('lift-progress-canvas');
+  if (canvas && typeof Chart !== 'undefined') {
+    var isDark = document.documentElement.classList.contains('dark') ||
+                 getComputedStyle(document.documentElement).getPropertyValue('--bg').trim() !== '#fff';
+    var gridCol = 'rgba(128,128,128,0.15)';
+    var tickCol = '#888';
+    _liftProgressChart = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: sessions.map(function(s){ return s.date; }),
+        datasets: [{
+          label: 'Max Weight (lbs)',
+          data: sessions.map(function(s){ return s.maxWeight; }),
+          borderColor: '#a78bfa',
+          backgroundColor: 'rgba(167,139,250,0.12)',
+          fill: true,
+          tension: 0.35,
+          pointRadius: sessions.length <= 10 ? 5 : 3,
+          pointBackgroundColor: '#a78bfa',
+          pointHoverRadius: 7,
+          borderWidth: 2,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              title: function(items) { return fmtDate(items[0].label); },
+              label: function(item) { return ' ' + item.raw + ' lbs'; }
+            }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: tickCol, maxTicksLimit: 7, maxRotation: 0 },
+            grid:  { color: gridCol }
+          },
+          y: {
+            ticks: { color: tickCol, callback: function(v){ return v + ' lbs'; } },
+            grid:  { color: gridCol },
+            beginAtZero: false
+          }
+        }
+      }
+    });
+  }
+}
+
+
 // ===== LIFT NAVIGATION =====
 function showLiftPage(name) {
   const scope = document.getElementById('wrap-lift');
   scope.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const pg = scope.querySelector('#page-'+name);
   if (pg) pg.classList.add('active');
-  const labels = ['liftlog','lifthistory'];
+  const labels = ['liftlog','lifthistory','liftprogress'];
   scope.querySelectorAll('nav.top-nav button').forEach((b,i) => b.classList.toggle('active', labels[i]===name));
   scope.querySelectorAll('nav.bottom-nav button').forEach((b,i) => b.classList.toggle('active', labels[i]===name));
   window.scrollTo(0,0);
   if (name === 'lifthistory') renderLiftHistory();
   if (name === 'liftlog') initLiftLogPage();
+  if (name === 'liftprogress') renderLiftProgress();
 }
 
 
