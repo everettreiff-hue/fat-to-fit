@@ -2080,6 +2080,27 @@ function _initApp() {
   document.getElementById('log-date').value = isoDate(new Date());
   try { renderDashboard(); _diagStep("renderDashboard done"); } catch(e) { _diagErr("renderDashboard", e); }
   try { initDriveSync(); } catch(e) { _diagErr("initDriveSync", e); }
+  setTimeout(function() {
+    try {
+      var d = document.getElementById("page-dashboard");
+      var m = document.querySelector("#wrap-body main");
+      var wb = document.getElementById("wrap-body");
+      var ms = document.querySelector(".app-mode-switch");
+      var st = document.getElementById("headline-stats");
+      var cs = d ? window.getComputedStyle(d) : null;
+      _diagStep(
+        "POST-RENDER:\n" +
+        "dashboard h=" + (d?d.offsetHeight:"null") + " display=" + (cs?cs.display:"?") + "\n" +
+        "main h=" + (m?m.offsetHeight:"null") + "\n" +
+        "wrap-body display=" + (wb?(wb.style.display||"auto"):"null") + " h=" + (wb?wb.offsetHeight:"null") + "\n" +
+        "mode-switch h=" + (ms?ms.offsetHeight:"null") + "\n" +
+        "stats len=" + (st?st.innerHTML.length:"null") + "\n" +
+        "color=" + (cs?cs.color:"?") + "\n" +
+        "bg=" + (cs?cs.backgroundColor:"?") + "\n" +
+        "scrollY=" + window.scrollY + " vp=" + window.innerWidth + "x" + window.innerHeight
+      );
+    } catch(e2) { _diagErr("post-check", e2); }
+  }, 300);
 
   // Inject PWA manifest as inline data URL
   const manifest = {
