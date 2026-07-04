@@ -1013,7 +1013,8 @@ const UPPER_EXERCISES = [
   'Lower Chest Pull Down','Preacher Bar Curls','Bull Testicals',
   'Dumbbell Curls','Behind Head Tricep Raises','Flat Bench (SMITH)',
   'Seated Row','High-Low Cross Over (Lower Pec)','Shoulder Press',
-  'Chest Press','Bench','Declined Press (Berry)','Tricep Press','Bicep Curl'
+  'Chest Press','Bench','Declined Press (Berry)','Tricep Press','Bicep Curl',
+  'Cable Shoulder Raises','Low-High Double Cable (Lower Pec)'
 ];
 const LOWER_EXERCISES = [
   'Seated Leg Curl','Leg Extension','Calf Raises (Squat Machine)',
@@ -1032,9 +1033,11 @@ function escapeHtml(s) { const d = document.createElement('div'); d.textContent 
     { date:'2026-06-21', type:'Upper', exercises:[
       { name:'Pectoral Fly', sets:[{weight:160,reps:8},{weight:160,reps:8},{weight:160,reps:8}] },
       { name:'Rear Deltoid', sets:[{weight:115,reps:8},{weight:100,reps:8},{weight:100,reps:6}] },
-      { name:'Inclined Bend (SMITH)', sets:[{weight:50,reps:8},{weight:70,reps:8},{weight:70,reps:6}] },
+      { name:'Inclined Bench (SMITH)', sets:[{weight:50,reps:8},{weight:70,reps:8},{weight:70,reps:6}] },
       { name:'Lat Pulldown', sets:[{weight:100,reps:8},{weight:115,reps:8},{weight:115,reps:8}] },
-      { name:'Lower Chest Pull Down', sets:[{weight:15,reps:8},{weight:20,reps:8},{weight:15,reps:8}] },
+      { name:'Lower Chest Pull Down', sets:[{weight:15,reps:8},{weight:20,reps:8},{weight:15,reps:8}] }
+    ]},
+    { date:'2026-06-22', type:'Upper', exercises:[
       { name:'Preacher Bar Curls', sets:[{weight:55,reps:8},{weight:60,reps:8},{weight:60,reps:8},{weight:60,reps:8}] },
       { name:'Bull Testicals', sets:[{weight:42.5,reps:8},{weight:50,reps:8},{weight:50,reps:8},{weight:50,reps:6}] },
       { name:'Dumbbell Curls', sets:[{weight:27.5,reps:8},{weight:30,reps:8}] },
@@ -1084,9 +1087,48 @@ function escapeHtml(s) { const d = document.createElement('div'); d.textContent 
       { name:'Leg Extension', sets:[{weight:130,reps:8},{weight:145,reps:8},{weight:145,reps:10}] },
       { name:'Seated Leg Press (Machine)', sets:[{weight:220,reps:8},{weight:235,reps:8},{weight:235,reps:8}] },
       { name:'Calf Extension', sets:[{weight:130,reps:12},{weight:145,reps:8},{weight:160,reps:12},{weight:175,reps:8}] }
+    ]},
+    { date:'2026-07-04', type:'Upper', exercises:[
+      { name:'Pectoral Fly', sets:[{weight:175,reps:8},{weight:175,reps:8},{weight:175,reps:7}] },
+      { name:'Rear Deltoid', sets:[{weight:100,reps:8},{weight:100,reps:8},{weight:100,reps:8}] },
+      { name:'Inclined Bench (SMITH)', sets:[{weight:70,reps:8},{weight:70,reps:8}] },
+      { name:'Lat Pulldown', sets:[{weight:115,reps:8},{weight:130,reps:8},{weight:130,reps:8}] },
+      { name:'Cable Shoulder Raises', sets:[{weight:10,reps:8},{weight:10,reps:6},{weight:10,reps:6}] },
+      { name:'Low-High Double Cable (Lower Pec)', sets:[{weight:10,reps:8},{weight:15,reps:8},{weight:15,reps:8}] }
     ]}
   ];
   saveLiftWorkouts(seed);
+})();
+
+// ===== MIGRATE LIFT DATA TO LATEST VERSION =====
+(function migrateV2() {
+  if (localStorage.getItem('ht_lift_version') === '2') return;
+  const workouts = getLiftWorkouts();
+  if (!workouts.length) { localStorage.setItem('ht_lift_version', '2'); return; }
+  workouts.forEach(w => w.exercises.forEach(ex => {
+    if (ex.name === 'Inclined Bend (SMITH)') ex.name = 'Inclined Bench (SMITH)';
+  }));
+  const jun22Names = ['Preacher Bar Curls','Bull Testicals','Dumbbell Curls','Behind Head Tricep Raises'];
+  const jun21 = workouts.find(w => w.date === '2026-06-21' && w.type === 'Upper');
+  if (jun21) {
+    const toMove = jun21.exercises.filter(e => jun22Names.includes(e.name));
+    jun21.exercises = jun21.exercises.filter(e => !jun22Names.includes(e.name));
+    if (toMove.length && !workouts.find(w => w.date === '2026-06-22' && w.type === 'Upper')) {
+      workouts.push({ date:'2026-06-22', type:'Upper', exercises: toMove });
+    }
+  }
+  if (!workouts.find(w => w.date === '2026-07-04' && w.type === 'Upper')) {
+    workouts.push({ date:'2026-07-04', type:'Upper', exercises:[
+      { name:'Pectoral Fly', sets:[{weight:175,reps:8},{weight:175,reps:8},{weight:175,reps:7}] },
+      { name:'Rear Deltoid', sets:[{weight:100,reps:8},{weight:100,reps:8},{weight:100,reps:8}] },
+      { name:'Inclined Bench (SMITH)', sets:[{weight:70,reps:8},{weight:70,reps:8}] },
+      { name:'Lat Pulldown', sets:[{weight:115,reps:8},{weight:130,reps:8},{weight:130,reps:8}] },
+      { name:'Cable Shoulder Raises', sets:[{weight:10,reps:8},{weight:10,reps:6},{weight:10,reps:6}] },
+      { name:'Low-High Double Cable (Lower Pec)', sets:[{weight:10,reps:8},{weight:15,reps:8},{weight:15,reps:8}] }
+    ]});
+  }
+  saveLiftWorkouts(workouts);
+  localStorage.setItem('ht_lift_version', '2');
 })();
 
 // ===== UTILS =====
