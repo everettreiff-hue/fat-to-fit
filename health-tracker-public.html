@@ -340,11 +340,40 @@
 </style>
 </head>
 <body>
+<script>
+/* iOS Safari rendering test - inject visible fixed overlay */
+(function() {
+  function addTestOverlay() {
+    var d = document.createElement('div');
+    d.id = 'ios-test-overlay';
+    d.style.cssText = 'position:fixed;bottom:120px;left:10px;right:10px;z-index:999998;background:#e53e3e;color:#fff;padding:16px;border-radius:12px;font-size:16px;font-weight:bold;font-family:sans-serif;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.5)';
+    d.innerHTML = '🔴 FIXED OVERLAY TEST<br><small style="font-size:12px;font-weight:normal">If you see this, position:fixed works<br>Screen: ' + window.innerWidth + 'x' + window.innerHeight + '</small>';
+    document.body.appendChild(d);
+    setTimeout(function() {
+      var main = document.querySelector('main');
+      var dash = document.getElementById('page-dashboard');
+      var info = document.createElement('div');
+      info.id = 'ios-test-info';
+      info.style.cssText = 'position:fixed;top:10px;left:10px;right:10px;z-index:999997;background:#2b6cb0;color:#fff;padding:12px;border-radius:8px;font-size:12px;font-family:monospace;line-height:1.4';
+      var dashBcr = dash ? dash.getBoundingClientRect() : null;
+      var mainBcr = main ? main.getBoundingClientRect() : null;
+      info.innerHTML = 
+        'dash rect: ' + (dashBcr ? Math.round(dashBcr.top)+','+Math.round(dashBcr.left)+' '+Math.round(dashBcr.width)+'x'+Math.round(dashBcr.height) : 'null') + '<br>' +
+        'main rect: ' + (mainBcr ? Math.round(mainBcr.top)+'->'+Math.round(mainBcr.bottom) : 'null') + '<br>' +
+        'main scrollTop: ' + (main ? main.scrollTop : 'null') + '<br>' +
+        'body bg: ' + window.getComputedStyle(document.body).backgroundColor + '<br>' +
+        'dash opacity: ' + (dash ? window.getComputedStyle(dash).opacity : 'null') + '<br>' +
+        'dash vis: ' + (dash ? window.getComputedStyle(dash).visibility : 'null') + '<br>' +
+        'scrollY: ' + window.scrollY;
+      document.body.appendChild(info);
+    }, 500);
+  }
+  if (document.body) { addTestOverlay(); }
+  else { document.addEventListener('DOMContentLoaded', addTestOverlay); }
+})();
+</script>
 
-<div id="_diag" style="position:sticky;top:0;left:0;right:0;z-index:999999;background:#1a0a2e;color:#e2e8f0;font-size:12px;font-family:monospace;padding:6px 10px;border-bottom:2px solid #4f8ef7;max-height:40vh;overflow-y:auto">
-  <b>DIAG:</b> <span id="_diag_step">HTML rendered — JS not yet run</span>
-  <div id="_diag_log" style="margin-top:4px;font-size:11px;color:#8892a4"></div>
-</div>
+
 <div class="app-mode-switch">
   <div class="mode-tabs">
     <button class="mode-tab active" id="mode-btn-body" onclick="switchAppMode('body')">⚖️ Body Composition</button>
