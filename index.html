@@ -341,6 +341,10 @@
 </head>
 <body>
 
+<div id="_diag" style="position:fixed;top:0;left:0;right:0;z-index:999999;background:#1a0a2e;color:#e2e8f0;font-size:12px;font-family:monospace;padding:6px 10px;border-bottom:2px solid #4f8ef7;max-height:50vh;overflow-y:auto">
+  <b>DIAG:</b> <span id="_diag_step">HTML rendered — JS not yet run</span>
+  <div id="_diag_log" style="margin-top:4px;font-size:11px;color:#8892a4"></div>
+</div>
 <div class="app-mode-switch">
   <div class="mode-tabs">
     <button class="mode-tab active" id="mode-btn-body" onclick="switchAppMode('body')">⚖️ Body Composition</button>
@@ -879,6 +883,25 @@
 
 
 <script type="text/plain" id="ht-app-source">
+
+// ===== DIAGNOSTICS (remove once iOS blank-screen issue is resolved) =====
+function _diagStep(msg) {
+  try {
+    var el = document.getElementById('_diag_step');
+    if (el) el.textContent = msg;
+    var log = document.getElementById('_diag_log');
+    if (log) log.innerHTML += '<div>' + new Date().toISOString().slice(11,23) + ' ' + msg + '</div>';
+  } catch(e) {}
+}
+function _diagErr(label, err) {
+  try {
+    var d = document.getElementById('_diag');
+    if (d) { d.style.background = '#8B0000'; d.style.borderColor = '#f87171'; }
+    _diagStep('ERROR @ ' + label + ': ' + (err && err.message ? err.message : String(err)));
+  } catch(e) {}
+}
+_diagStep('eval() started');
+
 // ===== TEMP DIAGNOSTIC: visible error overlay (helps debug blank-screen
 // issues on real devices where we can't see the console). Safe to remove
 // once mobile rendering is confirmed stable. =====
@@ -915,6 +938,7 @@
     } catch (_) {}
   });
 })();
+_diagStep("error handler ready");
 
 // Drive sync state (declared early so seed/init code that fires before the
 // Drive sync block below can safely call scheduleDriveSync without a TDZ error)
@@ -987,6 +1011,7 @@ function saveInBody(scans) {
   }
 })();
 
+_diagStep("constants & data store ready");
 // ===== NAVIGATION =====
 let charts = {};
 function showPage(name) {
@@ -1471,6 +1496,7 @@ function makeChart(id, cfg) {
 
 // ===== DASHBOARD =====
 function renderDashboard() {
+  _diagStep("renderDashboard called");
   const entries = getData().sort((a,b)=>a.date.localeCompare(b.date));
   const latest = entries[entries.length - 1];
   const today = new Date();
@@ -2050,9 +2076,10 @@ function renderBigCharts() {
 
 // ===== LOG ENTRY =====
 function _initApp() {
+  _diagStep("_initApp called");
   document.getElementById('log-date').value = isoDate(new Date());
-  renderDashboard();
-  initDriveSync();
+  try { renderDashboard(); _diagStep("renderDashboard done"); } catch(e) { _diagErr("renderDashboard", e); }
+  try { initDriveSync(); } catch(e) { _diagErr("initDriveSync", e); }
 
   // Inject PWA manifest as inline data URL
   const manifest = {
@@ -2072,6 +2099,7 @@ function _initApp() {
   const el = document.getElementById('pwa-manifest');
   if (el) el.href = URL.createObjectURL(blob);
 }
+_diagStep("readyState=" + document.readyState);
 // iOS Safari may fire DOMContentLoaded before eval() runs — guard with readyState
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', _initApp);
