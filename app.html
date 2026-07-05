@@ -13,10 +13,10 @@
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgMTIwIj48cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgcng9IjI2IiBmaWxsPSIjMGYxMTE3Ii8+PHJlY3QgeD0iOCIgeT0iOCIgd2lkdGg9IjEwNCIgaGVpZ2h0PSIxMDQiIHJ4PSIyMCIgZmlsbD0iIzFhMWQyNyIvPjx0ZXh0IHg9IjYwIiB5PSI3NiIgZm9udC1zaXplPSI1NiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzRmOGVmNyI+4pqhPC90ZXh0Pjwvc3ZnPg==">
 <link rel="manifest" id="pwa-manifest">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js" defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root {
@@ -33,7 +33,7 @@
     --radius: 12px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0f1117; color: #e2e8f0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; -webkit-transform: translateZ(0); transform: translateZ(0); }
+  body { background: #0f1117; color: #e2e8f0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
 
   /* NAV */
   nav { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 4px; padding: 0 20px; position: sticky; top: 0; z-index: 100; }
@@ -3146,7 +3146,7 @@ async function pushToDrive() {
   }
 }
 </script>
-<script>
+<script defer>
 // ===== TEMP DIAGNOSTIC RUNNER: the big app script above is type="text/plain"
 // so the browser won't auto-parse/execute it. Instead we eval() it here
 // inside a try/catch, so that even a SyntaxError anywhere in that ~100KB
