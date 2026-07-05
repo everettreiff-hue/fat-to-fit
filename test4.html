@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="supported-color-schemes" content="dark">
+<title>💪 Health Tracker</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💪</text></svg>">
+<meta name="theme-color" content="#0f1117">
+<link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgMTIwIj48cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgcng9IjI2IiBmaWxsPSIjMGYxMTE3Ii8+PHJlY3QgeD0iOCIgeT0iOCIgd2lkdGg9IjEwNCIgaGVpZ2h0PSIxMDQiIHJ4PSIyMCIgZmlsbD0iIzFhMWQyNyIvPjx0ZXh0IHg9IjYwIiB5PSI3NiIgZm9udC1zaXplPSI1NiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzRmOGVmNyI+4pqhPC90ZXh0Pjwvc3ZnPg==">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js" defer></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --border: #2e3350;
+    --accent: #4f8ef7;
+    --accent2: #34d399;
+    --warn: #f59e0b;
+    --danger: #f87171;
+    --text: #e2e8f0;
+    --muted: #8892a4;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0f1117; color: #e2e8f0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+
+  /* NAV */
+  nav { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 4px; padding: 0 20px; position: sticky; top: 0; z-index: 100; }
+  nav .brand { font-weight: 700; font-size: 16px; color: var(--accent); margin-right: 16px; padding: 14px 0; white-space: nowrap; }
+  nav button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 14px; font-weight: 500; padding: 14px 12px; border-bottom: 2px solid transparent; transition: all .2s; white-space: nowrap; }
+  nav button:hover { color: var(--text); }
+  nav button.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* LAYOUT */
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* CARDS */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+  .card h3 { font-size: 13px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 12px; }
+  .grid { display: grid; gap: 16px; }
+  .grid-2 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .grid-3 { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+  .grid-4 { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+  .grid-5 { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+  .grid-6 { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+
+  /* STAT TILES */
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
+  .stat .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+  .stat .value { font-size: 28px; font-weight: 700; line-height: 1; }
+  .stat .sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .stat .delta { font-size: 13px; margin-top: 4px; }
+  .delta.good { color: var(--accent2); }
+  .delta.bad { color: var(--danger); }
+  .delta.neutral { color: var(--muted); }
+
+  /* PROGRESS BAR */
+  .progress-wrap { margin-top: 8px; }
+  .progress-bar { background: var(--border); border-radius: 99px; height: 6px; overflow: hidden; }
+  .progress-bar .fill { height: 100%; border-radius: 99px; background: var(--accent); transition: width .5s; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  /* FORMS */
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .field input, .field select, .field textarea {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-size: 14px; padding: 9px 12px; outline: none; transition: border-color .2s;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); }
+  .field textarea { resize: vertical; min-height: 70px; }
+  .field select option { background: var(--surface2); }
+
+  /* BUTTONS */
+  .btn { border: none; border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600; padding: 10px 18px; transition: all .2s; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #3a7de8; }
+  .btn-secondary { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: transparent; border: 1px solid var(--danger); color: var(--danger); }
+  .btn-danger:hover { background: var(--danger); color: #fff; }
+  .btn-sm { font-size: 12px; padding: 6px 12px; }
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+
+  /* CHART WRAPPER */
+  .chart-wrap { position: relative; height: 290px; }
+  .chart-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; }
+  .chart-header h3 { margin-bottom:0; }
+
+  /* SECTION TITLE */
+  .section-title { font-size: 20px; font-weight: 700; margin-bottom: 20px; }
+
+  /* ALERT */
+  .alert { border-radius: 8px; font-size: 13px; padding: 10px 14px; margin-bottom: 16px; }
+  .alert-info { background: rgba(79,142,247,.12); border: 1px solid rgba(79,142,247,.3); color: #93bbfc; }
+  .alert-success { background: rgba(52,211,153,.12); border: 1px solid rgba(52,211,153,.3); color: #6ee7b7; }
+
+  /* PHOTO GRID */
+  .photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+  .photo-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .photo-card img { width: 100%; aspect-ratio: 3/4; object-fit: cover; display: block; }
+  .photo-card .photo-meta { padding: 8px 10px; font-size: 12px; color: var(--muted); }
+  .photo-placeholder { width: 100%; aspect-ratio: 3/4; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 6px; color: var(--muted); font-size: 12px; background: var(--surface2); cursor: pointer; border: 2px dashed var(--border); border-radius: 8px; }
+  .photo-placeholder:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* BADGE */
+  .badge { display: inline-block; border-radius: 99px; font-size: 11px; font-weight: 600; padding: 2px 8px; }
+  .badge-full { background: rgba(79,142,247,.2); color: #93bbfc; }
+  .badge-upper { background: rgba(168,85,247,.2); color: #c4b5fd; }
+  .badge-lower { background: rgba(251,146,60,.2); color: #fdba74; }
+  .badge-cardio { background: rgba(52,211,153,.2); color: #6ee7b7; }
+  .badge-rest { background: rgba(148,163,184,.2); color: #94a3b8; }
+  .badge-core { background: rgba(250,204,21,.2); color: #fde68a; }
+
+  /* APP MODE SWITCH */
+  .app-mode-switch { display:flex; justify-content:center; align-items:center; gap:8px; background:var(--surface); border-bottom:1px solid var(--border); padding:10px 20px; position:relative; }
+  .mode-tabs { display:flex; gap:8px; }
+  .mode-tab { background:var(--surface2); border:1px solid var(--border); border-radius:99px; color:var(--muted); font-size:13px; font-weight:700; padding:8px 20px; cursor:pointer; transition:all .2s; }
+  .mode-tab.active { background:var(--accent); color:#fff; border-color:var(--accent); }
+
+  /* Mobile-only Drive connect/status icon — hidden on desktop since the
+     full nav (with text status) is visible there instead. */
+  .drive-sync-mobile { display:none; }
+  .mode-tab:hover:not(.active) { border-color:var(--accent); color:var(--text); }
+
+  /* LIFT LOG FORM */
+  .lift-input { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; padding: 9px 12px; outline: none; transition: border-color .2s; }
+  .lift-input:focus { border-color: var(--accent); }
+  .lift-set-row { display:flex; gap:10px; align-items:center; margin-bottom:8px; }
+  .lift-set-row .lift-set-label { font-size:12px; color:var(--muted); width:46px; flex-shrink:0; }
+  .lift-set-row input { flex:1; min-width:0; }
+  .lift-exercise-block { margin-bottom:14px; }
+
+  /* DIVIDER */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+  /* OPTIONAL SECTION */
+  .optional-toggle { background: none; border: 1px dashed var(--border); border-radius: 8px; color: var(--muted); cursor: pointer; font-size: 13px; padding: 10px 16px; width: 100%; text-align: left; transition: all .2s; }
+  .optional-toggle:hover { border-color: var(--accent); color: var(--accent); }
+  .optional-section { display: none; margin-top: 12px; }
+  .optional-section.open { display: block; }
+
+  /* IMPORT */
+  .import-zone { border: 2px dashed var(--border); border-radius: 12px; padding: 30px; text-align: center; cursor: pointer; transition: all .2s; }
+  .import-zone:hover, .import-zone.drag { border-color: var(--accent); background: rgba(79,142,247,.05); }
+  .import-zone p { color: var(--muted); font-size: 14px; margin-top: 8px; }
+
+  /* PROJECTION BANNER */
+  .projection { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 18px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .projection .proj-item { display: flex; flex-direction: column; gap: 2px; }
+  .projection .proj-label { font-size: 11px; color: var(--muted); text-transform: uppercase; }
+  .projection .proj-val { font-size: 16px; font-weight: 700; }
+
+  /* SECTION GROUP LABELS */
+  .section-group { margin-bottom: 8px; margin-top: 28px; display: flex; align-items: center; gap: 10px; }
+  .section-group:first-of-type { margin-top: 0; }
+  .section-group-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); white-space: nowrap; }
+  .section-group-line { flex: 1; height: 1px; background: var(--border); }
+
+  /* STAT TILES — redesigned */
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; position: relative; overflow: hidden; }
+  .stat::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; border-radius:var(--radius) 0 0 var(--radius); }
+  .stat.accent-blue::before  { background: var(--accent); }
+  .stat.accent-orange::before{ background: var(--warn); }
+  .stat.accent-purple::before{ background: #a855f7; }
+  .stat.accent-green::before { background: var(--accent2); }
+  .stat.accent-muted::before { background: var(--border); }
+  .stat .label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 8px; display:flex; align-items:center; gap:5px; }
+  .stat .label .icon { font-size: 13px; }
+  .stat .value { font-size: 30px; font-weight: 800; line-height: 1; letter-spacing: -.5px; }
+  .stat .value .unit { font-size: 15px; font-weight: 500; color: var(--muted); margin-left: 2px; }
+  .stat .sub { font-size: 12px; color: var(--muted); margin-top: 5px; }
+  .stat .delta { font-size: 12px; font-weight: 600; margin-top: 4px; }
+  .delta.good { color: var(--accent2); }
+  .delta.bad  { color: var(--danger); }
+  .delta.neutral { color: var(--muted); }
+
+  /* PROGRESS BAR — thicker & labeled */
+  .progress-wrap { margin-top: 10px; }
+  .progress-bar { background: var(--surface2); border-radius: 99px; height: 8px; overflow: hidden; border: 1px solid var(--border); }
+  .progress-bar .fill { height: 100%; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width .6s ease; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin-top: 3px; }
+
+  /* PROJECTION BANNER — redesigned */
+  .projection {
+    background: linear-gradient(135deg, rgba(79,142,247,.08) 0%, rgba(52,211,153,.06) 100%);
+    border: 1px solid rgba(79,142,247,.25);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    display: flex; align-items: center; gap: 0; flex-wrap: wrap;
+  }
+  .proj-divider { width: 1px; height: 36px; background: var(--border); margin: 0 20px; flex-shrink: 0; }
+  .projection .proj-item { display: flex; flex-direction: column; gap: 3px; }
+  .projection .proj-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+  .projection .proj-val { font-size: 15px; font-weight: 700; }
+  .proj-badge { background: rgba(52,211,153,.15); border: 1px solid rgba(52,211,153,.3); border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 700; color: var(--accent2); white-space: nowrap; margin-left: auto; }
+
+  /* CARD SECTION HEADER */
+  .card-section-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 14px; display: flex; align-items: center; gap: 6px; }
+  .card-section-title .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+  /* COMP ROWS */
+  .comp-row { display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid var(--border); }
+  .comp-row:last-child { border-bottom: none; }
+  .comp-row .comp-label { font-size: 13px; color: var(--muted); }
+  .comp-row .comp-val { font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .comp-row .comp-delta { font-size: 11px; font-weight: 600; padding: 1px 6px; border-radius: 99px; }
+  .comp-delta.good  { background: rgba(52,211,153,.15); color: var(--accent2); }
+  .comp-delta.bad   { background: rgba(248,113,113,.15); color: var(--danger); }
+  .comp-delta.neutral { background: var(--surface2); color: var(--muted); }
+
+  /* TREND TABLE */
+  .trend-header { display:grid; grid-template-columns:1.2fr 1fr 1fr 1fr; gap:4px; padding:0 0 8px; border-bottom:1px solid var(--border); margin-bottom:4px; }
+  .trend-header span { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); text-align:center; }
+  .trend-header span:first-child { text-align:left; }
+  .trend-row { display:grid; grid-template-columns:1.2fr 1fr 1fr 1fr; gap:4px; padding:8px 0; border-bottom:1px solid var(--border); align-items:center; }
+  .trend-row:last-child { border-bottom:none; }
+  .trend-metric { font-size:12px; color:var(--muted); font-weight:500; }
+  .trend-val { font-size:13px; font-weight:700; text-align:center; }
+  .trend-goal { font-size:12px; font-weight:600; text-align:center; color:var(--muted); background:var(--surface2); border-radius:6px; padding:2px 6px; }
+
+  /* ===== MOBILE / PWA ===== */
+  /* Bottom nav on mobile */
+  @media(max-width:700px) {
+    /* Prevent iOS input zoom */
+    input, select, textarea { font-size: 16px !important; }
+
+    /* Safe area padding for notch/home bar */
+    body { padding-bottom: env(safe-area-inset-bottom); }
+    nav.bottom-nav { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
+
+    /* Top nav's Drive button is hidden along with the rest of nav.top-nav,
+       so show a compact icon-only Drive button in the always-visible
+       mode-switch bar instead. Tap behavior is identical (driveConnectClick). */
+    .app-mode-switch { justify-content: space-between; }
+    .drive-sync-mobile {
+      display: flex !important;
+      align-items: center; justify-content: center;
+      position: relative; flex-shrink: 0;
+      width: 34px; height: 34px; padding: 0;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 50%; font-size: 15px; cursor: pointer;
+    }
+    .drive-sync-mobile::after {
+      content: ''; position: absolute; top: -1px; right: -1px;
+      width: 9px; height: 9px; border-radius: 50%;
+      background: var(--muted); border: 1.5px solid var(--surface);
+    }
+    .drive-sync-mobile[data-state="synced"]::after { background: var(--accent2); }
+    .drive-sync-mobile[data-state="busy"]::after { background: var(--warn); }
+    .drive-sync-mobile[data-state="error"]::after { background: var(--danger); }
+
+    /* Top nav hidden on mobile, bottom nav shown */
+    nav.top-nav { display: none; }
+    nav.bottom-nav {
+      display: flex !important;
+      position: sticky; bottom: 0; left: 0; right: 0; z-index: 200;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: none;
+      padding: 6px 0 8px;
+      justify-content: space-around;
+      align-items: flex-end;
+      gap: 0;
+    }
+    nav.bottom-nav button {
+      flex: 1; display: flex; flex-direction: column; align-items: center;
+      gap: 2px; padding: 6px 4px; border: none; background: none;
+      color: var(--muted); font-size: 10px; font-weight: 600;
+      letter-spacing: .02em; cursor: pointer; border-bottom: none;
+      min-width: 0; text-align: center;
+    }
+    nav.bottom-nav button .nav-icon { font-size: 20px; line-height: 1; }
+    nav.bottom-nav button.active { color: var(--accent); }
+    nav.bottom-nav button.active .nav-icon { transform: scale(1.1); }
+
+    main { padding: 16px 12px; padding-bottom: calc(80px + env(safe-area-inset-bottom)); }
+
+    /* Grids collapse to 2 columns max */
+    .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr 1fr; }
+    .grid-5, .grid-6 { grid-template-columns: 1fr 1fr; }
+
+    /* Charts */
+    .chart-wrap { height: 230px; }
+
+    /* Stat tiles */
+    .stat { padding: 12px 14px; }
+    .stat .value { font-size: 22px; }
+    .stat .label { font-size: 10px; }
+
+    /* Projection banner */
+    .projection { flex-wrap: wrap; gap: 12px; padding: 12px 14px; }
+    .proj-divider { display: none; }
+    .projection .proj-item { min-width: calc(50% - 8px); }
+    .proj-badge { margin-left: 0; }
+
+    /* Section groups */
+    .section-group { margin-top: 20px; }
+
+    /* Cards */
+    .card { padding: 14px; }
+
+    /* Form grid single column */
+    .form-grid { grid-template-columns: 1fr 1fr; }
+
+    /* Table horizontal scroll */
+    .card > div > table { min-width: 600px; }
+    .card > div { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+    /* Bottom charts grid always 1 col */
+    .grid-4 { grid-template-columns: 1fr; }
+
+    /* Section title */
+    .section-title { font-size: 18px; margin-bottom: 14px; }
+  }
+
+  @media(max-width:400px) {
+    .grid-2, .grid-3, .grid-5, .grid-6 { grid-template-columns: 1fr; }
+    .stat .value { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+<div id="static-flow-test" style="background:#00aa00;color:#fff;font-size:18px;font-weight:bold;padding:16px;text-align:center">✅ STATIC NORMAL-FLOW DIV — if you see this, normal flow paints</div>
+<!-- diagnostic script removed -->
+
+
+<div class="app-mode-switch">
+  <div class="mode-tabs">
+    <button class="mode-tab active" id="mode-btn-body" onclick="switchAppMode('body')">⚖️ Body Composition</button>
+    <button class="mode-tab" id="mode-btn-lift" onclick="switchAppMode('lift')">🏋️ Weight Lifting</button>
+  </div>
+  <button class="drive-sync-mobile" onclick="driveConnectClick()" title="Connect or re-sync Google Drive" data-state="idle">☁️</button>
+</div>
+
+<div id="wrap-body">
+<nav class="top-nav">
+  <div class="brand">⚡ Everett</div>
+  <button class="active" onclick="showPage('dashboard')">Dashboard</button>
+  <button onclick="showPage('log')">Log Entry</button>
+  <button onclick="showPage('inbody')">InBody</button>
+  <button onclick="showPage('charts')">Charts</button>
+  <button onclick="showPage('history')">History</button>
+  <button onclick="showPage('photos')">Photos</button>
+  <button onclick="showPage('measurements')">Measurements</button>
+  <button onclick="showPage('import')">Import</button>
+  <button onclick="saveJSON()" style="margin-left:auto;color:var(--accent2);border-bottom-color:transparent">📦 Save JSON</button>
+  <button class="drive-sync-status" onclick="driveConnectClick()" style="color:var(--muted);border-bottom-color:transparent;font-size:12px;white-space:nowrap" title="Connect or re-sync Google Drive">☁️ Drive: tap to connect</button>
+</nav>
+
+<!-- Bottom nav — mobile only -->
+<nav class="bottom-nav" style="display:none">
+  <button class="active" onclick="showPage('dashboard')"><span class="nav-icon">📊</span>Dashboard</button>
+  <button onclick="showPage('log')"><span class="nav-icon">✏️</span>Log</button>
+  <button onclick="showPage('inbody')"><span class="nav-icon">⚖️</span>InBody</button>
+  <button onclick="showPage('charts')"><span class="nav-icon">📈</span>Charts</button>
+  <button onclick="showPage('history')"><span class="nav-icon">🕘</span>History</button>
+  <button onclick="showPage('photos')"><span class="nav-icon">📷</span>Photos</button>
+  <button onclick="showPage('import')"><span class="nav-icon">💾</span>Save</button>
+</nav>
+
+<main>
+
+<!-- ===== DASHBOARD ===== -->
+<div id="page-dashboard" class="page active" style="background:#cc0000;min-height:200px">
+
+  <div style="margin:12px 0;padding:16px;background:#7c3aed;color:#ffffff;border-radius:12px;font-size:16px;font-weight:700;text-align:center">
+  ✅ HTML renders OK — if you see this, layout works
+</div>
+<div style="text-align:center;padding:18px 0 8px;font-size:2.2rem;font-weight:900;letter-spacing:0.08em;color:var(--accent);text-transform:uppercase;">DON'T GIVE UP</div>
+
+  <!-- Projection banner -->
+  <div class="projection" id="proj-banner" style="margin-bottom:24px">
+    <div class="proj-item">
+      <span class="proj-label">🎯 Goal date</span>
+      <span class="proj-val" id="proj-original">Oct 31, 2026</span>
+    </div>
+    <div class="proj-divider"></div>
+    <div class="proj-item">
+      <span class="proj-label">Projected — Weight</span>
+      <span class="proj-val" id="proj-weight" style="color:var(--accent2)">—</span>
+    </div>
+    <div class="proj-divider"></div>
+    <div class="proj-item">
+      <span class="proj-label">Projected — Body Fat</span>
+      <span class="proj-val" id="proj-bf" style="color:var(--accent2)">—</span>
+    </div>
+    <div class="proj-divider"></div>
+    <div class="proj-item">
+      <span class="proj-label">⏳ Days remaining</span>
+      <span class="proj-val" id="proj-days">—</span>
+    </div>
+  </div>
+
+  <!-- SECTION: Goals & Progress -->
+  <div class="section-group"><span class="section-group-label">Goals &amp; Progress</span><div class="section-group-line"></div></div>
+  <div class="grid grid-6" style="margin-bottom:24px" id="headline-stats"></div>
+
+  <!-- SECTION: Trend Charts -->
+  <div class="section-group"><span class="section-group-label">Trend Charts</span><div class="section-group-line"></div></div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:var(--accent)"></div>Weight (lbs)</div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-weight')">Reset Zoom</button></div>
+    <div class="chart-wrap"><canvas id="chart-weight"></canvas></div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:var(--warn)"></div>Body Fat %</div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-bf')">Reset Zoom</button></div>
+    <div class="chart-wrap"><canvas id="chart-bf"></canvas></div>
+  </div>
+  <div class="card" style="margin-bottom:24px">
+    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:#a855f7"></div>Muscle Mass % — Trend</div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-mm')">Reset Zoom</button></div>
+    <div class="chart-wrap"><canvas id="chart-mm"></canvas></div>
+  </div>
+  <div class="card" style="margin-bottom:24px">
+    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:var(--accent2)"></div>Subcutaneous Fat % — Trend</div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-sf')">Reset Zoom</button></div>
+    <div class="chart-wrap"><canvas id="chart-sf"></canvas></div>
+  </div>
+
+  <!-- SECTION: Composition & Activity -->
+  <div class="section-group"><span class="section-group-label">Composition &amp; Activity</span><div class="section-group-line"></div></div>
+  <div class="grid grid-4" style="margin-bottom:24px">
+    <div class="card">
+      <div class="card-section-title"><div class="dot" style="background:var(--accent)"></div>Body Composition</div>
+      <div id="comp-latest"></div>
+    </div>
+    <div class="card">
+      <div class="card-section-title"><div class="dot" style="background:var(--accent2)"></div>Current Trend</div>
+      <div id="current-trend"></div>
+    </div>
+    <div class="card">
+      <div class="card-section-title"><div class="dot" style="background:var(--warn)"></div>Workout Breakdown — 30d</div>
+      <div class="chart-wrap" style="height:160px"><canvas id="chart-workouts"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-section-title"><div class="dot" style="background:var(--danger)"></div>Whoop Recovery — 14d</div>
+      <div class="chart-wrap" style="height:160px"><canvas id="chart-recovery"></canvas></div>
+    </div>
+  </div>
+
+  <!-- SECTION: Recent Entries -->
+  <div class="section-group"><span class="section-group-label">Recent Entries</span><div class="section-group-line"></div></div>
+  <div class="card">
+    <div id="recent-table"></div>
+  </div>
+</div>
+
+<!-- ===== LOG ENTRY ===== -->
+<div id="page-log" class="page">
+  <div class="section-title">Log Entry</div>
+  <div class="card">
+    <div class="form-grid">
+      <div class="field">
+        <label>Date</label>
+        <input type="date" id="log-date">
+      </div>
+      <div class="field">
+        <label>Weight (lbs)</label>
+        <input type="number" id="log-weight" step="0.1" placeholder="212.5">
+      </div>
+      <div class="field">
+        <label>Body Fat %</label>
+        <input type="number" id="log-bf" step="0.1" placeholder="30.4">
+      </div>
+      <div class="field">
+        <label>Visceral Fat %</label>
+        <input type="number" id="log-vf" step="0.1" placeholder="12.0">
+      </div>
+      <div class="field">
+        <label>Subcutaneous Fat %</label>
+        <input type="number" id="log-sf" step="0.1" placeholder="27.1">
+      </div>
+      <div class="field">
+        <label>Muscle Mass %</label>
+        <input type="number" id="log-mm" step="0.1" placeholder="—">
+      </div>
+      <div class="field">
+        <label>Workout</label>
+        <select id="log-workout">
+          <option value="">— Select —</option>
+          <option value="full">Full Body</option>
+          <option value="upper">Upper Body</option>
+          <option value="lower">Lower Body</option>
+          <option value="cardio">Cardio</option>
+          <option value="rest">Rest</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Whoop Recovery (0–100)</label>
+        <input type="number" id="log-recovery" min="0" max="100" placeholder="—">
+      </div>
+    </div>
+
+    <div style="margin-top:16px">
+      <div class="field">
+        <label>Weekly Notes</label>
+        <textarea id="log-notes" placeholder="How are you feeling this week? Any changes to notice?"></textarea>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <!-- Optional measurements -->
+    <button class="optional-toggle" onclick="toggleOptional()">＋ Add Body Measurements (optional)</button>
+    <div class="optional-section" id="opt-measurements">
+      <div class="form-grid" style="margin-top:12px">
+        <div class="field"><label>Waist (in)</label><input type="number" id="log-waist" step="0.25"></div>
+        <div class="field"><label>Chest (in)</label><input type="number" id="log-chest" step="0.25"></div>
+        <div class="field"><label>Hips (in)</label><input type="number" id="log-hips" step="0.25"></div>
+        <div class="field"><label>L Arm (in)</label><input type="number" id="log-arm" step="0.25"></div>
+        <div class="field"><label>L Thigh (in)</label><input type="number" id="log-thigh" step="0.25"></div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveEntry()">Save Entry</button>
+      <button class="btn btn-secondary" onclick="prefillToday()">Pre-fill from last entry</button>
+    </div>
+    <div id="log-msg" style="margin-top:12px;font-size:13px"></div>
+  </div>
+</div>
+
+<!-- ===== INBODY ===== -->
+<div id="page-inbody" class="page">
+  <div class="section-title">InBody Scans</div>
+  <div class="alert alert-info">InBody scans use bioelectrical impedance and are far more accurate than a home scale — use these as your main benchmark every ~6 weeks. Daily scale entries (Log tab) are tracked separately so one doesn't skew the other.</div>
+
+  <div class="projection" id="ib-banner" style="margin-bottom:24px"></div>
+
+  <div class="card" style="margin-bottom:24px">
+    <h3>Log New InBody Scan</h3>
+    <div class="form-grid">
+      <div class="field"><label>Date</label><input type="date" id="ib-date"></div>
+      <div class="field"><label>Time</label><input type="time" id="ib-time"></div>
+      <div class="field"><label>Weight (lbs)</label><input type="number" id="ib-weight" step="0.1" placeholder="206.8"></div>
+      <div class="field"><label>Body Fat % (PBF)</label><input type="number" id="ib-pbf" step="0.1" placeholder="26.7"></div>
+      <div class="field"><label>Body Fat Mass (lbs)</label><input type="number" id="ib-bfm" step="0.1" placeholder="55.1"></div>
+      <div class="field"><label>Lean Body Mass (lbs)</label><input type="number" id="ib-lbm" step="0.1" placeholder="151.7"></div>
+      <div class="field"><label>Skeletal Muscle Mass (lbs)</label><input type="number" id="ib-smm" step="0.1" placeholder="87.3"></div>
+      <div class="field"><label>BMI (kg/m²)</label><input type="number" id="ib-bmi" step="0.1" placeholder="28.0"></div>
+      <div class="field"><label>Visceral Fat Level</label><input type="number" id="ib-visceral" step="1" placeholder="11"></div>
+      <div class="field"><label>BMR (kcal)</label><input type="number" id="ib-bmr" step="1" placeholder="1855"></div>
+      <div class="field"><label>SMI (kg/m²)</label><input type="number" id="ib-smi" step="0.1" placeholder="8.4"></div>
+      <div class="field"><label>ECW/TBW</label><input type="number" id="ib-ecwtbw" step="0.001" placeholder="0.363"></div>
+    </div>
+
+    <hr class="divider">
+    <button class="optional-toggle" onclick="toggleIbOptional('ib-opt-water', this, 'Water &amp; Lean Breakdown')">＋ Add Water &amp; Lean Breakdown (optional)</button>
+    <div class="optional-section" id="ib-opt-water">
+      <div class="form-grid" style="margin-top:12px">
+        <div class="field"><label>Intracellular Water (lbs)</label><input type="number" id="ib-icw" step="0.1" placeholder="70.3"></div>
+        <div class="field"><label>Extracellular Water (lbs)</label><input type="number" id="ib-ecw" step="0.1" placeholder="40.1"></div>
+        <div class="field"><label>Total Body Water (lbs)</label><input type="number" id="ib-tbw" step="0.1" placeholder="110.5"></div>
+        <div class="field"><label>Dry Lean Mass (lbs)</label><input type="number" id="ib-dlm" step="0.1" placeholder="41.2"></div>
+      </div>
+    </div>
+
+    <button class="optional-toggle" style="margin-top:12px" onclick="toggleIbOptional('ib-opt-seglean', this, 'Segmental Lean Analysis')">＋ Add Segmental Lean Analysis (optional)</button>
+    <div class="optional-section" id="ib-opt-seglean">
+      <div style="margin-top:12px;overflow:auto">
+        <table>
+          <thead><tr><th></th><th>Lean Mass (lbs)</th><th>% of Ideal</th></tr></thead>
+          <tbody>
+            <tr><td>Right Arm</td><td><input type="number" id="ib-lean-ra-lb" step="0.01" style="width:90px"></td><td><input type="number" id="ib-lean-ra-pct" step="0.1" style="width:90px"></td></tr>
+            <tr><td>Left Arm</td><td><input type="number" id="ib-lean-la-lb" step="0.01" style="width:90px"></td><td><input type="number" id="ib-lean-la-pct" step="0.1" style="width:90px"></td></tr>
+            <tr><td>Trunk</td><td><input type="number" id="ib-lean-tr-lb" step="0.01" style="width:90px"></td><td><input type="number" id="ib-lean-tr-pct" step="0.1" style="width:90px"></td></tr>
+            <tr><td>Right Leg</td><td><input type="number" id="ib-lean-rl-lb" step="0.01" style="width:90px"></td><td><input type="number" id="ib-lean-rl-pct" step="0.1" style="width:90px"></td></tr>
+            <tr><td>Left Leg</td><td><input type="number" id="ib-lean-ll-lb" step="0.01" style="width:90px"></td><td><input type="number" id="ib-lean-ll-pct" step="0.1" style="width:90px"></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <button class="optional-toggle" style="margin-top:12px" onclick="toggleIbOptional('ib-opt-segfat', this, 'Segmental Fat Analysis')">＋ Add Segmental Fat Analysis (optional)</button>
+    <div class="optional-section" id="ib-opt-segfat">
+      <div style="margin-top:12px;overflow:auto">
+        <table>
+          <thead><tr><th></th><th>Fat Mass (lbs)</th><th>% of Standard</th></tr></thead>
+          <tbody>
+            <tr><td>Right Arm</td><td><input type="number" id="ib-fat-ra-lb" step="0.01" style="width:90px"></td><td><input type="number" id="ib-fat-ra-pct" step="0.1" style="width:90px"></td></tr>
+            <tr><td>Left Arm</td><td><input type="number" id="ib-fat-la-lb" step="0.01" style="width:90px"></td><td><input type="number" id="ib-fat-la-pct" step="0.1" style="width:90px"></td></tr>
+            <tr><td>Trunk</td><td><input type="number" id="ib-fat-tr-lb" step="0.01" style="width:90px"></td><td><input type="number" id="ib-fat-tr-pct" step="0.1" style="width:90px"></td></tr>
+            <tr><td>Right Leg</td><td><input type="number" id="ib-fat-rl-lb" step="0.01" style="width:90px"></td><td><input type="number" id="ib-fat-rl-pct" step="0.1" style="width:90px"></td></tr>
+            <tr><td>Left Leg</td><td><input type="number" id="ib-fat-ll-lb" step="0.01" style="width:90px"></td><td><input type="number" id="ib-fat-ll-pct" step="0.1" style="width:90px"></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div style="margin-top:16px">
+      <div class="field"><label>Notes</label><textarea id="ib-notes" placeholder="Conditions, time since last meal, anything notable about this scan"></textarea></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="saveInBodyEntry()">Save Scan</button>
+    </div>
+    <div id="ib-msg" style="margin-top:12px;font-size:13px"></div>
+  </div>
+
+  <div class="section-group"><span class="section-group-label">Latest Snapshot</span><div class="section-group-line"></div></div>
+  <div class="grid grid-4" id="ib-headline-stats" style="margin-bottom:24px"></div>
+
+  <div class="section-group"><span class="section-group-label">Trend Across Scans</span><div class="section-group-line"></div></div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:var(--accent)"></div>Body Composition (Weight / Lean / Fat Mass)</div></div>
+    <div class="chart-wrap"><canvas id="chart-ib-comp"></canvas></div>
+  </div>
+  <div class="grid grid-2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:var(--warn)"></div>Body Fat %</div></div>
+      <div class="chart-wrap"><canvas id="chart-ib-bf"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:#a855f7"></div>Skeletal Muscle Mass</div></div>
+      <div class="chart-wrap"><canvas id="chart-ib-smm"></canvas></div>
+    </div>
+  </div>
+  <div class="grid grid-2" style="margin-bottom:24px">
+    <div class="card">
+      <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:var(--danger)"></div>Visceral Fat Level</div></div>
+      <div class="chart-wrap"><canvas id="chart-ib-visceral"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:var(--accent)"></div>ECW/TBW (Hydration Balance)</div></div>
+      <div class="chart-wrap"><canvas id="chart-ib-ecw"></canvas></div>
+    </div>
+  </div>
+
+  <div class="section-group"><span class="section-group-label">Latest Scan — Segmental Analysis</span><div class="section-group-line"></div></div>
+  <div class="grid grid-2" style="margin-bottom:24px">
+    <div class="card">
+      <h3>Segmental Lean Analysis (% of Ideal)</h3>
+      <div class="chart-wrap"><canvas id="chart-ib-seglean"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>Segmental Fat Analysis (% of Standard)</h3>
+      <div class="chart-wrap"><canvas id="chart-ib-segfat"></canvas></div>
+    </div>
+  </div>
+
+  <div class="section-group"><span class="section-group-label">Scan History</span><div class="section-group-line"></div></div>
+  <div class="card" style="overflow:auto">
+    <div id="ib-history-table"></div>
+  </div>
+</div>
+
+<!-- ===== HISTORY ===== -->
+<div id="page-history" class="page">
+  <div class="section-title">Entry History</div>
+  <div class="card" style="overflow:auto">
+    <div id="history-table"></div>
+  </div>
+</div>
+
+<!-- ===== PHOTOS ===== -->
+<div id="page-photos" class="page">
+  <div class="section-title">Progress Photos</div>
+  <div class="alert alert-info">Take front, side, and back photos weekly — same time, same lighting. These are often more motivating than the scale when numbers stall.</div>
+  <div class="card" style="margin-bottom:16px">
+    <h3>Add Photos for a Date</h3>
+    <div class="form-grid" style="margin-bottom:14px">
+      <div class="field">
+        <label>Date</label>
+        <input type="date" id="photo-date">
+      </div>
+      <div class="field">
+        <label>Label (e.g. Week 1 — Front)</label>
+        <input type="text" id="photo-label" placeholder="Week 1 — Front">
+      </div>
+    </div>
+    <input type="file" id="photo-file" accept="image/*" style="display:none" onchange="handlePhotoUpload()">
+    <button class="btn btn-secondary" onclick="document.getElementById('photo-file').click()">📷 Upload Photo</button>
+  </div>
+  <div class="photo-grid" id="photo-gallery"></div>
+</div>
+
+<!-- ===== MEASUREMENTS ===== -->
+<div id="page-measurements" class="page">
+  <div class="section-title">Body Measurements</div>
+  <div class="grid grid-2" style="margin-bottom:20px">
+    <div class="card">
+      <h3>Waist Over Time</h3>
+      <div class="chart-wrap"><canvas id="chart-waist"></canvas></div>
+    </div>
+    <div class="card">
+      <h3>All Measurements Trend</h3>
+      <div class="chart-wrap"><canvas id="chart-allm"></canvas></div>
+    </div>
+  </div>
+  <div class="card" style="overflow:auto">
+    <h3>Measurement Log</h3>
+    <div id="meas-table"></div>
+  </div>
+</div>
+
+<!-- ===== CHARTS ===== -->
+<div id="page-charts" class="page">
+  <div class="section-title">Detailed Charts</div>
+  <div class="card" style="margin-bottom:20px">
+    <div class="chart-header"><h3>Weight (lbs)</h3><button class="btn btn-sm btn-secondary" onclick="resetChart('big-chart-weight')">Reset Zoom</button></div>
+    <div style="position:relative;height:480px"><canvas id="big-chart-weight"></canvas></div>
+  </div>
+  <div class="card" style="margin-bottom:20px">
+    <div class="chart-header"><h3>Body Fat %</h3><button class="btn btn-sm btn-secondary" onclick="resetChart('big-chart-bf')">Reset Zoom</button></div>
+    <div style="position:relative;height:480px"><canvas id="big-chart-bf"></canvas></div>
+  </div>
+  <div class="card" style="margin-bottom:20px">
+    <div class="chart-header"><h3>Muscle Mass %</h3><button class="btn btn-sm btn-secondary" onclick="resetChart('big-chart-mm')">Reset Zoom</button></div>
+    <div style="position:relative;height:480px"><canvas id="big-chart-mm"></canvas></div>
+  </div>
+  <div class="card" style="margin-bottom:20px">
+    <div class="chart-header"><h3>Subcutaneous Fat %</h3><button class="btn btn-sm btn-secondary" onclick="resetChart('big-chart-sf')">Reset Zoom</button></div>
+    <div style="position:relative;height:480px"><canvas id="big-chart-sf"></canvas></div>
+  </div>
+</div>
+
+<!-- ===== IMPORT ===== -->
+<div id="page-import" class="page">
+  <div class="section-title">Import &amp; Export</div>
+
+  <!-- Top row: JSON backup + Save App -->
+  <div class="grid grid-2" style="margin-bottom:16px">
+    <div class="card">
+      <h3>📦 Save Data (JSON)</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Best for regular backups and moving data between computers. Saves all your entries, measurements, and photos in a single compact file.</p>
+      <button class="btn btn-primary" onclick="saveJSON()">📦 Save JSON Backup</button>
+    </div>
+    <div class="card">
+      <h3>📂 Load Data (JSON)</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Restore from a previously saved JSON backup. Existing data will be replaced.</p>
+      <div class="import-zone" onclick="document.getElementById('json-file').click()"
+           ondragover="event.preventDefault();this.classList.add('drag')"
+           ondragleave="this.classList.remove('drag')"
+           ondrop="handleJSONDrop(event)">
+        <div style="font-size:32px">📂</div>
+        <p>Click or drag & drop a .json backup file</p>
+      </div>
+      <input type="file" id="json-file" accept=".json" style="display:none" onchange="handleJSONUpload()">
+      <div id="json-msg" style="margin-top:12px;font-size:13px"></div>
+    </div>
+  </div>
+
+  <!-- Second row: CSV + Save App + Reset -->
+  <div class="grid grid-3" style="margin-bottom:16px">
+    <div class="card">
+      <h3>CSV Import</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Import from Whoop / Apple Health CSV export. Columns: date, weight, body_fat, visceral_fat, subcutaneous_fat, muscle_mass, workout, recovery, notes.</p>
+      <div class="import-zone" id="import-zone" onclick="document.getElementById('csv-file').click()"
+           ondragover="event.preventDefault();this.classList.add('drag')"
+           ondragleave="this.classList.remove('drag')"
+           ondrop="handleDrop(event)">
+        <div style="font-size:28px">📄</div>
+        <p>Click or drag & drop a CSV file</p>
+      </div>
+      <input type="file" id="csv-file" accept=".csv" style="display:none" onchange="handleCSVUpload()">
+      <div id="import-msg" style="margin-top:12px;font-size:13px"></div>
+    </div>
+    <div class="card">
+      <h3>💾 Save App</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Downloads this app as a single HTML file with your data baked in. Use this to set up the app on a new computer — open the file and everything is already there.</p>
+      <button class="btn btn-secondary" onclick="saveApp()">💾 Save App</button>
+      <hr class="divider">
+      <h3 style="margin-top:0">Export CSV</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Download entries as a CSV for Excel or spreadsheet use.</p>
+      <button class="btn btn-secondary" onclick="exportCSV()">⬇ Download CSV</button>
+    </div>
+    <div class="card">
+      <h3>Reset All Data</h3>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Permanently delete all logged entries, InBody scans, and photos. This cannot be undone — save a JSON backup first.</p>
+      <button class="btn btn-danger" onclick="resetData()">🗑 Reset All Data</button>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h3>CSV Format Reference</h3>
+    <table>
+      <thead><tr><th>Column</th><th>Format</th><th>Example</th><th>Required?</th></tr></thead>
+      <tbody>
+        <tr><td>date</td><td>YYYY-MM-DD</td><td>2026-05-29</td><td>Yes</td></tr>
+        <tr><td>weight</td><td>Number (lbs)</td><td>212.5</td><td>No</td></tr>
+        <tr><td>body_fat</td><td>Percent (e.g. 30.4)</td><td>30.4</td><td>No</td></tr>
+        <tr><td>visceral_fat</td><td>Percent</td><td>12.0</td><td>No</td></tr>
+        <tr><td>subcutaneous_fat</td><td>Percent</td><td>27.1</td><td>No</td></tr>
+        <tr><td>muscle_mass</td><td>Percent</td><td>—</td><td>No</td></tr>
+        <tr><td>workout</td><td>full/upper/lower/cardio/rest</td><td>full</td><td>No</td></tr>
+        <tr><td>recovery</td><td>0–100</td><td>72</td><td>No</td></tr>
+        <tr><td>notes</td><td>Text</td><td>Felt strong today</td><td>No</td></tr>
+        <tr><td>waist</td><td>Inches</td><td>38.5</td><td>No</td></tr>
+        <tr><td>chest</td><td>Inches</td><td>—</td><td>No</td></tr>
+        <tr><td>hips</td><td>Inches</td><td>—</td><td>No</td></tr>
+        <tr><td>arm</td><td>Inches</td><td>—</td><td>No</td></tr>
+        <tr><td>thigh</td><td>Inches</td><td>—</td><td>No</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</main>
+</div><!-- /wrap-body -->
+
+<div id="wrap-lift" style="display:none">
+<nav class="top-nav">
+  <div class="brand">🏋️ Lifting</div>
+  <button class="active" onclick="showLiftPage('liftlog')">Log</button>
+  <button onclick="showLiftPage('lifthistory')">History</button>
+  <button onclick="showLiftPage('liftprogress')">Progress</button>
+  <button onclick="saveJSON()" style="margin-left:auto;color:var(--accent2);border-bottom-color:transparent">📦 Save JSON</button>
+  <button class="drive-sync-status" onclick="driveConnectClick()" style="color:var(--muted);border-bottom-color:transparent;font-size:12px;white-space:nowrap" title="Connect or re-sync Google Drive">☁️ Drive: tap to connect</button>
+</nav>
+<nav class="bottom-nav" style="display:none">
+  <button class="active" onclick="showLiftPage('liftlog')"><span class="nav-icon">✏️</span>Log</button>
+  <button onclick="showLiftPage('lifthistory')"><span class="nav-icon">🕘</span>History</button>
+  <button onclick="showLiftPage('liftprogress')"><span class="nav-icon">📈</span>Progress</button>
+</nav>
+<main>
+<div id="page-liftlog" class="page active">
+  <div class="section-title">Log Workout</div>
+  <div class="card" style="margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px">
+      <input type="date" id="lift-log-date" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px">
+      <div style="display:flex;gap:8px">
+        <button id="lift-type-upper" class="btn btn-primary" onclick="selectLiftType('Upper')">Upper Day</button>
+        <button id="lift-type-lower" class="btn btn-secondary" onclick="selectLiftType('Lower')">Lower Day</button>
+      </div>
+    </div>
+    <div id="lift-log-exercises"></div>
+    <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+      <div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:8px">+ Add unlisted exercise</div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <input type="text" id="lift-custom-name" placeholder="Exercise name" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px">
+        <button class="btn btn-secondary" onclick="addCustomLiftExercise()">Add</button>
+      </div>
+    </div>
+    <div id="lift-log-msg" style="margin-top:10px;font-size:13px;color:var(--accent2)"></div>
+    <div class="btn-row" style="margin-top:16px">
+      <button class="btn btn-primary" onclick="saveLiftWorkout()">💾 Save Workout</button>
+    </div>
+  </div>
+</div>
+<div id="page-lifthistory" class="page">
+  <div class="section-title">Workout History</div>
+  <div id="lift-history-list"></div>
+</div>
+
+<!-- ===== PROGRESS ===== -->
+<div id="page-liftprogress" class="page">
+  <div class="section-title">Exercise Progress</div>
+
+  <!-- Overall summary -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title" style="margin-bottom:12px">Overall Progress</div>
+    <div id="lift-overall-stats"><p style="color:var(--muted);font-size:13px">Loading…</p></div>
+  </div>
+
+  <!-- Per-exercise -->
+  <div class="card">
+    <div style="margin-bottom:14px">
+      <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px">Select Exercise</label>
+      <select id="lift-ex-select" onchange="renderLiftExerciseProgress(this.value)"
+        style="width:100%;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;outline:none">
+        <option value="">Select an exercise…</option>
+      </select>
+    </div>
+    <div id="lift-ex-progress"></div>
+  </div>
+</div>
+</main>
+</div><!-- /wrap-lift -->
+</body>
+</html>
