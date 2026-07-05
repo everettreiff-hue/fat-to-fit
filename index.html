@@ -3054,21 +3054,28 @@ function applyAllAppData(remote) {
 
 // Merge remote into local — local wins on key conflict, remote adds missing items.
 // Used on first connect so local seed/entered data is never silently wiped.
-function mergeByKey(local, remote, key) {
+function mergeByDate(local, remote) {
   const map = {};
-  remote.forEach(e => { if (e[key] != null) map[e[key]] = e; });
-  local.forEach(e => { if (e[key] != null) map[e[key]] = e; }); // local overwrites
+  remote.forEach(e => { if (e.date) map[e.date] = e; });
+  local.forEach(e => { if (e.date) map[e.date] = e; }); // local overwrites
+  return Object.values(map);
+}
+function mergeWorkouts(local, remote) {
+  // Workouts have no id — key by date+type composite
+  const map = {};
+  remote.forEach(e => { if (e.date && e.type) map[e.date + '|' + e.type] = e; });
+  local.forEach(e => { if (e.date && e.type) map[e.date + '|' + e.type] = e; }); // local overwrites
   return Object.values(map);
 }
 function mergeAllAppData(remote) {
   if (Array.isArray(remote.entries))
-    localStorage.setItem('ht_entries', JSON.stringify(mergeByKey(getData(), remote.entries, 'date')));
+    localStorage.setItem('ht_entries', JSON.stringify(mergeByDate(getData(), remote.entries)));
   if (Array.isArray(remote.photos))
-    localStorage.setItem('ht_photos', JSON.stringify(mergeByKey(getPhotos(), remote.photos, 'date')));
+    localStorage.setItem('ht_photos', JSON.stringify(mergeByDate(getPhotos(), remote.photos)));
   if (Array.isArray(remote.inbody))
-    localStorage.setItem('ht_inbody', JSON.stringify(mergeByKey(getInBody(), remote.inbody, 'date')));
+    localStorage.setItem('ht_inbody', JSON.stringify(mergeByDate(getInBody(), remote.inbody)));
   if (Array.isArray(remote.liftWorkouts))
-    localStorage.setItem('ht_lift_workouts', JSON.stringify(mergeByKey(getLiftWorkouts(), remote.liftWorkouts, 'id')));
+    localStorage.setItem('ht_lift_workouts', JSON.stringify(mergeWorkouts(getLiftWorkouts(), remote.liftWorkouts)));
 }
 
 function markLocalChange() {
