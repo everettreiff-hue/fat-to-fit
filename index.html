@@ -2933,7 +2933,9 @@ function handleDriveTokenError() {
 
 function driveConnectClick() {
   if (!driveTokenClient) { initDriveSync(); return; }
-  driveTokenClient.requestAccessToken({ prompt: 'consent' });
+  // 'select_account' shows account picker but skips consent/unverified screen
+  // if the user already granted access. Only use 'consent' to force a fresh grant.
+  driveTokenClient.requestAccessToken({ prompt: 'select_account' });
 }
 
 function handleDriveToken(resp) {
