@@ -250,6 +250,10 @@
        so show a compact icon-only Drive button in the always-visible
        mode-switch bar instead. Tap behavior is identical (driveConnectClick). */
     .app-mode-switch { justify-content: space-between; }
+    /* Standalone (home screen shortcut): push content below status bar */
+    @media (display-mode: standalone) {
+      .app-mode-switch { padding-top: calc(10px + env(safe-area-inset-top)); }
+    }
     .drive-sync-mobile {
       display: flex !important;
       align-items: center; justify-content: center;
