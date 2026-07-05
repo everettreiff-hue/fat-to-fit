@@ -3038,6 +3038,25 @@ function applyAllAppData(remote) {
   if (Array.isArray(remote.liftWorkouts)) localStorage.setItem('ht_lift_workouts', JSON.stringify(remote.liftWorkouts));
 }
 
+// Merge remote into local — local wins on key conflict, remote adds missing items.
+// Used on first connect so local seed/entered data is never silently wiped.
+function mergeByKey(local, remote, key) {
+  const map = {};
+  remote.forEach(e => { if (e[key] != null) map[e[key]] = e; });
+  local.forEach(e => { if (e[key] != null) map[e[key]] = e; }); // local overwrites
+  return Object.values(map);
+}
+function mergeAllAppData(remote) {
+  if (Array.isArray(remote.entries))
+    localStorage.setItem('ht_entries', JSON.stringify(mergeByKey(getData(), remote.entries, 'date')));
+  if (Array.isArray(remote.photos))
+    localStorage.setItem('ht_photos', JSON.stringify(mergeByKey(getPhotos(), remote.photos, 'date')));
+  if (Array.isArray(remote.inbody))
+    localStorage.setItem('ht_inbody', JSON.stringify(mergeByKey(getInBody(), remote.inbody, 'date')));
+  if (Array.isArray(remote.liftWorkouts))
+    localStorage.setItem('ht_lift_workouts', JSON.stringify(mergeByKey(getLiftWorkouts(), remote.liftWorkouts, 'id')));
+}
+
 function markLocalChange() {
   localStorage.setItem('ht_last_modified', String(Date.now()));
 }
@@ -3063,7 +3082,10 @@ async function driveInitialSync() {
       const localTs = Number(localStorage.getItem('ht_last_modified') || 0);
       const remoteTs = remote && remote.updatedAt ? new Date(remote.updatedAt).getTime() : 0;
       if (remote && remoteTs > localTs) {
-        applyAllAppData(remote);
+        // First connect on this device (localTs===0): merge so local data isn't wiped.
+        // Subsequent syncs: remote wins outright (user made changes on another device).
+        if (localTs === 0) mergeAllAppData(remote);
+        else applyAllAppData(remote);
         localStorage.setItem('ht_last_modified', String(remoteTs));
         setDriveStatus('☁️ Drive: synced ✓');
         driveBusy = false;
