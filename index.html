@@ -2722,7 +2722,7 @@ function selectLiftType(type) {
 }
 
 function renderLiftExerciseChecklist(type) {
-  const exList = type === 'Upper' ? UPPER_EXERCISES : LOWER_EXERCISES;
+  const exList = (type === 'Upper' ? UPPER_EXERCISES : LOWER_EXERCISES).slice().sort((a,b) => a.localeCompare(b));
   const date = document.getElementById('lift-log-date').value;
   const existing = getLiftWorkouts().find(w => w.date === date && w.type === type);
   const container = document.getElementById('lift-log-exercises');
@@ -2809,7 +2809,7 @@ function saveLiftWorkout() {
   const date = document.getElementById('lift-log-date').value;
   if (!date) { document.getElementById('lift-log-msg').textContent = 'Please select a date.'; return; }
   const type = _liftType;
-  const exList = type === 'Upper' ? UPPER_EXERCISES : LOWER_EXERCISES;
+  const exList = (type === 'Upper' ? UPPER_EXERCISES : LOWER_EXERCISES).slice().sort((a,b) => a.localeCompare(b));
   const exercises = [];
   exList.forEach(name => {
     const block = document.getElementById('leb-' + CSS.escape(name));
