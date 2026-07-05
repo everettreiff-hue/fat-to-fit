@@ -271,7 +271,7 @@
     nav.top-nav { display: none; }
     nav.bottom-nav {
       display: flex !important;
-      position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+      position: sticky; bottom: 0; z-index: 200;
       background: var(--surface);
       border-top: 1px solid var(--border);
       border-bottom: none;
@@ -338,39 +338,6 @@
 </style>
 </head>
 <body>
-<div id="static-flow-test" style="background:#00aa00;color:#fff;font-size:18px;font-weight:bold;padding:16px;text-align:center">✅ STATIC NORMAL-FLOW DIV — if you see this, normal flow paints</div>
-<script>
-/* iOS Safari rendering test - inject visible fixed overlay */
-(function() {
-  function addTestOverlay() {
-    var d = document.createElement('div');
-    d.id = 'ios-test-overlay';
-    d.style.cssText = 'position:fixed;bottom:120px;left:10px;right:10px;z-index:999998;background:#e53e3e;color:#fff;padding:16px;border-radius:12px;font-size:16px;font-weight:bold;font-family:sans-serif;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.5)';
-    d.innerHTML = '🔴 FIXED OVERLAY TEST<br><small style="font-size:12px;font-weight:normal">If you see this, position:fixed works<br>Screen: ' + window.innerWidth + 'x' + window.innerHeight + '</small>';
-    document.body.appendChild(d);
-    setTimeout(function() {
-      var main = document.querySelector('main');
-      var dash = document.getElementById('page-dashboard');
-      var info = document.createElement('div');
-      info.id = 'ios-test-info';
-      info.style.cssText = 'position:fixed;top:10px;left:10px;right:10px;z-index:999997;background:#2b6cb0;color:#fff;padding:12px;border-radius:8px;font-size:12px;font-family:monospace;line-height:1.4';
-      var dashBcr = dash ? dash.getBoundingClientRect() : null;
-      var mainBcr = main ? main.getBoundingClientRect() : null;
-      info.innerHTML = 
-        'dash rect: ' + (dashBcr ? Math.round(dashBcr.top)+','+Math.round(dashBcr.left)+' '+Math.round(dashBcr.width)+'x'+Math.round(dashBcr.height) : 'null') + '<br>' +
-        'main rect: ' + (mainBcr ? Math.round(mainBcr.top)+'->'+Math.round(mainBcr.bottom) : 'null') + '<br>' +
-        'main scrollTop: ' + (main ? main.scrollTop : 'null') + '<br>' +
-        'body bg: ' + window.getComputedStyle(document.body).backgroundColor + '<br>' +
-        'dash opacity: ' + (dash ? window.getComputedStyle(dash).opacity : 'null') + '<br>' +
-        'dash vis: ' + (dash ? window.getComputedStyle(dash).visibility : 'null') + '<br>' +
-        'scrollY: ' + window.scrollY;
-      document.body.appendChild(info);
-    }, 500);
-  }
-  if (document.body) { addTestOverlay(); }
-  else { document.addEventListener('DOMContentLoaded', addTestOverlay); }
-})();
-</script>
 
 
 <div class="app-mode-switch">
@@ -410,12 +377,7 @@
 <main>
 
 <!-- ===== DASHBOARD ===== -->
-<div id="page-dashboard" class="page active" style="background:#cc0000;min-height:200px">
-
-  <div style="margin:12px 0;padding:16px;background:#7c3aed;color:#ffffff;border-radius:12px;font-size:16px;font-weight:700;text-align:center">
-  ✅ HTML renders OK — if you see this, layout works
-</div>
-<div style="text-align:center;padding:18px 0 8px;font-size:2.2rem;font-weight:900;letter-spacing:0.08em;color:var(--accent);text-transform:uppercase;">DON'T GIVE UP</div>
+<div id="page-dashboard" class="page active">
 
   <!-- Projection banner -->
   <div class="projection" id="proj-banner" style="margin-bottom:24px">

@@ -3,18 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="supported-color-schemes" content="dark">
 <title>💪 Health Tracker</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💪</text></svg>">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Health">
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgMTIwIj48cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgcng9IjI2IiBmaWxsPSIjMGYxMTE3Ii8+PHJlY3QgeD0iOCIgeT0iOCIgd2lkdGg9IjEwNCIgaGVpZ2h0PSIxMDQiIHJ4PSIyMCIgZmlsbD0iIzFhMWQyNyIvPjx0ZXh0IHg9IjYwIiB5PSI3NiIgZm9udC1zaXplPSI1NiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzRmOGVmNyI+4pqhPC90ZXh0Pjwvc3ZnPg==">
-<link rel="manifest" id="pwa-manifest">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js" defer></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root {
@@ -31,7 +29,7 @@
     --radius: 12px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+  body { background: #0f1117; color: #e2e8f0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
 
   /* NAV */
   nav { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 4px; padding: 0 20px; position: sticky; top: 0; z-index: 100; }
@@ -273,7 +271,7 @@
     nav.top-nav { display: none; }
     nav.bottom-nav {
       display: flex !important;
-      position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+      position: sticky; bottom: 0; z-index: 200;
       background: var(--surface);
       border-top: 1px solid var(--border);
       border-bottom: none;
@@ -341,10 +339,7 @@
 </head>
 <body>
 
-<div id="_diag" style="position:fixed;top:0;left:0;right:0;z-index:999999;background:#1a0a2e;color:#e2e8f0;font-size:12px;font-family:monospace;padding:6px 10px;border-bottom:2px solid #4f8ef7;max-height:50vh;overflow-y:auto">
-  <b>DIAG:</b> <span id="_diag_step">HTML rendered — JS not yet run</span>
-  <div id="_diag_log" style="margin-top:4px;font-size:11px;color:#8892a4"></div>
-</div>
+
 <div class="app-mode-switch">
   <div class="mode-tabs">
     <button class="mode-tab active" id="mode-btn-body" onclick="switchAppMode('body')">⚖️ Body Composition</button>
@@ -383,8 +378,6 @@
 
 <!-- ===== DASHBOARD ===== -->
 <div id="page-dashboard" class="page active">
-
-  <div style="text-align:center;padding:18px 0 8px;font-size:2.2rem;font-weight:900;letter-spacing:0.08em;color:var(--accent);text-transform:uppercase;">DON'T GIVE UP</div>
 
   <!-- Projection banner -->
   <div class="projection" id="proj-banner" style="margin-bottom:24px">
@@ -2088,15 +2081,22 @@ function _initApp() {
       var ms = document.querySelector(".app-mode-switch");
       var st = document.getElementById("headline-stats");
       var cs = d ? window.getComputedStyle(d) : null;
+      var tb = document.getElementById("vis-test");
+      var tbs = tb ? window.getComputedStyle(tb) : null;
+      var dbr = d ? d.getBoundingClientRect() : null;
+      var mbr = m ? m.getBoundingClientRect() : null;
       _diagStep(
         "POST-RENDER:\n" +
         "dashboard h=" + (d?d.offsetHeight:"null") + " display=" + (cs?cs.display:"?") + "\n" +
-        "main h=" + (m?m.offsetHeight:"null") + "\n" +
-        "wrap-body display=" + (wb?(wb.style.display||"auto"):"null") + " h=" + (wb?wb.offsetHeight:"null") + "\n" +
-        "mode-switch h=" + (ms?ms.offsetHeight:"null") + "\n" +
+        "  opacity=" + (cs?cs.opacity:"?") + " vis=" + (cs?cs.visibility:"?") + "\n" +
+        "  rect=" + (dbr?Math.round(dbr.top)+","+Math.round(dbr.left)+","+Math.round(dbr.width)+"x"+Math.round(dbr.height):"null") + "\n" +
+        "main h=" + (m?m.offsetHeight:"null") + " scrollTop=" + (m?m.scrollTop:"null") + "\n" +
+        "  rect=" + (mbr?Math.round(mbr.top)+","+Math.round(mbr.left)+"->"+Math.round(mbr.bottom):"null") + "\n" +
+        "body-bg=" + window.getComputedStyle(document.body).backgroundColor + "\n" +
+        "vis-test h=" + (tb?tb.offsetHeight:"null") + " display=" + (tbs?tbs.display:"null") + "\n" +
+        "  rect-top=" + (tb?Math.round(tb.getBoundingClientRect().top):"null") + "\n" +
         "stats len=" + (st?st.innerHTML.length:"null") + "\n" +
         "color=" + (cs?cs.color:"?") + "\n" +
-        "bg=" + (cs?cs.backgroundColor:"?") + "\n" +
         "scrollY=" + window.scrollY + " vp=" + window.innerWidth + "x" + window.innerHeight
       );
     } catch(e2) { _diagErr("post-check", e2); }
@@ -3104,7 +3104,7 @@ async function pushToDrive() {
   }
 }
 </script>
-<script>
+<script defer>
 // ===== TEMP DIAGNOSTIC RUNNER: the big app script above is type="text/plain"
 // so the browser won't auto-parse/execute it. Instead we eval() it here
 // inside a try/catch, so that even a SyntaxError anywhere in that ~100KB
