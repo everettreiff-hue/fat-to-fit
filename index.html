@@ -2790,12 +2790,14 @@ function selectLiftType(type) {
 }
 
 function renderLiftExerciseChecklist(type) {
-  const exList = (type === 'Upper' ? UPPER_EXERCISES : LOWER_EXERCISES).slice().sort((a,b) => a.localeCompare(b));
+  const masterList = (type === 'Upper' ? UPPER_EXERCISES : LOWER_EXERCISES).slice().sort((a,b) => a.localeCompare(b));
   const date = document.getElementById('lift-log-date').value;
   const existing = getLiftWorkouts().find(w => w.date === date && w.type === type);
   const container = document.getElementById('lift-log-exercises');
-  container.innerHTML = exList.map(name => {
-    const exData = existing ? existing.exercises.find(e => e.name === name) : null;
+  // Build combined list: master exercises + any custom exercises saved in this workout
+  const masterSet = new Set(masterList);
+  const customExercises = existing ? existing.exercises.filter(ex => !masterSet.has(ex.name)) : [];
+  function exBlockHtml(name, exData) {
     const checked = !!exData;
     const sets = exData ? exData.sets : [{weight:'',reps:''}];
     return `<div class="lift-ex-block" id="leb-${CSS.escape(name)}" data-exname="${escapeHtml(name)}" style="margin-bottom:16px;border-top:1px solid var(--border);padding-top:12px">
@@ -2808,7 +2810,10 @@ function renderLiftExerciseChecklist(type) {
         <button class="btn btn-sm btn-secondary" style="margin-top:4px" onclick="addLiftSet('${name.replace(/'/g,"\'")}')">+ Add Set</button>
       </div>
     </div>`;
-  }).join('');
+  }
+  container.innerHTML =
+    masterList.map(name => exBlockHtml(name, existing ? existing.exercises.find(e => e.name === name) : null)).join('') +
+    customExercises.map(ex => exBlockHtml(ex.name, ex)).join('');
 }
 
 function liftSetRowHtml(name, idx, weight, reps) {
