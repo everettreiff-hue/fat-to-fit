@@ -497,6 +497,10 @@ if (window.navigator.standalone) {
         <input type="number" id="log-mm" step="0.1" placeholder="—">
       </div>
       <div class="field">
+        <label>Skeletal Muscle (lbs)</label>
+        <input type="number" id="log-sm" step="0.1" placeholder="—">
+      </div>
+      <div class="field">
         <label>Workout</label>
         <select id="log-workout">
           <option value="">— Select —</option>
@@ -1582,11 +1586,14 @@ function renderDashboard() {
   const currW = latest?.weight ?? BASELINE.weight;
   const currBF = latest?.bodyFat ?? BASELINE.bodyFat;
   const currMM = latest?.muscleMass ?? null;
-  // Find first logged muscle mass for baseline delta
+  const currSM = latest?.skeletalMuscle ?? null;
+  // Find first logged muscle mass / skeletal muscle for baseline delta
   const firstMM = entries.find(e => e.muscleMass != null)?.muscleMass ?? null;
+  const firstSM = entries.find(e => e.skeletalMuscle != null)?.skeletalMuscle ?? null;
   const lostW = (BASELINE.weight - currW).toFixed(1);
   const lostBF = (BASELINE.bodyFat - currBF).toFixed(1);
   const gainMM = currMM != null && firstMM != null ? (currMM - firstMM).toFixed(1) : null;
+  const gainSM = currSM != null && firstSM != null ? (currSM - firstSM).toFixed(1) : null;
   const remW = (currW - GOAL.weight).toFixed(1);
   const remBF = (currBF - GOAL.bodyFat).toFixed(1);
   const pctW = Math.min(100, Math.max(0, ((BASELINE.weight - currW)/(BASELINE.weight - GOAL.weight))*100));
@@ -1594,6 +1601,8 @@ function renderDashboard() {
 
   const mmDelta = gainMM != null ? (gainMM > 0 ? `↑ +${gainMM}% gained` : gainMM < 0 ? `↓ ${gainMM}% lost` : 'No change') : 'Log muscle mass to track';
   const mmCls = gainMM != null ? (gainMM > 0 ? 'good' : gainMM < 0 ? 'bad' : 'neutral') : 'neutral';
+  const smDelta = gainSM != null ? (gainSM > 0 ? `↑ +${gainSM} lbs gained` : gainSM < 0 ? `↓ ${Math.abs(gainSM)} lbs lost` : 'No change') : 'Log to track';
+  const smCls = gainSM != null ? (gainSM > 0 ? 'good' : gainSM < 0 ? 'bad' : 'neutral') : 'neutral';
 
   // Subcutaneous fat (same pattern as muscle mass)
   const currSF = latest?.subcutaneousFat ?? null;
@@ -1606,6 +1615,7 @@ function renderDashboard() {
     { icon:'⚖️',  label:'Current Weight',  num: fmt(currW,1),  unit:'lbs', sub:`Start: ${BASELINE.weight} lbs<br>Goal: ${GOAL.weight} lbs`,  delta: lostW > 0 ? `↓ ${lostW} lbs lost` : 'At baseline',      cls: lostW > 0 ? 'good':'neutral', progress:pctW,  accent:'accent-blue'   },
     { icon:'🔥',  label:'Body Fat',         num: fmt(currBF,1), unit:'%',   sub:`Start: ${BASELINE.bodyFat}%<br>Goal: ${GOAL.bodyFat}%`,    delta: lostBF > 0 ? `↓ ${lostBF}% lost` : 'At baseline',      cls: lostBF>0 ? 'good':'neutral',  progress:pctBF, accent:'accent-orange'  },
     { icon:'💪',  label:'Muscle Mass',      num: currMM!=null ? fmt(currMM,1):'—', unit:currMM!=null?'%':'', sub: firstMM!=null ? `Started: ${fmt(firstMM,1)}%`:'Log to track', delta:mmDelta, cls:mmCls, progress:null, accent:'accent-purple'  },
+    { icon:'🦴',  label:'Skeletal Muscle',  num: currSM!=null ? fmt(currSM,1):'—', unit:currSM!=null?'lbs':'', sub: firstSM!=null ? `Started: ${fmt(firstSM,1)} lbs`:'Log to track', delta:smDelta, cls:smCls, progress:null, accent:'accent-green'  },
     { icon:'📏',  label:'Subcut. Fat',      num: currSF!=null ? fmt(currSF,1):'—', unit:currSF!=null?'%':'', sub: firstSF!=null ? `Started: ${fmt(firstSF,1)}%`:'Log to track', delta:sfDelta, cls:sfCls, progress:null, accent:'accent-green'  },
     { icon:'📉',  label:'Remaining',        num: remW > 0 ? remW:' ✓', unit:remW>0?'lbs':'', sub:`${remBF>0?remBF+'% BF left':'Body fat goal ✓'}`, delta:`${daysLeft} days left`, cls:'neutral', progress:null, accent:'accent-muted' },
     { icon:'🏋️', label:'Weight Progress',  num: Math.round(pctW), unit:'%', sub:'toward weight goal',             delta:`${entries.length} entries logged`,                       cls:pctW>=100?'good':'neutral',    progress:pctW,  accent:'accent-blue'   },
@@ -1643,19 +1653,22 @@ function renderDashboard() {
   if (latest) {
     const firstMMEntry = entries.find(e => e.muscleMass != null);
     const mmBaseline = firstMMEntry?.muscleMass ?? null;
+    const firstSMEntry = entries.find(e => e.skeletalMuscle != null);
+    const smBaseline = firstSMEntry?.skeletalMuscle ?? null;
     const items = [
       { label:'Visceral Fat', val: latest.visceralFat, unit:'%', baseline: BASELINE.visceralFat },
       { label:'Subcut. Fat', val: latest.subcutaneousFat, unit:'%', baseline: BASELINE.subcutaneousFat },
       { label:'Muscle Mass', val: latest.muscleMass, unit:'%', baseline: mmBaseline },
+      { label:'Skeletal Muscle', val: latest.skeletalMuscle, unit:' lbs', baseline: smBaseline },
     ];
     compEl.innerHTML = items.map(item => {
       const diff = item.val != null && item.baseline != null ? (parseFloat(item.val) - item.baseline).toFixed(1) : null;
-      const cls = diff != null ? (item.label==='Muscle Mass' ? (diff>0?'good':'bad') : (diff<0?'good':'bad')) : 'neutral';
+      const cls = diff != null ? (item.label==='Muscle Mass'||item.label==='Skeletal Muscle' ? (diff>0?'good':'bad') : (diff<0?'good':'bad')) : 'neutral';
       return `<div class="comp-row">
         <span class="comp-label">${item.label}</span>
-        <span class="comp-val">${fmt(item.val)}${item.unit}${diff!=null?`<span class="comp-delta ${cls}">${diff>0?'+'+diff:diff}%</span>`:''}</span>
+        <span class="comp-val">${fmt(item.val)}${item.unit}${diff!=null?`<span class="comp-delta ${cls}">${diff>0?'+'+diff:diff}${item.unit.includes('lbs')?'lbs':'%'}</span>`:''}</span>
       </div>`;
-    }).join('') + `<div style="font-size:10px;color:var(--muted);margin-top:10px;letter-spacing:.03em">vs. May 28 baseline · muscle mass vs. first entry</div>`;
+    }).join('') + `<div style="font-size:10px;color:var(--muted);margin-top:10px;letter-spacing:.03em">vs. May 28 baseline · muscle mass &amp; skeletal muscle vs. first entry</div>`;
   } else {
     compEl.innerHTML = '<p style="color:var(--muted);font-size:13px">No entries yet.</p>';
   }
@@ -1739,10 +1752,11 @@ function renderCurrentTrend(entries) {
   const goalDailyBF = (GOAL.bodyFat - latestBF) / daysLeft;
 
   const metrics = [
-    { ...calcTrend('weight',     'lbs', 'Weight',     true),  goalDaily: goalDailyW,  showGoal: true },
-    { ...calcTrend('bodyFat',    '%',   'Body Fat',   true),  goalDaily: goalDailyBF, showGoal: true },
-    { ...calcTrend('muscleMass', '%',   'Muscle Mass',false), goalDaily: null,        showGoal: false },
-    { ...calcTrend('subcutaneousFat', '%', 'Subcut. Fat',true), goalDaily: null,        showGoal: false },
+    { ...calcTrend('weight',          'lbs', 'Weight',          true),  goalDaily: goalDailyW,  showGoal: true },
+    { ...calcTrend('bodyFat',         '%',   'Body Fat',        true),  goalDaily: goalDailyBF, showGoal: true },
+    { ...calcTrend('muscleMass',      '%',   'Muscle Mass',     false), goalDaily: null,        showGoal: false },
+    { ...calcTrend('skeletalMuscle',  'lbs', 'Skeletal Muscle', false), goalDaily: null,        showGoal: false },
+    { ...calcTrend('subcutaneousFat', '%',   'Subcut. Fat',     true),  goalDaily: null,        showGoal: false },
   ];
 
   if (metrics.every(m => m.daily === null)) {
@@ -2214,8 +2228,8 @@ function prefillToday() {
   const entries = getData().sort((a,b)=>a.date.localeCompare(b.date));
   const last = entries[entries.length-1];
   if (!last) return;
-  const fields = ['weight','bf','vf','sf','mm','workout','recovery'];
-  const keys = ['weight','bodyFat','visceralFat','subcutaneousFat','muscleMass','workout','recovery'];
+  const fields = ['weight','bf','vf','sf','mm','sm','workout','recovery'];
+  const keys = ['weight','bodyFat','visceralFat','subcutaneousFat','muscleMass','skeletalMuscle','workout','recovery'];
   fields.forEach((f,i)=>{ const el=document.getElementById('log-'+f); if(el&&last[keys[i]]!=null) el.value=last[keys[i]]; });
   if (last.waist) document.getElementById('log-waist').value=last.waist;
   if (last.chest) document.getElementById('log-chest').value=last.chest;
@@ -2237,6 +2251,7 @@ function saveEntry() {
     visceralFat: n('log-vf'),
     subcutaneousFat: n('log-sf'),
     muscleMass: n('log-mm'),
+    skeletalMuscle: n('log-sm'),
     workout: get('log-workout') || null,
     recovery: n('log-recovery'),
     notes: get('log-notes'),
@@ -2274,7 +2289,7 @@ function renderHistory() {
   const el = document.getElementById('history-table');
   if (!entries.length) { el.innerHTML='<p style="color:var(--muted);font-size:13px;padding:8px 0">No entries logged yet.</p>'; return; }
   el.innerHTML = `<table>
-    <thead><tr><th>Date</th><th>Weight</th><th>Body Fat</th><th>Visceral</th><th>Subcut.</th><th>Muscle</th><th>Workout</th><th>Recovery</th><th>Waist</th><th>Notes</th><th></th></tr></thead>
+    <thead><tr><th>Date</th><th>Weight</th><th>Body Fat</th><th>Visceral</th><th>Subcut.</th><th>Muscle</th><th>Skel. Muscle</th><th>Workout</th><th>Recovery</th><th>Waist</th><th>Notes</th><th></th></tr></thead>
     <tbody>${entries.map(e=>`<tr>
       <td>${fmtDate(e.date)}</td>
       <td>${fmt(e.weight)} lbs</td>
@@ -2282,6 +2297,7 @@ function renderHistory() {
       <td>${fmt(e.visceralFat)}%</td>
       <td>${fmt(e.subcutaneousFat)}%</td>
       <td>${fmt(e.muscleMass)}%</td>
+      <td>${fmt(e.skeletalMuscle)} lbs</td>
       <td>${workoutBadge(e.workout)}</td>
       <td>${fmt(e.recovery,0)}</td>
       <td>${fmt(e.waist)}"</td>
@@ -2643,7 +2659,7 @@ function importCSV(text) {
     const date = vals[col('date')];
     const n = key => { const v=vals[col(key)]; return v&&v!==''?parseFloat(v):null; };
     const s = key => { const v=vals[col(key)]; return v&&v!==''?v:null; };
-    const entry = { date, weight:n('weight'), bodyFat:n('body_fat'), visceralFat:n('visceral_fat'), subcutaneousFat:n('subcutaneous_fat'), muscleMass:n('muscle_mass'), workout:s('workout'), recovery:n('recovery'), notes:s('notes'), waist:n('waist'), chest:n('chest'), hips:n('hips'), arm:n('arm'), thigh:n('thigh') };
+    const entry = { date, weight:n('weight'), bodyFat:n('body_fat'), visceralFat:n('visceral_fat'), subcutaneousFat:n('subcutaneous_fat'), muscleMass:n('muscle_mass'), skeletalMuscle:n('skeletal_muscle'), workout:s('workout'), recovery:n('recovery'), notes:s('notes'), waist:n('waist'), chest:n('chest'), hips:n('hips'), arm:n('arm'), thigh:n('thigh') };
     const idx = entries.findIndex(e=>e.date===date);
     if (idx>=0) { Object.assign(entries[idx],entry); updated++; } else { entries.push(entry); added++; }
   }
@@ -2758,8 +2774,8 @@ async function saveApp() {
 }
 function exportCSV() {
   const entries = getData().sort((a,b)=>a.date.localeCompare(b.date));
-  const headers = 'date,weight,body_fat,visceral_fat,subcutaneous_fat,muscle_mass,workout,recovery,notes,waist,chest,hips,arm,thigh';
-  const rows = entries.map(e=>[e.date,e.weight??'',e.bodyFat??'',e.visceralFat??'',e.subcutaneousFat??'',e.muscleMass??'',e.workout??'',e.recovery??'',e.notes??'',e.waist??'',e.chest??'',e.hips??'',e.arm??'',e.thigh??''].join(','));
+  const headers = 'date,weight,body_fat,visceral_fat,subcutaneous_fat,muscle_mass,skeletal_muscle,workout,recovery,notes,waist,chest,hips,arm,thigh';
+  const rows = entries.map(e=>[e.date,e.weight??'',e.bodyFat??'',e.visceralFat??'',e.subcutaneousFat??'',e.muscleMass??'',e.skeletalMuscle??'',e.workout??'',e.recovery??'',e.notes??'',e.waist??'',e.chest??'',e.hips??'',e.arm??'',e.thigh??''].join(','));
   const blob = new Blob([[headers,...rows].join('\n')],{type:'text/csv'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='health-tracker-export.csv'; a.click();
 }
