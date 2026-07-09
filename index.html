@@ -1603,8 +1603,8 @@ function renderDashboard() {
   const sfCls = lostSF != null ? (lostSF > 0 ? 'good' : lostSF < 0 ? 'bad' : 'neutral') : 'neutral';
 
   const stats = [
-    { icon:'⚖️',  label:'Current Weight',  num: fmt(currW,1),  unit:'lbs', sub:`Started: ${BASELINE.weight} lbs`,  delta: lostW > 0 ? `↓ ${lostW} lbs lost` : 'At baseline',      cls: lostW > 0 ? 'good':'neutral', progress:pctW,  accent:'accent-blue'   },
-    { icon:'🔥',  label:'Body Fat',         num: fmt(currBF,1), unit:'%',   sub:`Started: ${BASELINE.bodyFat}%`,    delta: lostBF > 0 ? `↓ ${lostBF}% lost` : 'At baseline',      cls: lostBF>0 ? 'good':'neutral',  progress:pctBF, accent:'accent-orange'  },
+    { icon:'⚖️',  label:'Current Weight',  num: fmt(currW,1),  unit:'lbs', sub:`Start: ${BASELINE.weight} · Goal: ${GOAL.weight} lbs`,  delta: lostW > 0 ? `↓ ${lostW} lbs lost` : 'At baseline',      cls: lostW > 0 ? 'good':'neutral', progress:pctW,  accent:'accent-blue'   },
+    { icon:'🔥',  label:'Body Fat',         num: fmt(currBF,1), unit:'%',   sub:`Start: ${BASELINE.bodyFat}% · Goal: ${GOAL.bodyFat}%`,    delta: lostBF > 0 ? `↓ ${lostBF}% lost` : 'At baseline',      cls: lostBF>0 ? 'good':'neutral',  progress:pctBF, accent:'accent-orange'  },
     { icon:'💪',  label:'Muscle Mass',      num: currMM!=null ? fmt(currMM,1):'—', unit:currMM!=null?'%':'', sub: firstMM!=null ? `Started: ${fmt(firstMM,1)}%`:'Log to track', delta:mmDelta, cls:mmCls, progress:null, accent:'accent-purple'  },
     { icon:'📏',  label:'Subcut. Fat',      num: currSF!=null ? fmt(currSF,1):'—', unit:currSF!=null?'%':'', sub: firstSF!=null ? `Started: ${fmt(firstSF,1)}%`:'Log to track', delta:sfDelta, cls:sfCls, progress:null, accent:'accent-green'  },
     { icon:'📉',  label:'Remaining',        num: remW > 0 ? remW:' ✓', unit:remW>0?'lbs':'', sub:`${remBF>0?remBF+'% BF left':'Body fat goal ✓'}`, delta:`${daysLeft} days left`, cls:'neutral', progress:null, accent:'accent-muted' },
