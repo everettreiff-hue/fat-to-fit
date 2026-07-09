@@ -90,6 +90,10 @@
   .btn-danger { background: transparent; border: 1px solid var(--danger); color: var(--danger); }
   .btn-danger:hover { background: var(--danger); color: #fff; }
   .btn-sm { font-size: 12px; padding: 6px 12px; }
+  .crng { display:flex; gap:2px; }
+  .crng button { font-size:11px; padding:3px 9px; border-radius:6px; background:var(--surface2); border:1px solid var(--border); color:var(--muted); cursor:pointer; transition:all .15s; line-height:1.5; white-space:nowrap; }
+  .crng button.crng-active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .crng button:hover:not(.crng-active) { border-color:var(--accent); color:var(--accent); }
   .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
 
   /* TABLE */
@@ -423,23 +427,23 @@ if (window.navigator.standalone) {
   <!-- SECTION: Trend Charts -->
   <div class="section-group"><span class="section-group-label">Trend Charts</span><div class="section-group-line"></div></div>
   <div class="card" style="margin-bottom:16px">
-    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:var(--accent)"></div>Weight (lbs)</div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-weight')">Reset Zoom</button></div>
+    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:var(--accent)"></div>Weight (lbs)</div><div style="display:flex;align-items:center;gap:8px"><div class="crng"><button class="crng-active" onclick="setChartRange('chart-weight','data',this)">Data</button><button onclick="setChartRange('chart-weight','+4w',this)">+4 Wks</button><button onclick="setChartRange('chart-weight','goal',this)">Goal</button></div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-weight')">Reset Zoom</button></div></div>
     <div class="chart-wrap"><canvas id="chart-weight"></canvas></div>
   </div>
   <div class="card" style="margin-bottom:16px">
-    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:var(--warn)"></div>Body Fat %</div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-bf')">Reset Zoom</button></div>
+    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:var(--warn)"></div>Body Fat %</div><div style="display:flex;align-items:center;gap:8px"><div class="crng"><button class="crng-active" onclick="setChartRange('chart-bf','data',this)">Data</button><button onclick="setChartRange('chart-bf','+4w',this)">+4 Wks</button><button onclick="setChartRange('chart-bf','goal',this)">Goal</button></div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-bf')">Reset Zoom</button></div></div>
     <div class="chart-wrap"><canvas id="chart-bf"></canvas></div>
   </div>
   <div class="card" style="margin-bottom:16px">
-    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:#34d399"></div>Skeletal Muscle (lbs) — Trend</div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-sm')">Reset Zoom</button></div>
+    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:#34d399"></div>Skeletal Muscle (lbs) — Trend</div><div style="display:flex;align-items:center;gap:8px"><div class="crng"><button class="crng-active" onclick="setChartRange('chart-sm','data',this)">Data</button><button onclick="setChartRange('chart-sm','+4w',this)">+4 Wks</button><button onclick="setChartRange('chart-sm','goal',this)">Goal</button></div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-sm')">Reset Zoom</button></div></div>
     <div class="chart-wrap"><canvas id="chart-sm"></canvas></div>
   </div>
   <div class="card" style="margin-bottom:24px">
-    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:#a855f7"></div>Muscle Mass % — Trend</div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-mm')">Reset Zoom</button></div>
+    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:#a855f7"></div>Muscle Mass % — Trend</div><div style="display:flex;align-items:center;gap:8px"><div class="crng"><button class="crng-active" onclick="setChartRange('chart-mm','data',this)">Data</button><button onclick="setChartRange('chart-mm','+4w',this)">+4 Wks</button><button onclick="setChartRange('chart-mm','goal',this)">Goal</button></div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-mm')">Reset Zoom</button></div></div>
     <div class="chart-wrap"><canvas id="chart-mm"></canvas></div>
   </div>
   <div class="card" style="margin-bottom:24px">
-    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:var(--accent2)"></div>Subcutaneous Fat % — Trend</div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-sf')">Reset Zoom</button></div>
+    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:var(--accent2)"></div>Subcutaneous Fat % — Trend</div><div style="display:flex;align-items:center;gap:8px"><div class="crng"><button class="crng-active" onclick="setChartRange('chart-sf','data',this)">Data</button><button onclick="setChartRange('chart-sf','+4w',this)">+4 Wks</button><button onclick="setChartRange('chart-sf','goal',this)">Goal</button></div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-sf')">Reset Zoom</button></div></div>
     <div class="chart-wrap"><canvas id="chart-sf"></canvas></div>
   </div>
 
@@ -969,6 +973,20 @@ const ZOOM_OPTS = {
   pan:  { enabled:true, mode:'x' }
 };
 function resetChart(id) { if (charts[id]) charts[id].resetZoom(); }
+
+// ===== CHART RANGE TOGGLE =====
+const _chartRangeState = {};
+function setChartRange(chartId, range, btn) {
+  _chartRangeState[chartId] = range;
+  btn.closest('.crng').querySelectorAll('button').forEach(b => b.classList.remove('crng-active'));
+  btn.classList.add('crng-active');
+  const entries = getData().sort((a,b) => a.date.localeCompare(b.date));
+  if (chartId === 'chart-weight') renderProgressChart('chart-weight', entries, 'weight', BASELINE.weight, GOAL.weight, 'lbs', '#4f8ef7', range);
+  else if (chartId === 'chart-bf') renderProgressChart('chart-bf', entries, 'bodyFat', BASELINE.bodyFat, GOAL.bodyFat, '%', '#f59e0b', range);
+  else if (chartId === 'chart-sm') renderSkeletalMuscleChart(entries, range);
+  else if (chartId === 'chart-mm') renderMuscleMassChart(entries, range);
+  else if (chartId === 'chart-sf') renderSubcutaneousFatChart(entries, range);
+}
 
 // ===== CONSTANTS =====
 const BASELINE = {
@@ -1643,17 +1661,17 @@ function renderDashboard() {
   document.getElementById('proj-days').textContent = daysLeft + ' days';
 
   // Weight chart
-  renderProgressChart('chart-weight', entries, 'weight', BASELINE.weight, GOAL.weight, 'lbs', '#4f8ef7');
-  renderProgressChart('chart-bf', entries, 'bodyFat', BASELINE.bodyFat, GOAL.bodyFat, '%', '#f59e0b');
+  renderProgressChart('chart-weight', entries, 'weight', BASELINE.weight, GOAL.weight, 'lbs', '#4f8ef7', _chartRangeState['chart-weight']||'data');
+  renderProgressChart('chart-bf', entries, 'bodyFat', BASELINE.bodyFat, GOAL.bodyFat, '%', '#f59e0b', _chartRangeState['chart-bf']||'data');
 
   // Skeletal muscle trend
-  renderSkeletalMuscleChart(entries);
+  renderSkeletalMuscleChart(entries, _chartRangeState['chart-sm']||'data');
 
-  // Muscle mass trend (no goal line)
-  renderMuscleMassChart(entries);
+  // Muscle mass trend
+  renderMuscleMassChart(entries, _chartRangeState['chart-mm']||'data');
 
-  // Subcutaneous fat trend (no goal line)
-  renderSubcutaneousFatChart(entries);
+  // Subcutaneous fat trend
+  renderSubcutaneousFatChart(entries, _chartRangeState['chart-sf']||'data');
 
   // Body comp latest
   const compEl = document.getElementById('comp-latest');
@@ -1798,26 +1816,33 @@ function renderCurrentTrend(entries) {
   `;
 }
 
-function renderProgressChart(canvasId, entries, field, baselineVal, goalVal, unit, color) {
-  const totalDays = daysBetween(BASELINE.date, GOAL.date);
-  const today = new Date();
+function renderProgressChart(canvasId, entries, field, baselineVal, goalVal, unit, color, windowEnd) {
+  windowEnd = windowEnd || 'data';
+  const totalGoalDays = daysBetween(BASELINE.date, GOAL.date); // for goal pace slope
 
-  // Build label set from actual entry dates + sparse goal reference points
   const actualEntries = entries.filter(e=>e[field]!=null).sort((a,b)=>a.date.localeCompare(b.date));
   const actualDates = new Set(actualEntries.map(e=>e.date));
+  const lastEntryDate = actualEntries.length ? actualEntries[actualEntries.length-1].date : GOAL.date;
 
-  // Build a uniform daily date axis from start through the goal date — no
-  // further — so points are evenly spaced by real calendar time and the
-  // chart doesn't run past the goal.
-  const axisLen = totalDays;
+  // Compute axis end date based on windowEnd
+  let axisEndDate;
+  if (windowEnd === 'data') {
+    axisEndDate = lastEntryDate;
+  } else if (windowEnd === '+4w') {
+    const dt = new Date(lastEntryDate+'T00:00:00'); dt.setDate(dt.getDate()+28);
+    axisEndDate = isoDate(dt);
+  } else { // 'goal'
+    axisEndDate = GOAL.date;
+  }
+  const axisLen = daysBetween(BASELINE.date, axisEndDate);
+
+  // Build uniform daily date axis from start to axisEndDate
   const allDates = [];
   for (let d=0; d<=axisLen; d++) {
     const dt = new Date(START_DATE); dt.setDate(dt.getDate()+d);
     allDates.push(isoDate(dt));
   }
-  // Include any actual entry dates that fall before the generated range
-  // (e.g. backfilled data before START_DATE); drop anything past the goal date.
-  actualDates.forEach(d => { if (!allDates.includes(d) && d <= allDates[allDates.length-1]) allDates.push(d); });
+  actualDates.forEach(d => { if (!allDates.includes(d) && d <= axisEndDate) allDates.push(d); });
   allDates.sort();
 
   // Build per-date data
@@ -1829,17 +1854,18 @@ function renderProgressChart(canvasId, entries, field, baselineVal, goalVal, uni
   allDates.forEach(iso => {
     const d = daysBetween(BASELINE.date, iso);
     labels.push(new Date(iso+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}));
-    goalLine.push(d>=0 && d<=totalDays ? baselineVal+(goalVal-baselineVal)*(d/totalDays) : null);
+    goalLine.push(d>=0 && d<=totalGoalDays ? baselineVal+(goalVal-baselineVal)*(d/totalGoalDays) : null);
     actualData.push(actualMap[iso] ?? null);
     rollingData.push(rollingMap[iso] ?? null);
   });
 
-  // Projected line (regression from first to last actual, extended to axis end)
+  // Projected line: only for non-'data' ranges (axis extends beyond last entry)
   const pts = actualEntries.map(e=>({x:daysBetween(BASELINE.date,e.date),y:parseFloat(e[field])}));
-  const projData = allDates.map(()=>null);
-  if (pts.length >= 2) {
+  let projData = null;
+  if (windowEnd !== 'data' && pts.length >= 2) {
     const reg = linearRegression(pts.map(p=>p.x),pts.map(p=>p.y));
     if (reg) {
+      projData = allDates.map(()=>null);
       const firstIdx = allDates.findIndex(iso=>actualMap[iso]!=null);
       for (let i=firstIdx; i<allDates.length; i++) {
         const d=daysBetween(BASELINE.date,allDates[i]);
@@ -1848,17 +1874,16 @@ function renderProgressChart(canvasId, entries, field, baselineVal, goalVal, uni
     }
   }
 
+  const datasets = [
+    { label:'Goal Pace', data:goalLine, borderColor:'rgba(248,113,113,.6)', borderDash:[6,4], borderWidth:2, pointRadius:0, fill:false, tension:0 },
+    { label:'Actual', data:actualData, borderColor:color, backgroundColor:color+'33', borderWidth:2.5, pointRadius:0, pointHoverRadius:6, fill:false, tension:.3, spanGaps:false },
+    { label:'7-Day Avg', data:rollingData, borderColor:color+'aa', borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:.3, spanGaps:false },
+  ];
+  if (projData) datasets.push({ label:'Projected', data:projData, borderColor:'rgba(52,211,153,.7)', borderDash:[4,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0, spanGaps:false });
+
   makeChart(canvasId, {
     type:'line',
-    data:{
-      labels,
-      datasets:[
-        { label:'Goal Pace', data:goalLine, borderColor:'rgba(248,113,113,.6)', borderDash:[6,4], borderWidth:2, pointRadius:0, fill:false, tension:0 },
-        { label:'Actual', data:actualData, borderColor:color, backgroundColor:color+'33', borderWidth:2.5, pointRadius:0, pointHoverRadius:6, fill:false, tension:.3, spanGaps:false },
-        { label:'7-Day Avg', data:rollingData, borderColor:color+'aa', borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:.3, spanGaps:false },
-        { label:'Projected', data:projData, borderColor:'rgba(52,211,153,.7)', borderDash:[4,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0, spanGaps:false },
-      ]
-    },
+    data:{ labels, datasets },
     options:{
       responsive:true, maintainAspectRatio:false,
       interaction:{mode:'index',intersect:false},
@@ -1871,178 +1896,92 @@ function renderProgressChart(canvasId, entries, field, baselineVal, goalVal, uni
   });
 }
 
-function renderSkeletalMuscleChart(entries) {
-  const smEntries = entries.filter(e => e.skeletalMuscle != null).sort((a,b)=>a.date.localeCompare(b.date));
-  if (!smEntries.length) {
-    makeChart('chart-sm', { type:'line', data:{ labels:['No data yet'], datasets:[{ data:[null], borderColor:'#34d399', borderWidth:2 }]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{ticks:{color:'#8892a4',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10}},grid:{display:false}} } }});
+// Shared trend chart builder for all windowEnd-aware trend charts
+function _buildTrendChart(id, field, entries, windowEnd, color, colorFaded, projColor, unitSuffix, bgColor) {
+  const filtered = entries.filter(e => e[field] != null).sort((a,b)=>a.date.localeCompare(b.date));
+  if (!filtered.length) {
+    makeChart(id, { type:'line', data:{ labels:['No data yet'], datasets:[{ data:[null], borderColor:color, borderWidth:2 }]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{ticks:{color:'#8892a4',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10}},grid:{display:false}} } }});
     return;
   }
-  const labels = smEntries.map(e => fmtDate(e.date).split(',')[0]);
-  const actualData = smEntries.map(e => parseFloat(e.skeletalMuscle));
-  const rolling = rollingAvg(smEntries, 'skeletalMuscle', 7);
+  const labels = filtered.map(e => fmtDate(e.date).split(',')[0]);
+  const actualData = filtered.map(e => parseFloat(e[field]));
+  const rolling = rollingAvg(filtered, field, 7);
+  const pts = filtered.map(e => ({ x: daysBetween(BASELINE.date, e.date), y: parseFloat(e[field]) }));
+  const lastEntryDate = filtered[filtered.length-1].date;
+  const lastDay = pts[pts.length-1].x;
 
-  const pts = smEntries.map(e => ({ x: daysBetween(BASELINE.date, e.date), y: parseFloat(e.skeletalMuscle) }));
-  let projLabels = [...labels], projData = actualData.map(() => null);
+  const commonOpts = (legend) => ({
+    responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+    plugins:{ legend: legend ? {labels:{color:'#8892a4',font:{size:11},boxWidth:12}} : {display:false}, zoom:ZOOM_OPTS },
+    scales:{ y:{ticks:{color:'#8892a4',font:{size:10},callback:v=>v!=null?v.toFixed(1)+unitSuffix:null},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:12},grid:{display:false}} }
+  });
+
+  // 'data' mode: no projection beyond last entry
+  if (windowEnd === 'data') {
+    makeChart(id, {
+      type:'line',
+      data:{ labels, datasets:[
+        { label:'Actual', data:actualData, borderColor:color, backgroundColor:bgColor, borderWidth:2.5, pointRadius:3, pointHoverRadius:5, fill:true, tension:.3, spanGaps:false },
+        { label:'7-Day Avg', data:rolling, borderColor:colorFaded, borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:.3, spanGaps:false },
+      ]},
+      options: commonOpts(true)
+    });
+    return;
+  }
+
+  // Compute projection end date
+  let projEndDate;
+  if (windowEnd === '+4w') {
+    const dt = new Date(lastEntryDate+'T00:00:00'); dt.setDate(dt.getDate()+28);
+    projEndDate = isoDate(dt);
+  } else {
+    projEndDate = GOAL.date;
+  }
+  const projDays = Math.max(1, daysBetween(lastEntryDate, projEndDate));
+
   if (pts.length >= 2) {
     const reg = linearRegression(pts.map(p=>p.x), pts.map(p=>p.y));
     if (reg) {
-      const lastDay = pts[pts.length-1].x;
-      const extDays = 60;
-      const step = Math.max(1, Math.round(extDays / 10));
+      const numSteps = Math.min(projDays, 12);
+      const step = Math.max(1, Math.round(projDays / numSteps));
       const extLabels = [], extProj = [];
-      for (let d = 0; d <= extDays; d += step) {
-        const dt = new Date(START_DATE); dt.setDate(dt.getDate() + lastDay + d);
+      for (let d = step; d < projDays; d += step) {
+        const dt = new Date(lastEntryDate+'T00:00:00'); dt.setDate(dt.getDate()+d);
         extLabels.push(dt.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
-        extProj.push(reg.slope * (lastDay + d) + reg.intercept);
+        extProj.push(reg.slope*(lastDay+d)+reg.intercept);
       }
-      projLabels = [...labels, ...extLabels];
+      const endDt = new Date(projEndDate+'T00:00:00');
+      extLabels.push(endDt.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+      extProj.push(reg.slope*(lastDay+projDays)+reg.intercept);
+      const projLabels = [...labels, ...extLabels];
       const pad = extLabels.length;
-      makeChart('chart-sm', {
+      makeChart(id, {
         type:'line',
-        data:{
-          labels: projLabels,
-          datasets:[
-            { label:'Actual', data:[...actualData, ...Array(pad).fill(null)], borderColor:'#34d399', backgroundColor:'rgba(52,211,153,.15)', borderWidth:2.5, pointRadius:3, pointHoverRadius:5, fill:true, tension:.3, spanGaps:false },
-            { label:'7-Day Avg', data:[...rolling, ...Array(pad).fill(null)], borderColor:'rgba(52,211,153,.5)', borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:.3, spanGaps:false },
-            { label:'Projected', data:[...Array(actualData.length).fill(null), ...extProj], borderColor:'rgba(168,85,247,.7)', borderDash:[4,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0, spanGaps:false },
-          ]
-        },
-        options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
-          plugins:{legend:{labels:{color:'#8892a4',font:{size:11},boxWidth:12}}, zoom:ZOOM_OPTS},
-          scales:{ y:{ticks:{color:'#8892a4',font:{size:10},callback:v=>v!=null?v.toFixed(1)+' lbs':null},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:12},grid:{display:false}} }
-        }
+        data:{ labels:projLabels, datasets:[
+          { label:'Actual', data:[...actualData,...Array(pad).fill(null)], borderColor:color, backgroundColor:bgColor, borderWidth:2.5, pointRadius:3, pointHoverRadius:5, fill:true, tension:.3, spanGaps:false },
+          { label:'7-Day Avg', data:[...rolling,...Array(pad).fill(null)], borderColor:colorFaded, borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:.3, spanGaps:false },
+          { label:'Projected', data:[...Array(actualData.length).fill(null),...extProj], borderColor:projColor, borderDash:[4,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0, spanGaps:false },
+        ]},
+        options: commonOpts(true)
       });
       return;
     }
   }
-  // Fallback: just actual points
-  makeChart('chart-sm', {
-    type:'line',
-    data:{ labels, datasets:[
-      { label:'Actual', data:actualData, borderColor:'#34d399', backgroundColor:'rgba(52,211,153,.15)', borderWidth:2.5, pointRadius:3, fill:true, tension:.3 },
-    ]},
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
-      scales:{ y:{ticks:{color:'#8892a4',font:{size:10},callback:v=>v.toFixed(1)+' lbs'},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10}},grid:{display:false}} }
-    }
+  // Fallback: just actual
+  makeChart(id, {
+    type:'line', data:{ labels, datasets:[{ label:'Actual', data:actualData, borderColor:color, backgroundColor:bgColor, borderWidth:2.5, pointRadius:3, fill:true, tension:.3 }]},
+    options: commonOpts(false)
   });
 }
 
-function renderMuscleMassChart(entries) {
-  const mmEntries = entries.filter(e => e.muscleMass != null).sort((a,b)=>a.date.localeCompare(b.date));
-  if (!mmEntries.length) {
-    makeChart('chart-mm', { type:'line', data:{ labels:['No data yet'], datasets:[{ data:[null], borderColor:'#a855f7', borderWidth:2 }]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{ticks:{color:'#8892a4',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10}},grid:{display:false}} } }});
-    return;
-  }
-  const labels = mmEntries.map(e => fmtDate(e.date).split(',')[0]);
-  const actualData = mmEntries.map(e => parseFloat(e.muscleMass));
-  const rolling = rollingAvg(mmEntries, 'muscleMass', 7);
-
-  // Projected trend line
-  const pts = mmEntries.map(e => ({ x: daysBetween(BASELINE.date, e.date), y: parseFloat(e.muscleMass) }));
-  let projLabels = [...labels], projData = actualData.map(() => null);
-  if (pts.length >= 2) {
-    const reg = linearRegression(pts.map(p=>p.x), pts.map(p=>p.y));
-    if (reg) {
-      // Extend projection 60 days beyond last entry
-      const lastDay = pts[pts.length-1].x;
-      const extDays = 60;
-      const step = Math.max(1, Math.round(extDays / 10));
-      const extLabels = [], extProj = [];
-      for (let d = 0; d <= extDays; d += step) {
-        const dt = new Date(START_DATE); dt.setDate(dt.getDate() + lastDay + d);
-        extLabels.push(dt.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
-        extProj.push(reg.slope * (lastDay + d) + reg.intercept);
-      }
-      projLabels = [...labels, ...extLabels];
-      projData = [...actualData.map(()=>null), ...extProj];
-      // Align actual and rolling to full label set
-      const pad = extLabels.length;
-      makeChart('chart-mm', {
-        type:'line',
-        data:{
-          labels: projLabels,
-          datasets:[
-            { label:'Actual', data:[...actualData, ...Array(pad).fill(null)], borderColor:'#a855f7', backgroundColor:'rgba(168,85,247,.15)', borderWidth:2.5, pointRadius:3, pointHoverRadius:5, fill:true, tension:.3, spanGaps:false },
-            { label:'7-Day Avg', data:[...rolling, ...Array(pad).fill(null)], borderColor:'rgba(168,85,247,.5)', borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:.3, spanGaps:false },
-            { label:'Projected', data:[...Array(actualData.length).fill(null), ...extProj], borderColor:'rgba(52,211,153,.7)', borderDash:[4,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0, spanGaps:false },
-          ]
-        },
-        options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
-          plugins:{legend:{labels:{color:'#8892a4',font:{size:11},boxWidth:12}}, zoom:ZOOM_OPTS},
-          scales:{ y:{ticks:{color:'#8892a4',font:{size:10},callback:v=>v!=null?v.toFixed(1)+'%':null},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:12},grid:{display:false}} }
-        }
-      });
-      return;
-    }
-  }
-  // Fallback: just actual points
-  makeChart('chart-mm', {
-    type:'line',
-    data:{ labels, datasets:[
-      { label:'Actual', data:actualData, borderColor:'#a855f7', backgroundColor:'rgba(168,85,247,.15)', borderWidth:2.5, pointRadius:3, fill:true, tension:.3 },
-    ]},
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
-      scales:{ y:{ticks:{color:'#8892a4',font:{size:10},callback:v=>v.toFixed(1)+'%'},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10}},grid:{display:false}} }
-    }
-  });
+function renderSkeletalMuscleChart(entries, windowEnd) {
+  _buildTrendChart('chart-sm','skeletalMuscle',entries,windowEnd||'data','#34d399','rgba(52,211,153,.5)','rgba(168,85,247,.7)',' lbs','rgba(52,211,153,.15)');
 }
-
-function renderSubcutaneousFatChart(entries) {
-  const sfEntries = entries.filter(e => e.subcutaneousFat != null).sort((a,b)=>a.date.localeCompare(b.date));
-  if (!sfEntries.length) {
-    makeChart('chart-sf', { type:'line', data:{ labels:['No data yet'], datasets:[{ data:[null], borderColor:'#34d399', borderWidth:2 }]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{ticks:{color:'#8892a4',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10}},grid:{display:false}} } }});
-    return;
-  }
-  const labels = sfEntries.map(e => fmtDate(e.date).split(',')[0]);
-  const actualData = sfEntries.map(e => parseFloat(e.subcutaneousFat));
-  const rolling = rollingAvg(sfEntries, 'subcutaneousFat', 7);
-
-  // Projected trend line
-  const pts = sfEntries.map(e => ({ x: daysBetween(BASELINE.date, e.date), y: parseFloat(e.subcutaneousFat) }));
-  let projLabels = [...labels], projData = actualData.map(() => null);
-  if (pts.length >= 2) {
-    const reg = linearRegression(pts.map(p=>p.x), pts.map(p=>p.y));
-    if (reg) {
-      const lastDay = pts[pts.length-1].x;
-      const extDays = 60;
-      const step = Math.max(1, Math.round(extDays / 10));
-      const extLabels = [], extProj = [];
-      for (let d = 0; d <= extDays; d += step) {
-        const dt = new Date(START_DATE); dt.setDate(dt.getDate() + lastDay + d);
-        extLabels.push(dt.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
-        extProj.push(reg.slope * (lastDay + d) + reg.intercept);
-      }
-      projLabels = [...labels, ...extLabels];
-      projData = [...actualData.map(()=>null), ...extProj];
-      const pad = extLabels.length;
-      makeChart('chart-sf', {
-        type:'line',
-        data:{
-          labels: projLabels,
-          datasets:[
-            { label:'Actual', data:[...actualData, ...Array(pad).fill(null)], borderColor:'#34d399', backgroundColor:'rgba(52,211,153,.15)', borderWidth:2.5, pointRadius:3, pointHoverRadius:5, fill:true, tension:.3, spanGaps:false },
-            { label:'7-Day Avg', data:[...rolling, ...Array(pad).fill(null)], borderColor:'rgba(52,211,153,.5)', borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:.3, spanGaps:false },
-            { label:'Projected', data:[...Array(actualData.length).fill(null), ...extProj], borderColor:'rgba(79,142,247,.7)', borderDash:[4,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0, spanGaps:false },
-          ]
-        },
-        options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
-          plugins:{legend:{labels:{color:'#8892a4',font:{size:11},boxWidth:12}}, zoom:ZOOM_OPTS},
-          scales:{ y:{ticks:{color:'#8892a4',font:{size:10},callback:v=>v!=null?v.toFixed(1)+'%':null},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:12},grid:{display:false}} }
-        }
-      });
-      return;
-    }
-  }
-  // Fallback: just actual points
-  makeChart('chart-sf', {
-    type:'line',
-    data:{ labels, datasets:[
-      { label:'Actual', data:actualData, borderColor:'#34d399', backgroundColor:'rgba(52,211,153,.15)', borderWidth:2.5, pointRadius:3, fill:true, tension:.3 },
-    ]},
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
-      scales:{ y:{ticks:{color:'#8892a4',font:{size:10},callback:v=>v.toFixed(1)+'%'},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10}},grid:{display:false}} }
-    }
-  });
+function renderMuscleMassChart(entries, windowEnd) {
+  _buildTrendChart('chart-mm','muscleMass',entries,windowEnd||'data','#a855f7','rgba(168,85,247,.5)','rgba(52,211,153,.7)','%','rgba(168,85,247,.15)');
+}
+function renderSubcutaneousFatChart(entries, windowEnd) {
+  _buildTrendChart('chart-sf','subcutaneousFat',entries,windowEnd||'data','#34d399','rgba(52,211,153,.5)','rgba(79,142,247,.7)','%','rgba(52,211,153,.15)');
 }
 
 // ===== BIG CHARTS =====
