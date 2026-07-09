@@ -879,7 +879,8 @@ if (window.navigator.standalone) {
       <button id="lift-prog-tab-upper" class="btn btn-primary" style="flex:1" onclick="showLiftProgTab('Upper')">💪 Upper Body</button>
       <button id="lift-prog-tab-lower" class="btn btn-secondary" style="flex:1" onclick="showLiftProgTab('Lower')">🦵 Lower Body</button>
     </div>
-    <div id="lift-prog-ex-list" style="margin-bottom:8px"></div>
+    <div id="lift-prog-type-chart" style="margin-bottom:4px"></div>
+    <div id="lift-prog-ex-selector"></div>
     <div id="lift-ex-progress"></div>
   </div>
 </div>
@@ -1085,53 +1086,92 @@ function renderLiftProgress() {
   showLiftProgTab(_liftProgTab);
 }
 
+var _liftTypeChart = null;
+
 function showLiftProgTab(type) {
   _liftProgTab = type;
+  _liftProgSelectedEx = null;
   var upBtn = document.getElementById('lift-prog-tab-upper');
   var loBtn = document.getElementById('lift-prog-tab-lower');
   if (upBtn) upBtn.className = type === 'Upper' ? 'btn btn-primary' : 'btn btn-secondary';
   if (loBtn) loBtn.className = type === 'Lower' ? 'btn btn-primary' : 'btn btn-secondary';
   var detEl = document.getElementById('lift-ex-progress');
   if (detEl) detEl.innerHTML = '';
-  _liftProgSelectedEx = null;
-  renderLiftExList(type);
+  renderLiftTypeChart(type);
+  renderLiftExDropdown(type);
 }
 
-function renderLiftExList(type) {
-  var listEl = document.getElementById('lift-prog-ex-list');
-  if (!listEl) return;
+function renderLiftTypeChart(type) {
+  var el = document.getElementById('lift-prog-type-chart');
+  if (!el) return;
+  var workouts = getLiftWorkouts()
+    .filter(function(w){ return w.type === type; })
+    .sort(function(a,b){ return a.date.localeCompare(b.date); });
+  if (!workouts.length) {
+    el.innerHTML = '<p style="color:var(--muted);font-size:13px;padding:8px 0">No ' + type.toLowerCase() + ' body workouts logged yet.</p>';
+    return;
+  }
+  var labels = workouts.map(function(w){ return fmtDate(w.date); });
+  var volumes = workouts.map(function(w){
+    return w.exercises.reduce(function(t, ex){
+      return t + ex.sets.reduce(function(s, set){ return s + (parseFloat(set.weight)||0)*(parseInt(set.reps)||0); }, 0);
+    }, 0);
+  });
+  el.innerHTML =
+    '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">' +
+      (type==='Upper'?'💪':'🦵') + ' Total Volume Per Session</div>' +
+    '<div style="height:180px;position:relative;margin-bottom:14px"><canvas id="lift-type-chart-canvas"></canvas></div>';
+  setTimeout(function() {
+    var canvas = document.getElementById('lift-type-chart-canvas');
+    if (!canvas || typeof Chart === 'undefined') return;
+    if (_liftTypeChart) { try { _liftTypeChart.destroy(); } catch(e){} _liftTypeChart = null; }
+    var accentCol = type === 'Upper' ? '#6366f1' : '#22c55e';
+    var gridCol = 'rgba(255,255,255,0.07)';
+    var textCol = '#94a3b8';
+    _liftTypeChart = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{ label: 'Volume (lbs)', data: volumes,
+          backgroundColor: accentCol + '99', borderColor: accentCol, borderWidth: 1, borderRadius: 4 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, datalabels: { display: false },
+          tooltip: { callbacks: { label: function(ctx){ return ctx.parsed.y.toLocaleString() + ' lbs'; } } } },
+        scales: {
+          x: { ticks: { color: textCol, font: { size: 10 }, maxRotation: 45 }, grid: { color: gridCol } },
+          y: { ticks: { color: textCol, font: { size: 10 } }, grid: { color: gridCol } }
+        }
+      }
+    });
+  }, 50);
+}
+
+function renderLiftExDropdown(type) {
+  var el = document.getElementById('lift-prog-ex-selector');
+  if (!el) return;
   var workouts = getLiftWorkouts().filter(function(w){ return w.type === type; });
   var exData = getLiftExerciseData(workouts);
   var names = Object.keys(exData).sort();
-  if (!names.length) {
-    listEl.innerHTML = '<p style="color:var(--muted);font-size:13px;padding:8px 0">No ' + type.toLowerCase() + ' body workouts logged yet.</p>';
-    return;
-  }
-  listEl.innerHTML = names.map(function(name) {
-    var sessions = exData[name];
-    var pr = Math.max.apply(null, sessions.map(function(s){return s.maxWeight;}));
-    var firstMax = sessions[0].maxWeight;
-    var lastMax  = sessions[sessions.length-1].maxWeight;
-    var pct = firstMax > 0 ? (lastMax-firstMax)/firstMax*100 : 0;
-    var pctCol = pct >= 0 ? 'var(--accent2)' : '#f87171';
-    var isSelected = name === _liftProgSelectedEx;
-    return '<div class="lift-ex-row" data-exname="' + escapeHtml(name) + '" onclick="selectLiftEx(this.dataset.exname)" ' +
-      'style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:8px;cursor:pointer;margin-bottom:6px;' +
-      (isSelected ? 'background:var(--accent);color:#fff' : 'background:var(--surface2)') + '">' +
-      '<span style="font-weight:600;font-size:14px">' + escapeHtml(name) + '</span>' +
-      '<span style="display:flex;gap:10px;align-items:center;flex-shrink:0">' +
-        '<span style="font-size:11px;color:' + (isSelected?'rgba(255,255,255,.8)':'var(--muted)') + '">' + sessions.length + 'x</span>' +
-        '<span style="font-size:12px;font-weight:600;color:' + (isSelected?'#fff':'var(--accent)') + '">' + pr + ' lbs</span>' +
-        '<span style="font-size:12px;font-weight:700;color:' + (isSelected?'#fff':pctCol) + '">' + (pct>=0?'+':'') + pct.toFixed(0) + '%</span>' +
-      '</span>' +
-    '</div>';
-  }).join('');
+  if (!names.length) { el.innerHTML = ''; return; }
+  el.innerHTML =
+    '<label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px">Drill Down: Select Exercise</label>' +
+    '<select id="lift-ex-select" onchange="selectLiftEx(this.value)" ' +
+      'style="width:100%;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;outline:none;margin-bottom:4px">' +
+    '<option value="">Select an exercise…</option>' +
+    names.map(function(n) {
+      var s = exData[n];
+      var pr = Math.max.apply(null, s.map(function(x){return x.maxWeight;}));
+      return '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + ' · ' + s.length + ' session' + (s.length===1?'':'s') + ' · ' + pr + ' lbs PR</option>';
+    }).join('') +
+    '</select>';
 }
 
 function selectLiftEx(name) {
   _liftProgSelectedEx = name;
-  renderLiftExList(_liftProgTab);
-  renderLiftExerciseProgress(name);
+  if (name) renderLiftExerciseProgress(name);
+  else { var d = document.getElementById('lift-ex-progress'); if (d) d.innerHTML = ''; }
 }
 
 function renderLiftOverallStats(workouts) {
