@@ -875,13 +875,11 @@ if (window.navigator.standalone) {
 
   <!-- Per-exercise -->
   <div class="card">
-    <div style="margin-bottom:14px">
-      <label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px">Select Exercise</label>
-      <select id="lift-ex-select" onchange="renderLiftExerciseProgress(this.value)"
-        style="width:100%;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;outline:none">
-        <option value="">Select an exercise…</option>
-      </select>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button id="lift-prog-tab-upper" class="btn btn-primary" style="flex:1" onclick="showLiftProgTab('Upper')">💪 Upper Body</button>
+      <button id="lift-prog-tab-lower" class="btn btn-secondary" style="flex:1" onclick="showLiftProgTab('Lower')">🦵 Lower Body</button>
     </div>
+    <div id="lift-prog-ex-list" style="margin-bottom:8px"></div>
     <div id="lift-ex-progress"></div>
   </div>
 </div>
@@ -1078,18 +1076,62 @@ function getLiftExerciseData(workouts) {
   return data;
 }
 
+var _liftProgTab = 'Upper';
+var _liftProgSelectedEx = null;
+
 function renderLiftProgress() {
   var workouts = getLiftWorkouts().sort(function(a,b){return a.date.localeCompare(b.date);});
   renderLiftOverallStats(workouts);
-  populateLiftExDropdown(workouts);
-  // Auto-select first populated exercise
-  var sel = document.getElementById('lift-ex-select');
-  if (sel && !sel.value && sel.options.length > 1) {
-    sel.value = sel.options[1].value;
-    renderLiftExerciseProgress(sel.value);
-  } else if (sel && sel.value) {
-    renderLiftExerciseProgress(sel.value);
+  showLiftProgTab(_liftProgTab);
+}
+
+function showLiftProgTab(type) {
+  _liftProgTab = type;
+  var upBtn = document.getElementById('lift-prog-tab-upper');
+  var loBtn = document.getElementById('lift-prog-tab-lower');
+  if (upBtn) upBtn.className = type === 'Upper' ? 'btn btn-primary' : 'btn btn-secondary';
+  if (loBtn) loBtn.className = type === 'Lower' ? 'btn btn-primary' : 'btn btn-secondary';
+  var detEl = document.getElementById('lift-ex-progress');
+  if (detEl) detEl.innerHTML = '';
+  _liftProgSelectedEx = null;
+  renderLiftExList(type);
+}
+
+function renderLiftExList(type) {
+  var listEl = document.getElementById('lift-prog-ex-list');
+  if (!listEl) return;
+  var workouts = getLiftWorkouts().filter(function(w){ return w.type === type; });
+  var exData = getLiftExerciseData(workouts);
+  var names = Object.keys(exData).sort();
+  if (!names.length) {
+    listEl.innerHTML = '<p style="color:var(--muted);font-size:13px;padding:8px 0">No ' + type.toLowerCase() + ' body workouts logged yet.</p>';
+    return;
   }
+  listEl.innerHTML = names.map(function(name) {
+    var sessions = exData[name];
+    var pr = Math.max.apply(null, sessions.map(function(s){return s.maxWeight;}));
+    var firstMax = sessions[0].maxWeight;
+    var lastMax  = sessions[sessions.length-1].maxWeight;
+    var pct = firstMax > 0 ? (lastMax-firstMax)/firstMax*100 : 0;
+    var pctCol = pct >= 0 ? 'var(--accent2)' : '#f87171';
+    var isSelected = name === _liftProgSelectedEx;
+    return '<div class="lift-ex-row" onclick="selectLiftEx(' + JSON.stringify(name) + ')" ' +
+      'style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:8px;cursor:pointer;margin-bottom:6px;' +
+      (isSelected ? 'background:var(--accent);color:#fff' : 'background:var(--surface2)') + '">' +
+      '<span style="font-weight:600;font-size:14px">' + escapeHtml(name) + '</span>' +
+      '<span style="display:flex;gap:10px;align-items:center;flex-shrink:0">' +
+        '<span style="font-size:11px;color:' + (isSelected?'rgba(255,255,255,.8)':'var(--muted)') + '">' + sessions.length + 'x</span>' +
+        '<span style="font-size:12px;font-weight:600;color:' + (isSelected?'#fff':'var(--accent)') + '">' + pr + ' lbs</span>' +
+        '<span style="font-size:12px;font-weight:700;color:' + (isSelected?'#fff':pctCol) + '">' + (pct>=0?'+':'') + pct.toFixed(0) + '%</span>' +
+      '</span>' +
+    '</div>';
+  }).join('');
+}
+
+function selectLiftEx(name) {
+  _liftProgSelectedEx = name;
+  renderLiftExList(_liftProgTab);
+  renderLiftExerciseProgress(name);
 }
 
 function renderLiftOverallStats(workouts) {
@@ -1164,21 +1206,6 @@ function renderLiftOverallStats(workouts) {
       }).join('') : '');
 }
 
-function populateLiftExDropdown(workouts) {
-  var sel = document.getElementById('lift-ex-select');
-  if (!sel) return;
-  var exData = getLiftExerciseData(workouts);
-  var names = Object.keys(exData).sort();
-  var current = sel.value;
-  sel.innerHTML = '<option value="">Select an exercise…</option>' +
-    names.map(function(n) {
-      var sessions = exData[n];
-      return '<option value="' + escapeHtml(n) + '"' + (n===current?' selected':'') + '>' +
-        escapeHtml(n) + ' (' + sessions.length + ' session' + (sessions.length===1?'':'s') + ')' +
-        '</option>';
-    }).join('');
-  if (!sel.value && names.length) sel.value = names[0];
-}
 
 function renderLiftExerciseProgress(name) {
   var el = document.getElementById('lift-ex-progress');
