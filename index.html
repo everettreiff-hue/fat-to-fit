@@ -838,7 +838,7 @@ if (window.navigator.standalone) {
   <div class="section-title">Log Workout</div>
   <div class="card" style="margin-bottom:16px">
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px">
-      <input type="date" id="lift-log-date" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px">
+      <input type="date" id="lift-log-date" onchange="renderLiftExerciseChecklist(_liftType)" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px">
       <div style="display:flex;gap:8px">
         <button id="lift-type-upper" class="btn btn-primary" onclick="selectLiftType('Upper')">Upper Day</button>
         <button id="lift-type-lower" class="btn btn-secondary" onclick="selectLiftType('Lower')">Lower Day</button>
@@ -952,6 +952,7 @@ let driveTokenClient = null;
 let driveAccessToken = null;
 let driveTokenExpiry = 0;
 let driveSyncTimer = null;
+let driveHasSynced = false;
 let driveBusy = false;
 
 // ===== ZOOM HELPER =====
@@ -2874,7 +2875,8 @@ function addCustomLiftExercise() {
 
 function saveLiftWorkout() {
   const date = document.getElementById('lift-log-date').value;
-  if (!date) { document.getElementById('lift-log-msg').textContent = 'Please select a date.'; return; }
+  const msgEl = document.getElementById('lift-log-msg');
+  if (!date) { msgEl.style.color = '#f87171'; msgEl.textContent = '⚠️ Please select a date.'; return; }
   const type = _liftType;
   const exList = (type === 'Upper' ? UPPER_EXERCISES : LOWER_EXERCISES).slice().sort((a,b) => a.localeCompare(b));
   const exercises = [];
@@ -2893,14 +2895,15 @@ function saveLiftWorkout() {
     });
     if (sets.length) exercises.push({ name, sets });
   });
-  if (!exercises.length) { document.getElementById('lift-log-msg').textContent = 'Select at least one exercise with sets.'; return; }
+  if (!exercises.length) { msgEl.style.color = '#f87171'; msgEl.textContent = '⚠️ Check at least one exercise and enter weight + reps.'; return; }
   const workouts = getLiftWorkouts();
   const idx = workouts.findIndex(w => w.date === date && w.type === type);
   if (idx >= 0) workouts[idx] = { date, type, exercises };
   else workouts.push({ date, type, exercises });
   saveLiftWorkouts(workouts);
-  document.getElementById('lift-log-msg').textContent = 'Saved!';
-  setTimeout(() => { document.getElementById('lift-log-msg').textContent = ''; }, 2000);
+  msgEl.style.color = 'var(--accent2)';
+  msgEl.textContent = '✅ Saved!';
+  setTimeout(() => { msgEl.textContent = ''; }, 2500);
 }
 
 // ===== LIFT: HISTORY =====
@@ -3011,9 +3014,14 @@ function handleDriveToken(resp) {
   driveAccessToken = resp.access_token;
   driveTokenExpiry = Date.now() + (Number(resp.expires_in) || 3600) * 1000 - 60000;
   localStorage.setItem('ht_drive_connected', '1');
-  setDriveStatus('☁️ Drive: syncing…');
   scheduleProactiveTokenRefresh();
-  driveInitialSync();
+  // Only do the full initial sync (pull + possible reload) on the first token.
+  // Subsequent token refreshes just update the in-memory token; any pending
+  // local changes will be pushed by the normal scheduleDriveSync path.
+  if (!driveHasSynced) {
+    setDriveStatus('☁️ Drive: syncing…');
+    driveInitialSync();
+  }
 }
 
 // Refresh the token shortly before it expires so a long-running open tab
@@ -3178,6 +3186,7 @@ async function driveInitialSync() {
         else applyAllAppData(remote);
         localStorage.setItem('ht_last_modified', String(remoteTs));
         setDriveStatus('☁️ Drive: synced ✓');
+        driveHasSynced = true;
         driveBusy = false;
         location.reload();
         return;
@@ -3187,6 +3196,7 @@ async function driveInitialSync() {
       localStorage.setItem('ht_drive_file_id', fileId);
     }
     await pushToDrive();
+    driveHasSynced = true;
   } catch (e) {
     console.warn('Drive initial sync failed', e);
     setDriveStatus('☁️ Drive: error, tap to retry');
