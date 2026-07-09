@@ -2791,12 +2791,15 @@ function selectLiftType(type) {
 
 function renderLiftExerciseChecklist(type) {
   const masterList = (type === 'Upper' ? UPPER_EXERCISES : LOWER_EXERCISES).slice().sort((a,b) => a.localeCompare(b));
-  const date = document.getElementById('lift-log-date').value;
-  const existing = getLiftWorkouts().find(w => w.date === date && w.type === type);
-  const container = document.getElementById('lift-log-exercises');
-  // Build combined list: master exercises + any custom exercises saved in this workout
   const masterSet = new Set(masterList);
-  const customExercises = existing ? existing.exercises.filter(ex => !masterSet.has(ex.name)) : [];
+  const date = document.getElementById('lift-log-date').value;
+  const allTypeWorkouts = getLiftWorkouts().filter(w => w.type === type);
+  const existing = allTypeWorkouts.find(w => w.date === date);
+  // Collect custom exercise names from ALL workouts of this type (so they persist across sessions)
+  const customNames = new Set();
+  allTypeWorkouts.forEach(w => w.exercises.forEach(ex => { if (!masterSet.has(ex.name)) customNames.add(ex.name); }));
+  const customList = Array.from(customNames).sort((a,b) => a.localeCompare(b));
+  const container = document.getElementById('lift-log-exercises');
   function exBlockHtml(name, exData) {
     const checked = !!exData;
     const sets = exData ? exData.sets : [{weight:'',reps:''}];
@@ -2813,7 +2816,7 @@ function renderLiftExerciseChecklist(type) {
   }
   container.innerHTML =
     masterList.map(name => exBlockHtml(name, existing ? existing.exercises.find(e => e.name === name) : null)).join('') +
-    customExercises.map(ex => exBlockHtml(ex.name, ex)).join('');
+    customList.map(name => exBlockHtml(name, existing ? existing.exercises.find(e => e.name === name) : null)).join('');
 }
 
 function liftSetRowHtml(name, idx, weight, reps) {
