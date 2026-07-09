@@ -1115,7 +1115,7 @@ function renderLiftExList(type) {
     var pct = firstMax > 0 ? (lastMax-firstMax)/firstMax*100 : 0;
     var pctCol = pct >= 0 ? 'var(--accent2)' : '#f87171';
     var isSelected = name === _liftProgSelectedEx;
-    return '<div class="lift-ex-row" onclick="selectLiftEx(' + JSON.stringify(name) + ')" ' +
+    return '<div class="lift-ex-row" data-exname="' + escapeHtml(name) + '" onclick="selectLiftEx(this.dataset.exname)" ' +
       'style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:8px;cursor:pointer;margin-bottom:6px;' +
       (isSelected ? 'background:var(--accent);color:#fff' : 'background:var(--surface2)') + '">' +
       '<span style="font-weight:600;font-size:14px">' + escapeHtml(name) + '</span>' +
