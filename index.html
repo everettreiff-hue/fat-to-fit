@@ -3155,9 +3155,52 @@ function saveLiftWorkout() {
 // ===== AI COACH =====
 let _coachHistory = [];
 
+function saveCoachHistory() {
+  // Cap stored history at 100 messages to keep localStorage size manageable
+  const toStore = _coachHistory.slice(-100);
+  localStorage.setItem('ht_coach_history', JSON.stringify(toStore));
+}
+
+function renderCoachBubble(msg, container) {
+  const el = document.createElement('div');
+  if (msg.role === 'user') {
+    el.style.cssText = 'display:flex;justify-content:flex-end';
+    el.innerHTML = `<div style="max-width:85%;background:var(--accent);color:#fff;border-radius:14px 14px 3px 14px;padding:10px 14px;font-size:14px;line-height:1.5;word-break:break-word">${escapeHtml(msg.content)}</div>`;
+  } else {
+    // Strip any workout-json blocks from display
+    const display = msg.content.replace(/```workout-json[\s\S]+?```/g, '').trim();
+    const formatted = escapeHtml(display)
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/\n\n/g, '</p><p style="margin:8px 0 0">')
+      .replace(/\n/g, '<br>');
+    el.style.cssText = 'display:flex;justify-content:flex-start';
+    el.innerHTML = `<div style="max-width:92%;background:var(--surface2);border:1px solid var(--border);border-radius:14px 14px 14px 3px;padding:12px 14px;font-size:14px;line-height:1.6;word-break:break-word"><p style="margin:0">${formatted}</p></div>`;
+  }
+  container.appendChild(el);
+}
+
 function initCoachPage() {
   const hasKey = !!localStorage.getItem('ht_coach_api_key');
   document.getElementById('coach-key-setup').style.display = hasKey ? 'none' : '';
+
+  // Restore persisted conversation
+  const saved = localStorage.getItem('ht_coach_history');
+  if (saved) {
+    try { _coachHistory = JSON.parse(saved); } catch(e) { _coachHistory = []; }
+  }
+  if (_coachHistory.length) {
+    const messagesEl = document.getElementById('coach-messages');
+    const welcome = document.getElementById('coach-welcome');
+    if (welcome) welcome.remove();
+    _coachHistory.forEach(msg => renderCoachBubble(msg, messagesEl));
+    // Add a subtle "session restored" separator
+    const sep = document.createElement('div');
+    sep.style.cssText = 'text-align:center;font-size:11px;color:var(--muted);padding:4px 0';
+    sep.textContent = '— previous conversation restored —';
+    messagesEl.appendChild(sep);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
 }
 
 function saveCoachApiKey() {
@@ -3175,6 +3218,7 @@ function showChangeApiKey() {
 
 function clearCoachChat() {
   _coachHistory = [];
+  localStorage.removeItem('ht_coach_history');
   const el = document.getElementById('coach-messages');
   el.innerHTML = '<div id="coach-welcome" style="text-align:center;color:var(--muted);font-size:13px;padding:24px 16px;line-height:1.6">🤖 <strong style="color:var(--text)">AI Coach</strong><br>I have full access to your workout history and body composition data. Ask me anything — I\'ll give you specific, data-driven advice.</div>';
 }
@@ -3247,6 +3291,7 @@ async function sendCoachMessage() {
   if (welcome) welcome.remove();
   // User bubble
   _coachHistory.push({ role: 'user', content: text });
+  saveCoachHistory();
   const userBubble = document.createElement('div');
   userBubble.style.cssText = 'display:flex;justify-content:flex-end';
   userBubble.innerHTML = `<div style="max-width:85%;background:var(--accent);color:#fff;border-radius:14px 14px 3px 14px;padding:10px 14px;font-size:14px;line-height:1.5;word-break:break-word">${escapeHtml(text)}</div>`;
@@ -3271,7 +3316,7 @@ async function sendCoachMessage() {
         model: 'claude-haiku-4-5',
         max_tokens: 1024,
         system: buildCoachSystemPrompt(),
-        messages: _coachHistory
+        messages: _coachHistory.slice(-30)
       })
     });
     const data = await res.json();
@@ -3288,6 +3333,7 @@ async function sendCoachMessage() {
     }
     const reply = data.content[0].text;
     _coachHistory.push({ role: 'assistant', content: reply });
+    saveCoachHistory();
     // Parse optional workout-json block
     let displayReply = reply;
     let suggestedWorkout = null;
