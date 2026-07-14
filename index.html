@@ -2880,15 +2880,34 @@ function renderLiftExerciseChecklist(type) {
   const customNames = new Set();
   allTypeWorkouts.forEach(w => w.exercises.forEach(ex => { if (!masterSet.has(ex.name)) customNames.add(ex.name); }));
   const customList = Array.from(customNames).sort((a,b) => a.localeCompare(b));
+  // Build last-session map: most recent past workout containing each exercise
+  const lastSessionMap = {};
+  allTypeWorkouts
+    .filter(w => w.date < date)
+    .sort((a,b) => b.date.localeCompare(a.date))
+    .forEach(w => {
+      w.exercises.forEach(ex => {
+        if (!lastSessionMap[ex.name]) lastSessionMap[ex.name] = { date: w.date, sets: ex.sets };
+      });
+    });
   const container = document.getElementById('lift-log-exercises');
   function exBlockHtml(name, exData) {
     const checked = !!exData;
     const sets = exData ? exData.sets : [{weight:'',reps:''}];
+    const last = lastSessionMap[name];
+    let lastHtml = '';
+    if (last) {
+      const d = new Date(last.date + 'T00:00:00');
+      const dateStr = d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+      const setsStr = last.sets.filter(s => s.weight || s.reps).map(s => `${s.weight||'?'}×${s.reps||'?'}`).join(' · ');
+      if (setsStr) lastHtml = `<div style="font-size:11px;color:var(--muted);margin:-4px 0 8px 24px">Last (${dateStr}): ${setsStr}</div>`;
+    }
     return `<div class="lift-ex-block" id="leb-${CSS.escape(name)}" data-exname="${escapeHtml(name)}" style="margin-bottom:16px;border-top:1px solid var(--border);padding-top:12px">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;font-weight:600;font-size:14px">
         <input type="checkbox" class="lift-ex-check" onchange="toggleLiftExercise('${name.replace(/'/g,"\'")}', this.checked)" ${checked?'checked':''} style="width:16px;height:16px;accent-color:var(--accent)">
         ${escapeHtml(name)}
       </label>
+      ${lastHtml}
       <div class="lift-sets-wrap" style="${checked?'':'display:none'}">
         ${sets.map((s,i) => liftSetRowHtml(name, i, s.weight, s.reps)).join('')}
         <button class="btn btn-sm btn-secondary" style="margin-top:4px" onclick="addLiftSet('${name.replace(/'/g,"\'")}')">+ Add Set</button>
