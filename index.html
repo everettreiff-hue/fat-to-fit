@@ -91,6 +91,9 @@
   .btn-danger:hover { background: var(--danger); color: #fff; }
   .btn-sm { font-size: 12px; padding: 6px 12px; }
   .crng { display:flex; gap:2px; }
+  @keyframes coach-pulse { 0%,100%{opacity:.3} 50%{opacity:1} }
+  .coach-thinking-dot { display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--muted);animation:coach-pulse 1.2s ease-in-out infinite; }
+  .coach-thinking-dot:nth-child(2){animation-delay:.2s} .coach-thinking-dot:nth-child(3){animation-delay:.4s}
   .crng button { font-size:11px; padding:3px 9px; border-radius:6px; background:var(--surface2); border:1px solid var(--border); color:var(--muted); cursor:pointer; transition:all .15s; line-height:1.5; white-space:nowrap; }
   .crng button.crng-active { background:var(--accent); color:#fff; border-color:var(--accent); }
   .crng button:hover:not(.crng-active) { border-color:var(--accent); color:var(--accent); }
@@ -844,6 +847,7 @@ if (window.navigator.standalone) {
   <button class="active" onclick="showLiftPage('liftlog')"><span class="nav-icon">✏️</span>Log</button>
   <button onclick="showLiftPage('lifthistory')"><span class="nav-icon">🕘</span>History</button>
   <button onclick="showLiftPage('liftprogress')"><span class="nav-icon">📈</span>Progress</button>
+  <button onclick="showLiftPage('liftcoach')"><span class="nav-icon">🤖</span>Coach</button>
 </nav>
 <main>
 <div id="page-liftlog" class="page active">
@@ -894,6 +898,39 @@ if (window.navigator.standalone) {
     <div id="lift-prog-type-chart" style="margin-bottom:4px"></div>
     <div id="lift-prog-ex-selector"></div>
     <div id="lift-ex-progress"></div>
+  </div>
+<!-- ===== AI COACH ===== -->
+<div id="page-liftcoach" class="page">
+  <div class="section-title">AI Coach</div>
+  <div id="coach-key-setup" class="card" style="margin-bottom:16px;display:none">
+    <div class="card-title" style="margin-bottom:8px">🔑 API Key Setup</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5">Enter your Anthropic API key to enable AI coaching. Get one free at <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a>. Your key is stored only in this browser — never sent anywhere except Anthropic.</p>
+    <div style="display:flex;gap:8px">
+      <input type="password" id="coach-api-key-input" placeholder="sk-ant-..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px">
+      <button class="btn btn-primary" onclick="saveCoachApiKey()">Save</button>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:12px;padding:10px 12px">
+    <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Quick Actions</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">
+      <button class="btn btn-sm btn-secondary" onclick="coachQuickPrompt('Analyze my recent workouts and give me specific progressive overload targets for my next session — actual weights and reps to aim for.')">📊 Next Session Plan</button>
+      <button class="btn btn-sm btn-secondary" onclick="coachQuickPrompt('Look at my workout history across all exercises and identify where I\'m progressing well and where I\'m stalling or need to focus more.')">⚡ Identify Weak Points</button>
+      <button class="btn btn-sm btn-secondary" onclick="coachQuickPrompt('Review my body composition trends alongside my workout data and tell me how my training is affecting my physique goals. Am I on track?')">🏃 Body Comp Review</button>
+      <button class="btn btn-sm btn-secondary" onclick="coachQuickPrompt('Based on my training history, suggest an optimal weekly split and volume for my goals.')">📅 Weekly Plan</button>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:12px;padding:0;overflow:hidden">
+    <div id="coach-messages" style="min-height:220px;max-height:55vh;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px">
+      <div id="coach-welcome" style="text-align:center;color:var(--muted);font-size:13px;padding:24px 16px;line-height:1.6">🤖 <strong style="color:var(--text)">AI Coach</strong><br>I have full access to your workout history and body composition data. Ask me anything — I'll give you specific, data-driven advice.</div>
+    </div>
+    <div style="padding:10px 12px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end">
+      <textarea id="coach-input" placeholder="Ask your coach…" rows="2" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;resize:none;font-family:inherit;line-height:1.4" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendCoachMessage();}"></textarea>
+      <button class="btn btn-primary" onclick="sendCoachMessage()" style="padding:8px 14px;flex-shrink:0">Send</button>
+    </div>
+  </div>
+  <div style="text-align:center;margin-bottom:8px">
+    <button onclick="clearCoachChat()" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;margin-right:12px">Clear chat</button>
+    <button onclick="showChangeApiKey()" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer">Change API key</button>
   </div>
 </div>
 </main>
@@ -1398,13 +1435,14 @@ function showLiftPage(name) {
   scope.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const pg = scope.querySelector('#page-'+name);
   if (pg) pg.classList.add('active');
-  const labels = ['liftlog','lifthistory','liftprogress'];
+  const labels = ['liftlog','lifthistory','liftprogress','liftcoach'];
   scope.querySelectorAll('nav.top-nav button').forEach((b,i) => b.classList.toggle('active', labels[i]===name));
   scope.querySelectorAll('nav.bottom-nav button').forEach((b,i) => b.classList.toggle('active', labels[i]===name));
   window.scrollTo(0,0);
   if (name === 'lifthistory') renderLiftHistory();
   if (name === 'liftlog') initLiftLogPage();
   if (name === 'liftprogress') renderLiftProgress();
+  if (name === 'liftcoach') initCoachPage();
 }
 
 
@@ -3015,6 +3053,157 @@ function saveLiftWorkout() {
 }
 
 // ===== LIFT: HISTORY =====
+// ===== AI COACH =====
+let _coachHistory = [];
+
+function initCoachPage() {
+  const hasKey = !!localStorage.getItem('ht_coach_api_key');
+  document.getElementById('coach-key-setup').style.display = hasKey ? 'none' : '';
+}
+
+function saveCoachApiKey() {
+  const key = document.getElementById('coach-api-key-input').value.trim();
+  if (!key) return;
+  localStorage.setItem('ht_coach_api_key', key);
+  document.getElementById('coach-key-setup').style.display = 'none';
+  document.getElementById('coach-api-key-input').value = '';
+}
+
+function showChangeApiKey() {
+  localStorage.removeItem('ht_coach_api_key');
+  document.getElementById('coach-key-setup').style.display = '';
+}
+
+function clearCoachChat() {
+  _coachHistory = [];
+  const el = document.getElementById('coach-messages');
+  el.innerHTML = '<div id="coach-welcome" style="text-align:center;color:var(--muted);font-size:13px;padding:24px 16px;line-height:1.6">🤖 <strong style="color:var(--text)">AI Coach</strong><br>I have full access to your workout history and body composition data. Ask me anything — I\'ll give you specific, data-driven advice.</div>';
+}
+
+function coachQuickPrompt(text) {
+  document.getElementById('coach-input').value = text;
+  sendCoachMessage();
+}
+
+function buildCoachSystemPrompt() {
+  const entries = getData().sort((a,b) => a.date.localeCompare(b.date));
+  const workouts = getLiftWorkouts().sort((a,b) => a.date.localeCompare(b.date));
+  const latest = entries.length ? entries[entries.length - 1] : null;
+  const recent = workouts.slice(-20);
+
+  let sys = `You are a personal fitness coach embedded in the user's private health tracking app. You have full access to their real data below. Be specific, data-driven, and actionable. Reference actual numbers from their data when giving advice. Keep responses concise but thorough. Use **bold** for key numbers and exercise names.
+
+USER GOALS:
+- Start: ${BASELINE.date} | Weight: ${BASELINE.weight} lbs | Body Fat: ${BASELINE.bodyFat}%
+- Target: ${GOAL.date} | Weight: ${GOAL.weight} lbs | Body Fat: ${GOAL.bodyFat}%`;
+
+  if (latest) {
+    sys += `\n\nCURRENT STATS (${latest.date}):`;
+    if (latest.weight != null) sys += `\n- Weight: ${latest.weight} lbs`;
+    if (latest.bodyFat != null) sys += `\n- Body Fat: ${latest.bodyFat}%`;
+    if (latest.muscleMass != null) sys += `\n- Muscle Mass: ${latest.muscleMass}%`;
+    if (latest.skeletalMuscle != null) sys += `\n- Skeletal Muscle: ${latest.skeletalMuscle} lbs`;
+    if (latest.subcutaneousFat != null) sys += `\n- Subcutaneous Fat: ${latest.subcutaneousFat}%`;
+    if (latest.visceralFat != null) sys += `\n- Visceral Fat: ${latest.visceralFat}`;
+  }
+
+  if (entries.length > 1) {
+    const first = entries[0];
+    sys += `\n\nPROGRESS SINCE START (${first.date} → ${latest.date}):`;
+    if (first.weight != null && latest.weight != null) sys += `\n- Weight: ${first.weight} → ${latest.weight} lbs (${(latest.weight - first.weight > 0 ? '+' : '')}${(latest.weight - first.weight).toFixed(1)})`;
+    if (first.bodyFat != null && latest.bodyFat != null) sys += `\n- Body Fat: ${first.bodyFat} → ${latest.bodyFat}% (${(latest.bodyFat - first.bodyFat > 0 ? '+' : '')}${(latest.bodyFat - first.bodyFat).toFixed(1)})`;
+    if (first.muscleMass != null && latest.muscleMass != null) sys += `\n- Muscle Mass: ${first.muscleMass} → ${latest.muscleMass}% (${(latest.muscleMass - first.muscleMass > 0 ? '+' : '')}${(latest.muscleMass - first.muscleMass).toFixed(1)})`;
+  }
+
+  if (recent.length) {
+    sys += `\n\nWORKOUT HISTORY (last ${recent.length} sessions):`;
+    recent.forEach(w => {
+      sys += `\n\n${w.date} — ${w.type}:`;
+      w.exercises.forEach(ex => {
+        const setsStr = (ex.sets || []).filter(s => s.weight || s.reps).map(s => `${s.weight||'?'}lbs×${s.reps||'?'}`).join(', ');
+        if (setsStr) sys += `\n  • ${ex.name}: ${setsStr}`;
+      });
+    });
+  }
+
+  sys += `\n\nFocus on progressive overload: small, consistent increases in weight, reps, or sets. When recommending next-session targets, give specific numbers based on the data above.`;
+  return sys;
+}
+
+async function sendCoachMessage() {
+  const apiKey = localStorage.getItem('ht_coach_api_key');
+  if (!apiKey) { document.getElementById('coach-key-setup').style.display = ''; return; }
+  const input = document.getElementById('coach-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  const messagesEl = document.getElementById('coach-messages');
+  // Remove welcome message on first real message
+  const welcome = document.getElementById('coach-welcome');
+  if (welcome) welcome.remove();
+  // User bubble
+  _coachHistory.push({ role: 'user', content: text });
+  const userBubble = document.createElement('div');
+  userBubble.style.cssText = 'display:flex;justify-content:flex-end';
+  userBubble.innerHTML = `<div style="max-width:85%;background:var(--accent);color:#fff;border-radius:14px 14px 3px 14px;padding:10px 14px;font-size:14px;line-height:1.5;word-break:break-word">${escapeHtml(text)}</div>`;
+  messagesEl.appendChild(userBubble);
+  // Thinking indicator
+  const thinkingEl = document.createElement('div');
+  thinkingEl.style.cssText = 'display:flex;justify-content:flex-start';
+  thinkingEl.innerHTML = `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px 14px 14px 3px;padding:12px 16px;display:flex;gap:4px;align-items:center"><span class="coach-thinking-dot"></span><span class="coach-thinking-dot"></span><span class="coach-thinking-dot"></span></div>`;
+  messagesEl.appendChild(thinkingEl);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-5',
+        max_tokens: 1500,
+        system: buildCoachSystemPrompt(),
+        messages: _coachHistory
+      })
+    });
+    const data = await res.json();
+    thinkingEl.remove();
+    if (!res.ok) {
+      const errMsg = data.error?.message || `Error ${res.status}`;
+      const errEl = document.createElement('div');
+      errEl.style.cssText = 'color:#f87171;font-size:13px;padding:4px 0';
+      errEl.textContent = '⚠️ ' + errMsg;
+      messagesEl.appendChild(errEl);
+      _coachHistory.pop();
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return;
+    }
+    const reply = data.content[0].text;
+    _coachHistory.push({ role: 'assistant', content: reply });
+    const formatted = escapeHtml(reply)
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/\n\n/g, '</p><p style="margin:8px 0 0">')
+      .replace(/\n/g, '<br>');
+    const replyEl = document.createElement('div');
+    replyEl.style.cssText = 'display:flex;justify-content:flex-start';
+    replyEl.innerHTML = `<div style="max-width:92%;background:var(--surface2);border:1px solid var(--border);border-radius:14px 14px 14px 3px;padding:12px 14px;font-size:14px;line-height:1.6;word-break:break-word"><p style="margin:0">${formatted}</p></div>`;
+    messagesEl.appendChild(replyEl);
+  } catch(e) {
+    thinkingEl.remove();
+    const errEl = document.createElement('div');
+    errEl.style.cssText = 'color:#f87171;font-size:13px;padding:4px 0';
+    errEl.textContent = '⚠️ Network error — check your connection and try again.';
+    messagesEl.appendChild(errEl);
+    _coachHistory.pop();
+  }
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
 function renderLiftHistory() {
   const workouts = getLiftWorkouts().slice().sort((a,b) => {
     const dc = b.date.localeCompare(a.date);
