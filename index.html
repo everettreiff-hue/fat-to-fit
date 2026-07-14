@@ -3434,6 +3434,9 @@ function handleDriveToken(resp) {
   if (!driveHasSynced) {
     setDriveStatus('☁️ Drive: syncing…');
     driveInitialSync();
+  } else {
+    // Already synced — tap again checks for pending Apple Health import
+    checkPendingHealthImport();
   }
 }
 
@@ -3572,6 +3575,70 @@ function markLocalChange() {
   localStorage.setItem('ht_last_modified', String(Date.now()));
 }
 
+// ===== APPLE HEALTH IMPORT =====
+const HEALTH_IMPORT_FILE_NAME = 'fat-to-fit-health-import.json';
+
+async function importHealthData(token) {
+  try {
+    const q = encodeURIComponent(`name='${HEALTH_IMPORT_FILE_NAME}' and trashed=false`);
+    const r = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`, {
+      headers: { Authorization: 'Bearer ' + token }
+    });
+    const files = (await r.json()).files || [];
+    if (!files.length) return 0;
+
+    const fileId = files[0].id;
+    const importData = await driveGetContent(token, fileId);
+    if (!importData || !Array.isArray(importData) || !importData.length) return 0;
+
+    const existing = getData();
+    const existingDates = new Set(existing.map(e => e.date));
+    let added = 0;
+
+    importData.forEach(imp => {
+      if (!imp.date || existingDates.has(imp.date)) return;
+      existing.push({
+        date: imp.date,
+        weight:           imp.weight        ?? null,
+        bodyFat:          imp.bodyFat        ?? null,
+        visceralFat:      imp.visceralFat    ?? null,
+        subcutaneousFat:  imp.subcutaneousFat ?? null,
+        muscleMass:       imp.muscleMass     ?? null,
+        skeletalMuscle:   imp.leanBodyMass   ?? imp.skeletalMuscle ?? null,
+        workout: null,
+        recovery: null
+      });
+      existingDates.add(imp.date);
+      added++;
+    });
+
+    if (added > 0) {
+      saveData(existing);
+      markLocalChange();
+    }
+    // Clear the file (write empty array) so Shortcut can safely append next time
+    await driveUpdateContent(token, fileId, []);
+    return added;
+  } catch(e) {
+    console.warn('Apple Health import failed', e);
+    return 0;
+  }
+}
+
+async function checkPendingHealthImport() {
+  const token = await ensureDriveTokenAsync();
+  if (!token) return;
+  setDriveStatus('☁️ Drive: checking…');
+  const added = await importHealthData(token);
+  if (added > 0) {
+    await pushToDrive();
+    setDriveStatus(`☁️ Drive: +${added} entries from Apple Health ✓`);
+    setTimeout(() => location.reload(), 1500);
+  } else {
+    await pushToDrive();
+  }
+}
+
 function scheduleDriveSync() {
   markLocalChange();
   if (driveSyncTimer) clearTimeout(driveSyncTimer);
@@ -3598,7 +3665,14 @@ async function driveInitialSync() {
         if (localTs === 0) mergeAllAppData(remote);
         else applyAllAppData(remote);
         localStorage.setItem('ht_last_modified', String(remoteTs));
-        setDriveStatus('☁️ Drive: synced ✓');
+        // Check for Apple Health import before reloading
+        const healthAdded = await importHealthData(token);
+        if (healthAdded > 0) {
+          await pushToDrive();
+          setDriveStatus(`☁️ Drive: synced ✓ (+${healthAdded} from Apple Health)`);
+        } else {
+          setDriveStatus('☁️ Drive: synced ✓');
+        }
         driveHasSynced = true;
         driveBusy = false;
         location.reload();
@@ -3608,7 +3682,12 @@ async function driveInitialSync() {
       fileId = await driveCreateFile(token);
       localStorage.setItem('ht_drive_file_id', fileId);
     }
+    const healthAdded = await importHealthData(token);
     await pushToDrive();
+    if (healthAdded > 0) {
+      setDriveStatus(`☁️ Drive: synced ✓ (+${healthAdded} from Apple Health)`);
+      setTimeout(() => location.reload(), 800);
+    }
     driveHasSynced = true;
   } catch (e) {
     console.warn('Drive initial sync failed', e);
