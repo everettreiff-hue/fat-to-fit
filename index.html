@@ -3594,6 +3594,13 @@ async function driveGetContent(token, fileId) {
   try { return await res.json(); } catch { return null; }
 }
 
+function getCoachHistory() {
+  // Always read from localStorage so Drive sync captures history even if
+  // the Coach tab hasn't been opened yet this session (which would leave
+  // _coachHistory as [] in memory).
+  try { return JSON.parse(localStorage.getItem('ht_coach_history') || '[]'); } catch { return _coachHistory; }
+}
+
 function getAllAppData() {
   return {
     updatedAt: new Date().toISOString(),
@@ -3601,7 +3608,7 @@ function getAllAppData() {
     photos: getPhotos(),
     inbody: getInBody(),
     liftWorkouts: getLiftWorkouts(),
-    coachHistory: _coachHistory
+    coachHistory: getCoachHistory()
   };
 }
 
@@ -3613,6 +3620,8 @@ function applyAllAppData(remote) {
   if (Array.isArray(remote.coachHistory) && remote.coachHistory.length > _coachHistory.length) {
     _coachHistory = remote.coachHistory;
     localStorage.setItem('ht_coach_history', JSON.stringify(_coachHistory));
+    // If Coach tab is open, reset so initCoachPage re-renders with new history
+    _coachInitialized = false;
   }
 }
 
@@ -3644,6 +3653,7 @@ function mergeAllAppData(remote) {
   if (Array.isArray(remote.coachHistory) && remote.coachHistory.length > _coachHistory.length) {
     _coachHistory = remote.coachHistory;
     localStorage.setItem('ht_coach_history', JSON.stringify(_coachHistory));
+    _coachInitialized = false;
   }
 }
 
