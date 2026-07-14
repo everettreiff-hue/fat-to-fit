@@ -3154,6 +3154,7 @@ function saveLiftWorkout() {
 // ===== LIFT: HISTORY =====
 // ===== AI COACH =====
 let _coachHistory = [];
+let _coachInitialized = false;
 
 function saveCoachHistory() {
   // Cap stored history at 100 messages to keep localStorage size manageable
@@ -3184,6 +3185,10 @@ function initCoachPage() {
   const hasKey = !!localStorage.getItem('ht_coach_api_key');
   document.getElementById('coach-key-setup').style.display = hasKey ? 'none' : '';
 
+  // Only load history once per page session
+  if (_coachInitialized) return;
+  _coachInitialized = true;
+
   // Restore persisted conversation
   const saved = localStorage.getItem('ht_coach_history');
   if (saved) {
@@ -3194,7 +3199,6 @@ function initCoachPage() {
     const welcome = document.getElementById('coach-welcome');
     if (welcome) welcome.remove();
     _coachHistory.forEach(msg => renderCoachBubble(msg, messagesEl));
-    // Add a subtle "session restored" separator
     const sep = document.createElement('div');
     sep.style.cssText = 'text-align:center;font-size:11px;color:var(--muted);padding:4px 0';
     sep.textContent = '— previous conversation restored —';
@@ -3218,6 +3222,7 @@ function showChangeApiKey() {
 
 function clearCoachChat() {
   _coachHistory = [];
+  _coachInitialized = false;
   localStorage.removeItem('ht_coach_history');
   const el = document.getElementById('coach-messages');
   el.innerHTML = '<div id="coach-welcome" style="text-align:center;color:var(--muted);font-size:13px;padding:24px 16px;line-height:1.6">🤖 <strong style="color:var(--text)">AI Coach</strong><br>I have full access to your workout history and body composition data. Ask me anything — I\'ll give you specific, data-driven advice.</div>';
