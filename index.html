@@ -860,6 +860,14 @@ if (window.navigator.standalone) {
         <button id="lift-type-lower" class="btn btn-secondary" onclick="selectLiftType('Lower')">Lower Day</button>
       </div>
     </div>
+    <div id="coach-suggested-card" style="display:none;margin-bottom:16px;background:var(--surface2);border:1.5px solid var(--accent);border-radius:10px;padding:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-weight:600;font-size:14px">🤖 Coach Suggested</div>
+        <button onclick="dismissCoachSuggestion()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:22px;line-height:1;padding:0">×</button>
+      </div>
+      <div id="coach-suggested-exercises"></div>
+      <button class="btn btn-primary" onclick="applyCoachWorkout()" style="margin-top:12px;width:100%">✅ Add Checked to Today's Log</button>
+    </div>
     <div id="lift-log-exercises"></div>
     <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
       <div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:8px">+ Add unlisted exercise</div>
@@ -921,6 +929,7 @@ if (window.navigator.standalone) {
       <button class="btn btn-sm btn-secondary" onclick="coachQuickPrompt('Look at my workout history across all exercises and identify where I\'m progressing well and where I\'m stalling or need to focus more.')">⚡ Identify Weak Points</button>
       <button class="btn btn-sm btn-secondary" onclick="coachQuickPrompt('Review my body composition trends alongside my workout data and tell me how my training is affecting my physique goals. Am I on track?')">🏃 Body Comp Review</button>
       <button class="btn btn-sm btn-secondary" onclick="coachQuickPrompt('Based on my training history and body composition data, suggest an optimal weekly split and volume for my goals.')">📅 Weekly Plan</button>
+      <button class="btn btn-sm btn-secondary" onclick="coachQuickPrompt('Based on my recent workout history, suggest a specific workout for today. Tell me which exercises to do, the exact sets, reps, and weights to target based on my progression. Specify Upper or Lower day.')">📋 Suggest Today\'s Workout</button>
     </div>
   </div>
   <div class="card" style="margin-bottom:12px;padding:0;overflow:hidden">
@@ -2905,6 +2914,90 @@ function initLiftLogPage() {
   const dateEl = document.getElementById('lift-log-date');
   if (!dateEl.value) dateEl.value = isoDate(new Date());
   selectLiftType(_liftType);
+  renderCoachSuggestion();
+}
+
+function renderCoachSuggestion() {
+  const raw = localStorage.getItem('ht_coach_suggested_workout');
+  const card = document.getElementById('coach-suggested-card');
+  if (!card) return;
+  if (!raw) { card.style.display = 'none'; return; }
+  let workout;
+  try { workout = JSON.parse(raw); } catch(e) { card.style.display = 'none'; return; }
+  if (!workout || !workout.length) { card.style.display = 'none'; return; }
+  const container = document.getElementById('coach-suggested-exercises');
+  container.innerHTML = workout.map((ex, i) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:9px 0;${i < workout.length-1 ? 'border-bottom:1px solid var(--border)' : ''}">
+      <input type="checkbox" id="csx-${i}" checked style="width:16px;height:16px;accent-color:var(--accent);flex-shrink:0;cursor:pointer">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:600">${escapeHtml(ex.name)}</div>
+        <div style="font-size:12px;color:var(--muted)">${ex.sets} sets × ${ex.reps} reps${ex.weight ? ' @ ' + ex.weight + ' lbs' : ''}</div>
+      </div>
+      <div style="display:flex;gap:4px;align-items:center;flex-shrink:0">
+        <input type="number" placeholder="lbs" value="${ex.weight || ''}" min="0" step="2.5" title="Weight (lbs)" style="width:58px;padding:4px 6px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px">
+        <span style="color:var(--muted);font-size:12px">×</span>
+        <input type="text" placeholder="reps" value="${ex.reps || ''}" title="Reps" style="width:50px;padding:4px 6px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px">
+      </div>
+    </div>`).join('');
+  card.style.display = '';
+}
+
+function dismissCoachSuggestion() {
+  localStorage.removeItem('ht_coach_suggested_workout');
+  document.getElementById('coach-suggested-card').style.display = 'none';
+}
+
+function applyCoachWorkout() {
+  const raw = localStorage.getItem('ht_coach_suggested_workout');
+  if (!raw) return;
+  let workout;
+  try { workout = JSON.parse(raw); } catch(e) { return; }
+  const container = document.getElementById('coach-suggested-exercises');
+  const rows = container.querySelectorAll(':scope > div');
+  rows.forEach((row, i) => {
+    const checkbox = document.getElementById('csx-' + i);
+    if (!checkbox || !checkbox.checked) return;
+    const ex = workout[i];
+    const inputs = row.querySelectorAll('input[type="number"], input[type="text"]');
+    const weight = inputs[0]?.value || ex.weight || '';
+    const reps = inputs[1]?.value || ex.reps || '';
+    const numSets = ex.sets || 1;
+    let block = document.getElementById('leb-' + CSS.escape(ex.name));
+    if (!block) {
+      // Add as a custom/unlisted exercise block
+      const logContainer = document.getElementById('lift-log-exercises');
+      const div = document.createElement('div');
+      div.innerHTML = `<div class="lift-ex-block" id="leb-${CSS.escape(ex.name)}" data-exname="${escapeHtml(ex.name)}" style="margin-bottom:16px;border-top:1px solid var(--border);padding-top:12px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;font-weight:600;font-size:14px">
+          <input type="checkbox" class="lift-ex-check" onchange="toggleLiftExercise('${ex.name.replace(/'/g,"\\'")}', this.checked)" checked style="width:16px;height:16px;accent-color:var(--accent)">
+          ${escapeHtml(ex.name)}
+        </label>
+        <div class="lift-sets-wrap">
+          ${Array.from({length: numSets}, (_, si) => liftSetRowHtml(ex.name, si, weight, reps)).join('')}
+          <button class="btn btn-sm btn-secondary" style="margin-top:4px" onclick="addLiftSet('${ex.name.replace(/'/g,"\\'")}')">+ Add Set</button>
+        </div>
+      </div>`;
+      logContainer.appendChild(div.firstElementChild);
+    } else {
+      // Exercise already in list — check it and fill sets
+      const chk = block.querySelector('.lift-ex-check');
+      if (chk) { chk.checked = true; toggleLiftExercise(ex.name, true); }
+      const wrap = block.querySelector('.lift-sets-wrap');
+      if (wrap) {
+        wrap.querySelectorAll('.lift-set-row').forEach(r => r.remove());
+        const addBtn = wrap.querySelector('button');
+        Array.from({length: numSets}, (_, si) => {
+          const d = document.createElement('div');
+          d.innerHTML = liftSetRowHtml(ex.name, si, weight, reps);
+          wrap.insertBefore(d.firstElementChild, addBtn);
+        });
+      }
+    }
+  });
+  document.getElementById('coach-suggested-card').style.display = 'none';
+  const msgEl = document.getElementById('lift-log-msg');
+  msgEl.textContent = '✅ Coach workout loaded!';
+  setTimeout(() => { msgEl.textContent = ''; }, 3000);
 }
 
 function selectLiftType(type) {
@@ -3133,6 +3226,11 @@ USER GOALS:
   }
 
   sys += `\n\nFocus on progressive overload: small, consistent increases in weight, reps, or sets. When recommending next-session targets, give specific numbers based on the data above.`;
+  sys += `\n\nWhen recommending a specific workout for the user to do TODAY, always append a structured workout block at the very end of your response in this exact format (no text after it):
+\`\`\`workout-json
+[{"name":"Exercise Name","sets":3,"reps":"8-10","weight":135}]
+\`\`\`
+Rules: use exercise names exactly as they appear in the user's history when possible. Set "weight" to 0 for bodyweight. "reps" is a string like "8-10" or "12". Only include this block when recommending a specific session to do today — not for general advice, weekly plans, or analysis.`;
   return sys;
 }
 
@@ -3190,14 +3288,26 @@ async function sendCoachMessage() {
     }
     const reply = data.content[0].text;
     _coachHistory.push({ role: 'assistant', content: reply });
-    const formatted = escapeHtml(reply)
+    // Parse optional workout-json block
+    let displayReply = reply;
+    let suggestedWorkout = null;
+    const workoutMatch = reply.match(/```workout-json\n([\s\S]+?)\n```/);
+    if (workoutMatch) {
+      try {
+        suggestedWorkout = JSON.parse(workoutMatch[1]);
+        localStorage.setItem('ht_coach_suggested_workout', JSON.stringify(suggestedWorkout));
+        displayReply = reply.replace(/```workout-json[\s\S]+?```/, '').trim();
+      } catch(e) {}
+    }
+    const formatted = escapeHtml(displayReply)
       .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.*?)\*/g, '<em>$1</em>')
       .replace(/\n\n/g, '</p><p style="margin:8px 0 0">')
       .replace(/\n/g, '<br>');
     const replyEl = document.createElement('div');
     replyEl.style.cssText = 'display:flex;justify-content:flex-start';
-    replyEl.innerHTML = `<div style="max-width:92%;background:var(--surface2);border:1px solid var(--border);border-radius:14px 14px 14px 3px;padding:12px 14px;font-size:14px;line-height:1.6;word-break:break-word"><p style="margin:0">${formatted}</p></div>`;
+    const loadBtnHtml = suggestedWorkout ? `<div style="margin-top:10px"><button class="btn btn-sm btn-primary" onclick="switchAppMode('lift');showLiftPage('liftlog');" style="font-size:13px">📋 Load workout in Log →</button></div>` : '';
+    replyEl.innerHTML = `<div style="max-width:92%;background:var(--surface2);border:1px solid var(--border);border-radius:14px 14px 14px 3px;padding:12px 14px;font-size:14px;line-height:1.6;word-break:break-word"><p style="margin:0">${formatted}</p>${loadBtnHtml}</div>`;
     messagesEl.appendChild(replyEl);
   } catch(e) {
     thinkingEl.remove();
