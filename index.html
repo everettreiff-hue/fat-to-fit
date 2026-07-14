@@ -3232,9 +3232,9 @@ function buildCoachSystemPrompt() {
   const entries = getData().sort((a,b) => a.date.localeCompare(b.date));
   const workouts = getLiftWorkouts().sort((a,b) => a.date.localeCompare(b.date));
   const latest = entries.length ? entries[entries.length - 1] : null;
-  const recent = workouts.slice(-20);
+  const recent = workouts.slice(-40);
 
-  let sys = `You are a personal fitness coach embedded in the user's private health tracking app. You have full access to their real data below. Be specific, data-driven, and actionable. Reference actual numbers from their data when giving advice. Keep responses concise but thorough. Use **bold** for key numbers and exercise names.
+  let sys = `You are a personal fitness coach embedded in the user's private health tracking app. You have full access to their complete historical data below. Be specific, data-driven, and actionable. Reference actual numbers from their data when giving advice. Keep responses concise but thorough. Use **bold** for key numbers and exercise names.
 
 USER GOALS:
 - Start: ${BASELINE.date} | Weight: ${BASELINE.weight} lbs | Body Fat: ${BASELINE.bodyFat}%
@@ -3252,10 +3252,25 @@ USER GOALS:
 
   if (entries.length > 1) {
     const first = entries[0];
-    sys += `\n\nPROGRESS SINCE START (${first.date} → ${latest.date}):`;
+    sys += `\n\nOVERALL PROGRESS (${first.date} → ${latest.date}):`;
     if (first.weight != null && latest.weight != null) sys += `\n- Weight: ${first.weight} → ${latest.weight} lbs (${(latest.weight - first.weight > 0 ? '+' : '')}${(latest.weight - first.weight).toFixed(1)})`;
     if (first.bodyFat != null && latest.bodyFat != null) sys += `\n- Body Fat: ${first.bodyFat} → ${latest.bodyFat}% (${(latest.bodyFat - first.bodyFat > 0 ? '+' : '')}${(latest.bodyFat - first.bodyFat).toFixed(1)})`;
     if (first.muscleMass != null && latest.muscleMass != null) sys += `\n- Muscle Mass: ${first.muscleMass} → ${latest.muscleMass}% (${(latest.muscleMass - first.muscleMass > 0 ? '+' : '')}${(latest.muscleMass - first.muscleMass).toFixed(1)})`;
+  }
+
+  // Full body composition history
+  if (entries.length) {
+    sys += `\n\nFULL BODY COMPOSITION LOG (${entries.length} entries):`;
+    entries.forEach(e => {
+      const parts = [e.date];
+      if (e.weight != null) parts.push(`${e.weight}lbs`);
+      if (e.bodyFat != null) parts.push(`BF:${e.bodyFat}%`);
+      if (e.visceralFat != null) parts.push(`VF:${e.visceralFat}`);
+      if (e.subcutaneousFat != null) parts.push(`SF:${e.subcutaneousFat}%`);
+      if (e.muscleMass != null) parts.push(`MM:${e.muscleMass}%`);
+      if (e.skeletalMuscle != null) parts.push(`SM:${e.skeletalMuscle}lbs`);
+      sys += `\n${parts.join(' | ')}`;
+    });
   }
 
   if (recent.length) {
@@ -3314,7 +3329,7 @@ async function sendCoachMessage() {
       },
       body: JSON.stringify({
         model: 'claude-haiku-4-5',
-        max_tokens: 1024,
+        max_tokens: 2048,
         system: buildCoachSystemPrompt(),
         messages: _coachHistory.slice(-30)
       })
