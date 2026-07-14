@@ -3600,7 +3600,8 @@ function getAllAppData() {
     entries: getData(),
     photos: getPhotos(),
     inbody: getInBody(),
-    liftWorkouts: getLiftWorkouts()
+    liftWorkouts: getLiftWorkouts(),
+    coachHistory: _coachHistory
   };
 }
 
@@ -3609,6 +3610,10 @@ function applyAllAppData(remote) {
   if (Array.isArray(remote.photos)) localStorage.setItem('ht_photos', JSON.stringify(remote.photos));
   if (Array.isArray(remote.inbody)) localStorage.setItem('ht_inbody', JSON.stringify(remote.inbody));
   if (Array.isArray(remote.liftWorkouts)) localStorage.setItem('ht_lift_workouts', JSON.stringify(remote.liftWorkouts));
+  if (Array.isArray(remote.coachHistory) && remote.coachHistory.length > _coachHistory.length) {
+    _coachHistory = remote.coachHistory;
+    localStorage.setItem('ht_coach_history', JSON.stringify(_coachHistory));
+  }
 }
 
 // Merge remote into local — local wins on key conflict, remote adds missing items.
@@ -3635,6 +3640,11 @@ function mergeAllAppData(remote) {
     localStorage.setItem('ht_inbody', JSON.stringify(mergeByDate(getInBody(), remote.inbody)));
   if (Array.isArray(remote.liftWorkouts))
     localStorage.setItem('ht_lift_workouts', JSON.stringify(mergeWorkouts(getLiftWorkouts(), remote.liftWorkouts)));
+  // Coach history: keep whichever device has more messages
+  if (Array.isArray(remote.coachHistory) && remote.coachHistory.length > _coachHistory.length) {
+    _coachHistory = remote.coachHistory;
+    localStorage.setItem('ht_coach_history', JSON.stringify(_coachHistory));
+  }
 }
 
 function markLocalChange() {
