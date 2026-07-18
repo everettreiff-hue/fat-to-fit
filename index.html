@@ -1020,6 +1020,7 @@ if (window.navigator.standalone) {
       <button class="btn btn-sm btn-secondary" onclick="coachQuickPrompt('Review my body composition trends alongside my workout data and tell me how my training is affecting my physique goals. Am I on track?')">🏃 Body Comp Review</button>
       <button class="btn btn-sm btn-secondary" onclick="coachQuickPrompt('Based on my training history and body composition data, suggest an optimal weekly split and volume for my goals.')">📅 Weekly Plan</button>
       <button class="btn btn-sm btn-secondary" onclick="coachQuickPrompt('Based on my recent workout history, suggest a specific workout for today. Tell me which exercises to do, the exact sets, reps, and weights to target based on my progression. Specify Upper or Lower day.')">📋 Suggest Today\'s Workout</button>
+      <button class="btn btn-sm btn-secondary" onclick="coachQuickPrompt('Analyze my nutrition data alongside my training. Am I eating enough protein for my workout volume? How does my calorie deficit look relative to my body composition progress? Give me specific recommendations.')">🥗 Nutrition Analysis</button>
     </div>
   </div>
   <div class="card" style="margin-bottom:12px;padding:0;overflow:hidden">
@@ -3600,6 +3601,24 @@ USER GOALS:
         const setsStr = (ex.sets || []).filter(s => s.weight || s.reps).map(s => `${s.weight||'?'}lbs×${s.reps||'?'}`).join(', ');
         if (setsStr) sys += `\n  • ${ex.name}: ${setsStr}`;
       });
+    });
+  }
+
+  // Nutrition data (last 30 tracked days)
+  const nutrData = getNutritionData()
+    .filter(d => d.calories > 0)
+    .sort((a,b) => a.date.localeCompare(b.date))
+    .slice(-30);
+  if (nutrData.length) {
+    const avgCals  = Math.round(nutrData.reduce((s,d)=>s+d.calories,0)/nutrData.length);
+    const avgProt  = Math.round(nutrData.reduce((s,d)=>s+d.protein,0)/nutrData.length);
+    const avgNet   = Math.round(nutrData.reduce((s,d)=>s+(d.calories-(d.exerciseCals||0)),0)/nutrData.length);
+    sys += `\n\nNUTRITION LOG (last ${nutrData.length} tracked days, ${nutrData[0].date} → ${nutrData[nutrData.length-1].date}):`;
+    sys += `\nAverages: ${avgCals} kcal/day | ${avgProt}g protein/day | ${avgNet} kcal net/day`;
+    sys += `\nDate | Cals | Protein | Carbs | Fat | Burned | Net`;
+    nutrData.forEach(d => {
+      const net = d.calories - (d.exerciseCals || 0);
+      sys += `\n${d.date} | ${d.calories} | ${Math.round(d.protein)}g | ${Math.round(d.carbs)}g | ${Math.round(d.fat)}g | ${d.exerciseCals||0} | ${net}`;
     });
   }
 
