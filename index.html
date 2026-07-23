@@ -3947,19 +3947,24 @@ function getAllAppData() {
 }
 
 function applyAllAppData(remote) {
-  if (Array.isArray(remote.entries)) localStorage.setItem('ht_entries', JSON.stringify(remote.entries));
-  if (Array.isArray(remote.photos)) localStorage.setItem('ht_photos', JSON.stringify(remote.photos));
-  if (Array.isArray(remote.inbody)) localStorage.setItem('ht_inbody', JSON.stringify(remote.inbody));
-  if (Array.isArray(remote.liftWorkouts)) localStorage.setItem('ht_lift_workouts', JSON.stringify(remote.liftWorkouts));
+  // Always merge rather than overwrite — prevents data loss when both devices
+  // have unique entries (e.g. workouts logged on phone while desktop was open).
+  // Local wins on same date+type conflict; remote adds anything local is missing.
+  if (Array.isArray(remote.entries))
+    localStorage.setItem('ht_entries', JSON.stringify(mergeByDate(getData(), remote.entries)));
+  if (Array.isArray(remote.photos))
+    localStorage.setItem('ht_photos', JSON.stringify(mergeByDate(getPhotos(), remote.photos)));
+  if (Array.isArray(remote.inbody))
+    localStorage.setItem('ht_inbody', JSON.stringify(mergeByDate(getInBody(), remote.inbody)));
+  if (Array.isArray(remote.liftWorkouts))
+    localStorage.setItem('ht_lift_workouts', JSON.stringify(mergeWorkouts(getLiftWorkouts(), remote.liftWorkouts)));
   if (Array.isArray(remote.coachHistory) && remote.coachHistory.length > _coachHistory.length) {
     _coachHistory = remote.coachHistory;
     localStorage.setItem('ht_coach_history', JSON.stringify(_coachHistory));
-    // If Coach tab is open, reset so initCoachPage re-renders with new history
     _coachInitialized = false;
   }
-  if (Array.isArray(remote.nutrition) && remote.nutrition.length > getNutritionData().length) {
-    localStorage.setItem('ht_nutrition', JSON.stringify(remote.nutrition));
-  }
+  if (Array.isArray(remote.nutrition))
+    localStorage.setItem('ht_nutrition', JSON.stringify(mergeByDate(getNutritionData(), remote.nutrition)));
 }
 
 // Merge remote into local — local wins on key conflict, remote adds missing items.
