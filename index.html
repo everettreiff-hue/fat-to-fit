@@ -1103,7 +1103,7 @@ _diagStep("error handler ready");
 let fbSyncTimer = null;
 let fbBusy = false;
 let fbUnsubscribe = null;
-let fbLastWriteTs = 0;
+let fbLastWriteTs = Number(localStorage.getItem('ht_fb_last_write') || 0);
 
 // ===== ZOOM HELPER =====
 const ZOOM_OPTS = {
@@ -3796,18 +3796,22 @@ function manualSync() { pushToFirestore(); }
 async function pushToFirestore() {
   if (fbBusy) return;
   const db = getFirestore();
-  if (!db) { setSyncStatus('\u2601️ sync error'); return; }
+  if (!db) { setSyncStatus('☁️ sync error'); return; }
   fbBusy = true;
-  setSyncStatus('\u2601️ syncing\u2026');
+  setSyncStatus('☁️ syncing…');
   try {
     const data = getAllAppData();
+    const writeTs = new Date(data.updatedAt).getTime();
+    // Set fbLastWriteTs BEFORE await so echo-detection works even if
+    // onSnapshot fires while the write is still in flight.
+    fbLastWriteTs = writeTs;
+    localStorage.setItem('ht_fb_last_write', String(writeTs));
     await db.collection('health').doc('data').set(data);
-    fbLastWriteTs = new Date(data.updatedAt).getTime();
-    localStorage.setItem('ht_last_modified', String(fbLastWriteTs));
-    setSyncStatus('\u2601️ synced \u2713');
+    localStorage.setItem('ht_last_modified', String(writeTs));
+    setSyncStatus('☁️ synced ✓');
   } catch(e) {
     console.warn('Firestore push failed', e);
-    setSyncStatus('\u2601️ sync error');
+    setSyncStatus('☁️ sync error');
   } finally {
     fbBusy = false;
   }
@@ -3819,46 +3823,69 @@ function scheduleFirebaseSync() {
   fbSyncTimer = setTimeout(() => { pushToFirestore(); }, 1500);
 }
 
-function initFirebaseSync() {
+async function initFirebaseSync() {
   const db = getFirestore();
-  if (!db) { setSyncStatus('\u2601️ Firebase unavailable'); return; }
-  setSyncStatus('\u2601️ connecting\u2026');
+  if (!db) { setSyncStatus('☁️ Firebase unavailable'); return; }
+  setSyncStatus('☁️ connecting…');
+
+  // If a previous merge flagged that we need to push merged data, do it first
+  // (and await it) so fbLastWriteTs is set before the listener fires.
+  if (localStorage.getItem('ht_needs_push') === '1') {
+    localStorage.removeItem('ht_needs_push');
+    await pushToFirestore();
+  }
+
   fbUnsubscribe = db.collection('health').doc('data').onSnapshot(
     (snap) => {
       if (!snap.exists) {
-        // No cloud data yet — push local seed data
         pushToFirestore();
         return;
       }
       const remote = snap.data();
       const remoteTs = remote && remote.updatedAt ? new Date(remote.updatedAt).getTime() : 0;
       const localTs = Number(localStorage.getItem('ht_last_modified') || 0);
-      // Skip echo of our own write
+
+      // Skip echo of our own write (fbLastWriteTs persists across reloads via localStorage)
       if (remoteTs > 0 && remoteTs === fbLastWriteTs) {
-        setSyncStatus('\u2601️ synced \u2713');
+        setSyncStatus('☁️ synced ✓');
         return;
       }
+
       if (remoteTs > localTs) {
-        // Remote is newer — merge and reload
+        // Remote is newer — check whether the merge actually changes any counts.
+        // If data is already identical (two devices bouncing the same state),
+        // skip reload+push to avoid an infinite sync loop.
+        const prevCounts = [getData().length, getLiftWorkouts().length, getNutritionData().length];
         if (localTs === 0) mergeAllAppData(remote);
         else applyAllAppData(remote);
-        localStorage.setItem('ht_last_modified', String(Date.now())); // > remoteTs → triggers push after reload
-        setSyncStatus('\u2601️ synced \u2713');
-        setTimeout(() => location.reload(), 300);
+        const newCounts = [getData().length, getLiftWorkouts().length, getNutritionData().length];
+        const dataChanged = prevCounts.some((c, i) => c !== newCounts[i]);
+
+        localStorage.setItem('ht_last_modified', String(remoteTs));
+
+        if (dataChanged) {
+          // Real new data — flag a push after reload, then reload to re-render UI
+          localStorage.setItem('ht_needs_push', '1');
+          setSyncStatus('☁️ synced ✓');
+          setTimeout(() => location.reload(), 300);
+        } else {
+          // No actual change — accept remote ts, no reload or push needed
+          fbLastWriteTs = remoteTs;
+          localStorage.setItem('ht_fb_last_write', String(remoteTs));
+          setSyncStatus('☁️ synced ✓');
+        }
       } else if (localTs > remoteTs) {
-        // Local is newer — push to cloud
         pushToFirestore();
       } else {
-        setSyncStatus('\u2601️ synced \u2713');
+        setSyncStatus('☁️ synced ✓');
       }
     },
     (err) => {
       console.warn('Firestore listener error', err);
-      setSyncStatus('\u2601️ sync error');
+      setSyncStatus('☁️ sync error');
     }
   );
 }
-
 function getCoachHistory() {
   // Always read from localStorage so sync captures history even if
   // the Coach tab hasn't been opened yet this session.
