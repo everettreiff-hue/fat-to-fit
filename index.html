@@ -333,6 +333,26 @@
   @media (display-mode: standalone) {
     .app-mode-switch { padding-top: calc(10px + env(safe-area-inset-top)); }
   }
+
+  /* ===== SESSION ===== */
+  .rest-preset-btn {
+    background: rgba(255,255,255,0.18);
+    border: 2px solid rgba(255,255,255,0.35);
+    border-radius: 12px;
+    color: #fff;
+    padding: 10px 20px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .rest-preset-btn:hover { background: rgba(255,255,255,0.3); }
+  #page-liftsession { padding: 0 0 80px; }
+  @media (min-width: 700px) {
+    #page-liftsession { padding: 20px 0 40px; }
+    #session-active-list { max-width: 640px; margin: 0 auto; }
+    #session-hub, #session-builder { max-width: 640px; margin: 0 auto; }
+  }
 </style>
 </head>
 <body>
@@ -827,12 +847,14 @@ if (window.navigator.standalone) {
   <button class="active" onclick="showLiftPage('liftlog')">Log</button>
   <button onclick="showLiftPage('lifthistory')">History</button>
   <button onclick="showLiftPage('liftprogress')">Progress</button>
+  <button onclick="showLiftPage('liftsession')">▶ Session</button>
   <button onclick="saveJSON()" style="margin-left:auto;color:var(--accent2);border-bottom-color:transparent">📦 Save JSON</button>
 </nav>
 <nav class="bottom-nav" style="display:none">
   <button class="active" onclick="showLiftPage('liftlog')"><span class="nav-icon">✏️</span>Log</button>
   <button onclick="showLiftPage('lifthistory')"><span class="nav-icon">🕘</span>History</button>
   <button onclick="showLiftPage('liftprogress')"><span class="nav-icon">📈</span>Progress</button>
+  <button onclick="showLiftPage('liftsession')"><span class="nav-icon">▶️</span>Session</button>
 </nav>
 <main>
 <div id="page-liftlog" class="page active">
@@ -893,6 +915,116 @@ if (window.navigator.standalone) {
     <div id="lift-ex-progress"></div>
   </div>
 </div><!-- /page-liftprogress -->
+
+<!-- ===== SESSION PAGE ===== -->
+<div id="page-liftsession" class="page">
+
+  <!-- Rest Timer Overlay -->
+  <div id="rest-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:20px">
+    <div style="font-size:18px;color:#fff;font-weight:700;letter-spacing:1px">⏱ REST</div>
+    <div id="rest-countdown" style="font-size:96px;font-weight:900;color:#fff;line-height:1;font-variant-numeric:tabular-nums">60</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+      <button class="rest-preset-btn" onclick="setRestDuration(30)">30s</button>
+      <button class="rest-preset-btn" onclick="setRestDuration(60)">1m</button>
+      <button class="rest-preset-btn" onclick="setRestDuration(90)">90s</button>
+      <button class="rest-preset-btn" onclick="setRestDuration(120)">2m</button>
+    </div>
+    <div style="display:flex;gap:12px;align-items:center">
+      <button onclick="addRestTime(-15)" style="background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:44px;height:44px;color:#fff;font-size:18px;cursor:pointer;font-weight:700">-</button>
+      <span style="color:rgba(255,255,255,0.6);font-size:13px">15s</span>
+      <button onclick="addRestTime(15)" style="background:rgba(255,255,255,0.15);border:none;border-radius:50%;width:44px;height:44px;color:#fff;font-size:18px;cursor:pointer;font-weight:700">+</button>
+    </div>
+    <button onclick="skipRest()" style="background:none;border:2px solid rgba(255,255,255,0.4);border-radius:12px;color:#fff;padding:12px 32px;font-size:16px;font-weight:700;cursor:pointer;margin-top:8px">Skip Rest →</button>
+  </div>
+
+  <!-- Save Template Modal -->
+  <div id="save-template-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9000;align-items:center;justify-content:center">
+    <div style="background:var(--surface2);border-radius:18px;padding:28px 24px;width:90%;max-width:380px;box-shadow:0 8px 40px rgba(0,0,0,0.4)">
+      <div style="font-size:17px;font-weight:800;margin-bottom:16px">💾 Save Template</div>
+      <input id="template-name-input" type="text" placeholder="Template name (e.g. Push Day A)"
+        style="width:100%;box-sizing:border-box;padding:12px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-size:15px;margin-bottom:16px"
+        onkeydown="if(event.key==='Enter')saveAsTemplate()">
+      <div style="display:flex;gap:10px">
+        <button onclick="document.getElementById('save-template-modal').style.display='none'" style="flex:1;padding:12px;border-radius:10px;border:1.5px solid var(--border);background:none;color:var(--text);font-size:15px;cursor:pointer">Cancel</button>
+        <button onclick="saveAsTemplate()" style="flex:1;padding:12px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:15px;font-weight:700;cursor:pointer">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HUB VIEW -->
+  <div id="session-hub" style="">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+      <div class="section-title" style="margin-bottom:0">▶ Workout Session</div>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap">
+      <button onclick="initSessionBuilder('custom')" style="flex:1;min-width:130px;background:var(--accent);border:none;border-radius:12px;color:#fff;padding:14px 10px;font-size:15px;font-weight:700;cursor:pointer">🏋️ Build Custom</button>
+      <button onclick="initSessionBuilder('ai')" style="flex:1;min-width:130px;background:var(--accent2);border:none;border-radius:12px;color:#fff;padding:14px 10px;font-size:15px;font-weight:700;cursor:pointer">🤖 AI Recommend</button>
+    </div>
+    <div style="font-size:14px;font-weight:700;color:var(--muted);margin-bottom:12px;text-transform:uppercase;letter-spacing:0.5px">Saved Templates</div>
+    <div id="session-no-templates" style="color:var(--muted);font-size:14px;text-align:center;padding:24px 0">No templates yet — build a workout and save it!</div>
+    <div id="session-templates-list"></div>
+  </div>
+
+  <!-- BUILDER VIEW -->
+  <div id="session-builder" style="display:none">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+      <button onclick="showSessionView('hub')" style="background:none;border:none;color:var(--accent);font-size:22px;cursor:pointer;padding:0">←</button>
+      <div class="section-title" style="margin-bottom:0">Build Workout</div>
+    </div>
+
+    <!-- Type selector -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:13px;color:var(--muted);margin-bottom:8px;font-weight:600">Workout Type</div>
+      <div style="display:flex;gap:8px">
+        <button id="session-type-upper" class="btn btn-primary" onclick="setSessionType('Upper')">Upper</button>
+        <button id="session-type-lower" class="btn btn-secondary" onclick="setSessionType('Lower')">Lower</button>
+        <button id="session-type-full" class="btn btn-secondary" onclick="setSessionType('Full')">Full Body</button>
+      </div>
+    </div>
+
+    <!-- Exercise list -->
+    <div style="background:var(--surface2);border-radius:14px;padding:16px;margin-bottom:16px;min-height:60px">
+      <div id="session-plan-list"></div>
+    </div>
+
+    <!-- Auto-order button -->
+    <button onclick="autoOrderSessionPlan()" style="width:100%;background:none;border:1.5px solid var(--border);border-radius:10px;color:var(--text);padding:10px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:14px">⚡ Auto-Order (Compound → Isolation)</button>
+
+    <!-- Add exercise -->
+    <div style="display:flex;gap:8px;margin-bottom:18px">
+      <input id="session-add-ex-input" type="text" placeholder="Add exercise..." list="session-ex-datalist"
+        style="flex:1;padding:12px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-size:15px"
+        onkeydown="if(event.key==='Enter')addExToSessionPlan()">
+      <datalist id="session-ex-datalist"></datalist>
+      <button onclick="addExToSessionPlan()" style="background:var(--accent);border:none;border-radius:10px;color:#fff;padding:12px 18px;font-size:18px;font-weight:700;cursor:pointer">+</button>
+    </div>
+
+    <!-- Action buttons -->
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <button onclick="showSaveTemplateModal()" style="flex:1;min-width:120px;background:none;border:1.5px solid var(--accent);border-radius:12px;color:var(--accent);padding:13px 10px;font-size:14px;font-weight:700;cursor:pointer">💾 Save Template</button>
+      <button onclick="beginSession()" style="flex:2;min-width:140px;background:var(--accent2);border:none;border-radius:12px;color:#fff;padding:13px 10px;font-size:15px;font-weight:800;cursor:pointer">▶ Start Session</button>
+    </div>
+  </div>
+
+  <!-- ACTIVE SESSION VIEW -->
+  <div id="session-active" style="display:none">
+    <!-- Sticky header -->
+    <div style="position:sticky;top:0;z-index:100;background:var(--bg);padding:12px 0 10px;margin-bottom:12px;border-bottom:1.5px solid var(--border)">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-size:22px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--accent2)">⏱ <span id="session-elapsed">0:00</span></div>
+          <div id="session-ex-counter" style="font-size:13px;color:var(--muted);margin-top:2px"></div>
+        </div>
+        <button onclick="confirmEndSession()" style="background:var(--accent2);border:none;border-radius:12px;color:#fff;padding:12px 22px;font-size:15px;font-weight:800;cursor:pointer">Finish ✓</button>
+      </div>
+    </div>
+    <div id="session-active-list"></div>
+    <div style="margin-top:16px;padding-bottom:32px">
+      <button onclick="confirmEndSession()" style="width:100%;background:var(--accent2);border:none;border-radius:14px;color:#fff;padding:16px;font-size:17px;font-weight:800;cursor:pointer">✅ Finish &amp; Save Workout</button>
+    </div>
+  </div>
+
+</div><!-- /page-liftsession -->
 </main>
 </div><!-- /wrap-lift -->
 
@@ -1746,16 +1878,426 @@ function showLiftPage(name) {
   scope.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const pg = scope.querySelector('#page-'+name);
   if (pg) pg.classList.add('active');
-  const labels = ['liftlog','lifthistory','liftprogress'];
+  const labels = ['liftlog','lifthistory','liftprogress','liftsession'];
   scope.querySelectorAll('nav.top-nav button').forEach((b,i) => b.classList.toggle('active', labels[i]===name));
   scope.querySelectorAll('nav.bottom-nav button').forEach((b,i) => b.classList.toggle('active', labels[i]===name));
   window.scrollTo(0,0);
   if (name === 'lifthistory') renderLiftHistory();
   if (name === 'liftlog') initLiftLogPage();
   if (name === 'liftprogress') renderLiftProgress();
-
+  if (name === 'liftsession') renderLiftSession();
 }
 
+
+
+// ============================================================
+// ===== WORKOUT SESSION (Plan → Execute → Log) =====
+// ============================================================
+
+// --- Data helpers ---
+function getWorkoutTemplates() {
+  try { return JSON.parse(localStorage.getItem('ht_workout_templates') || '[]'); } catch { return []; }
+}
+function saveWorkoutTemplates(t) { localStorage.setItem('ht_workout_templates', JSON.stringify(t)); scheduleFirebaseSync(); }
+function getActiveSession() {
+  try { return JSON.parse(localStorage.getItem('ht_active_session') || 'null'); } catch { return null; }
+}
+function saveActiveSession(s) { localStorage.setItem('ht_active_session', JSON.stringify(s)); }
+function clearActiveSession() { localStorage.removeItem('ht_active_session'); }
+
+// --- Exercise ordering priority ---
+const EXERCISE_PRIORITY = {
+  'squat':1,'deadlift':1,'bench':2,'flat bench':2,'inclined bench':2,'declined':2,'press':3,
+  'row':4,'pulldown':4,'lat pulldown':4,'pull':4,'overhead':3,'shoulder press':3,
+  'leg press':3,'hip thrust':4,'lunge':4,'romanian':4,
+  'curl':6,'extension':6,'fly':6,'raise':6,'cross':6,'cable':6,'tricep':6,'bicep':6,
+  'calf':7,'ab':8,'core':8,'plank':8,'cardio':9,'treadmill':9,'bike':9,
+};
+function exerciseOrderScore(name) {
+  const n = name.toLowerCase();
+  for (const [key, val] of Object.entries(EXERCISE_PRIORITY)) {
+    if (n.includes(key)) return val;
+  }
+  return 5;
+}
+function autoOrderSessionPlan() {
+  _sessionPlan.exercises.sort((a, b) => exerciseOrderScore(a.name) - exerciseOrderScore(b.name));
+  renderSessionPlanList();
+}
+
+// --- Previous performance lookup ---
+function getPrevPerformance(exName) {
+  const workouts = getLiftWorkouts()
+    .filter(w => w.exercises && w.exercises.some(e => e.name === exName))
+    .sort((a, b) => b.date.localeCompare(a.date));
+  if (!workouts.length) return null;
+  const ex = workouts[0].exercises.find(e => e.name === exName);
+  if (!ex) return null;
+  const sets = ex.sets && ex.sets.length ? ex.sets : (ex.weight ? [{weight: ex.weight, reps: ex.reps}] : []);
+  return { date: workouts[0].date, sets };
+}
+
+// --- Session state ---
+let _sessionPlan = { type: 'Upper', exercises: [] };
+let _sessionElapsedTimer = null;
+let _restTimer = null;
+let _restRemaining = 0;
+
+function showSessionView(view) {
+  ['hub','builder','active'].forEach(v => {
+    const el = document.getElementById('session-' + v);
+    if (el) el.style.display = v === view ? '' : 'none';
+  });
+  if (view === 'hub') renderSessionHub();
+  if (view === 'builder') renderSessionBuilder();
+}
+
+function renderLiftSession() {
+  const active = getActiveSession();
+  if (active && active.status === 'active') {
+    showSessionView('active');
+    resumeActiveSession(active);
+  } else {
+    showSessionView('hub');
+  }
+}
+
+// --- HUB ---
+function renderSessionHub() {
+  const templates = getWorkoutTemplates();
+  const listEl = document.getElementById('session-templates-list');
+  const noneEl = document.getElementById('session-no-templates');
+  if (!listEl) return;
+  if (!templates.length) {
+    listEl.innerHTML = '';
+    if (noneEl) noneEl.style.display = '';
+    return;
+  }
+  if (noneEl) noneEl.style.display = 'none';
+  listEl.innerHTML = templates.map((t, i) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--surface2);border-radius:10px;margin-bottom:8px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:700">${escapeHtml(t.name)}</div>
+        <div style="font-size:12px;color:var(--muted)">${t.exercises.length} exercises &middot; ${t.type}</div>
+      </div>
+      <button onclick="startFromTemplate(${i})" style="background:var(--accent2);border:none;border-radius:8px;color:#fff;padding:8px 14px;font-size:13px;font-weight:700;cursor:pointer">&#9654; Start</button>
+      <button onclick="deleteTemplate(${i})" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px">&times;</button>
+    </div>
+  `).join('');
+}
+
+function startFromTemplate(idx) {
+  const t = getWorkoutTemplates()[idx];
+  if (!t) return;
+  _sessionPlan = {
+    type: t.type,
+    exercises: t.exercises.map(e => ({name: e.name, targetSets: e.sets||3, targetReps: e.reps||10, targetWeight: e.weight||''}))
+  };
+  beginSession();
+}
+
+function deleteTemplate(idx) {
+  if (!confirm('Delete this template?')) return;
+  const templates = getWorkoutTemplates();
+  templates.splice(idx, 1);
+  saveWorkoutTemplates(templates);
+  renderSessionHub();
+}
+
+// --- BUILDER ---
+function initSessionBuilder(mode) {
+  _sessionPlan = { type: 'Upper', exercises: [] };
+  showSessionView('builder');
+  const allEx = [...(typeof UPPER_EXERCISES !== 'undefined' ? UPPER_EXERCISES : []), ...(typeof LOWER_EXERCISES !== 'undefined' ? LOWER_EXERCISES : [])];
+  const dl = document.getElementById('session-ex-datalist');
+  if (dl) dl.innerHTML = allEx.map(e => `<option value="${escapeHtml(e)}">`).join('');
+  setSessionType('Upper');
+
+  if (mode === 'ai') {
+    const raw = localStorage.getItem('ht_coach_suggested_workout');
+    if (raw) {
+      try {
+        const suggested = JSON.parse(raw);
+        if (Array.isArray(suggested) && suggested.length) {
+          _sessionPlan.exercises = suggested.map(ex => ({
+            name: ex.name, targetSets: ex.sets||3, targetReps: ex.reps||10, targetWeight: ex.weight||''
+          }));
+          autoOrderSessionPlan();
+          return;
+        }
+      } catch(e) {}
+    }
+    const listEl = document.getElementById('session-plan-list');
+    if (listEl) listEl.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0">Ask the AI Coach for a workout plan first, then come back here.</div>';
+  } else {
+    renderSessionPlanList();
+  }
+}
+
+function renderSessionBuilder() { renderSessionPlanList(); }
+
+function setSessionType(type) {
+  _sessionPlan.type = type;
+  ['Upper','Lower','Full'].forEach(t => {
+    const btn = document.getElementById('session-type-' + t.toLowerCase());
+    if (btn) btn.className = t === type ? 'btn btn-primary' : 'btn btn-secondary';
+  });
+}
+
+function renderSessionPlanList() {
+  const listEl = document.getElementById('session-plan-list');
+  if (!listEl) return;
+  if (!_sessionPlan.exercises.length) {
+    listEl.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:12px 0">No exercises yet &mdash; add some below</div>';
+    return;
+  }
+  listEl.innerHTML = _sessionPlan.exercises.map((ex, i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:10px 0;${i < _sessionPlan.exercises.length-1 ? 'border-bottom:1px solid var(--border)' : ''}">
+      <div style="color:var(--muted);font-size:13px;font-weight:700;width:20px;flex-shrink:0;text-align:center">${i+1}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:600;margin-bottom:4px">${escapeHtml(ex.name)}</div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <input type="number" value="${ex.targetSets||3}" min="1" max="10" title="Sets"
+            style="width:44px;padding:5px 6px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;text-align:center"
+            onchange="_sessionPlan.exercises[${i}].targetSets=Number(this.value)">
+          <span style="color:var(--muted);font-size:11px">sets</span>
+          <input type="number" value="${ex.targetReps||10}" min="1" max="100" title="Reps"
+            style="width:44px;padding:5px 6px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;text-align:center"
+            onchange="_sessionPlan.exercises[${i}].targetReps=Number(this.value)">
+          <span style="color:var(--muted);font-size:11px">reps @</span>
+          <input type="number" value="${ex.targetWeight||''}" placeholder="lbs" min="0" step="2.5"
+            style="width:58px;padding:5px 6px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;text-align:center"
+            onchange="_sessionPlan.exercises[${i}].targetWeight=Number(this.value)||''">
+        </div>
+      </div>
+      <button onclick="removeExFromPlan(${i})" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px;line-height:1;flex-shrink:0">&times;</button>
+    </div>
+  `).join('');
+}
+
+function addExToSessionPlan() {
+  const input = document.getElementById('session-add-ex-input');
+  const name = input ? input.value.trim() : '';
+  if (!name) return;
+  _sessionPlan.exercises.push({ name, targetSets: 3, targetReps: 10, targetWeight: '' });
+  if (input) input.value = '';
+  renderSessionPlanList();
+}
+
+function removeExFromPlan(i) {
+  _sessionPlan.exercises.splice(i, 1);
+  renderSessionPlanList();
+}
+
+function showSaveTemplateModal() {
+  const modal = document.getElementById('save-template-modal');
+  if (modal) modal.style.display = 'flex';
+  const inp = document.getElementById('template-name-input');
+  if (inp) { inp.focus(); inp.value = ''; }
+}
+
+function saveAsTemplate() {
+  const nameEl = document.getElementById('template-name-input');
+  const name = nameEl ? nameEl.value.trim() : '';
+  if (!name) { alert('Please enter a template name.'); return; }
+  const templates = getWorkoutTemplates();
+  templates.push({
+    name,
+    type: _sessionPlan.type,
+    exercises: _sessionPlan.exercises.map(e => ({name: e.name, sets: e.targetSets||3, reps: e.targetReps||10, weight: e.targetWeight||''})),
+    createdAt: new Date().toISOString().slice(0,10)
+  });
+  saveWorkoutTemplates(templates);
+  const modal = document.getElementById('save-template-modal');
+  if (modal) modal.style.display = 'none';
+  alert('Template saved!');
+}
+
+// --- ACTIVE SESSION ---
+function beginSession() {
+  if (!_sessionPlan.exercises.length) { alert('Add at least one exercise first.'); return; }
+  const session = {
+    status: 'active',
+    type: _sessionPlan.type,
+    startedAt: new Date().toISOString(),
+    exercises: _sessionPlan.exercises.map((ex, i) => ({
+      name: ex.name, order: i,
+      targetSets: ex.targetSets||3, targetReps: ex.targetReps||10, targetWeight: ex.targetWeight||'',
+      sets: [], skipped: false,
+      prevPerf: getPrevPerformance(ex.name)
+    }))
+  };
+  saveActiveSession(session);
+  showSessionView('active');
+  renderActiveSession();
+  startSessionTimer(session.startedAt);
+}
+
+function resumeActiveSession(session) {
+  renderActiveSession();
+  startSessionTimer(session.startedAt);
+}
+
+function startSessionTimer(startedAt) {
+  if (_sessionElapsedTimer) clearInterval(_sessionElapsedTimer);
+  _sessionElapsedTimer = setInterval(() => {
+    const secs = Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000);
+    const m = Math.floor(secs / 60), s = secs % 60;
+    const el = document.getElementById('session-elapsed');
+    if (el) el.textContent = m + ':' + String(s).padStart(2,'0');
+  }, 1000);
+}
+
+function renderActiveSession() {
+  const session = getActiveSession();
+  if (!session) return;
+  const listEl = document.getElementById('session-active-list');
+  const counterEl = document.getElementById('session-ex-counter');
+  if (!listEl) return;
+
+  const completed = session.exercises.filter(e => e.sets.length >= e.targetSets || e.skipped).length;
+  if (counterEl) counterEl.textContent = completed + ' of ' + session.exercises.length + ' done';
+
+  listEl.innerHTML = session.exercises.map((ex, ei) => {
+    const isDone = ex.sets.length >= ex.targetSets || ex.skipped;
+    const prev = ex.prevPerf;
+    const prevHtml = prev
+      ? `<div style="font-size:12px;color:var(--muted);margin-bottom:8px">&#128197; Last (${prev.date}): ${prev.sets.map(s => `${s.weight||'?'}lbs &times; ${s.reps||'?'}`).join(', ')}</div>`
+      : `<div style="font-size:12px;color:var(--muted);margin-bottom:8px">No previous data</div>`;
+
+    const setRows = ex.sets.map((st, si) => `
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 0;opacity:0.6">
+        <div style="width:42px;text-align:center;font-size:12px;color:var(--accent2);font-weight:700">&#10003; ${si+1}</div>
+        <div style="flex:1;font-size:13px">${st.weight||'&mdash;'} lbs &times; ${st.reps||'&mdash;'} reps</div>
+      </div>
+    `).join('');
+
+    const nextSetNum = ex.sets.length + 1;
+    const suggestedWeight = ex.sets.length > 0 ? ex.sets[ex.sets.length-1].weight : (ex.targetWeight||'');
+    const suggestedReps = ex.targetReps || 10;
+
+    const inputRow = (!isDone) ? `
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--border);margin-top:6px">
+        <div style="width:42px;text-align:center;font-size:11px;color:var(--muted);font-weight:700;flex-shrink:0">Set ${nextSetNum}</div>
+        <input type="number" id="s-w-${ei}" value="${suggestedWeight}" placeholder="lbs" min="0" step="2.5"
+          style="width:72px;padding:10px 6px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-size:16px;text-align:center;font-weight:700">
+        <span style="color:var(--muted);font-size:16px">&times;</span>
+        <input type="number" id="s-r-${ei}" value="${suggestedReps}" placeholder="reps" min="0"
+          style="width:62px;padding:10px 6px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-size:16px;text-align:center;font-weight:700">
+        <button onclick="logSet(${ei})"
+          style="flex:1;background:var(--accent2);border:none;border-radius:11px;color:#fff;padding:12px 6px;font-size:20px;font-weight:900;cursor:pointer">&#10003;</button>
+      </div>
+      <button onclick="skipExercise(${ei})" style="background:none;border:1px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px;padding:6px 12px;cursor:pointer;margin-top:6px">Skip Exercise</button>
+    ` : `<div style="font-size:13px;color:var(--accent2);font-weight:700;margin-top:8px">${ex.skipped ? '&#9197; Skipped' : '&#9989; Done'}</div>`;
+
+    const cardStyle = isDone
+      ? 'background:var(--surface2);border-radius:14px;padding:14px;margin-bottom:12px;opacity:0.65'
+      : 'background:var(--surface2);border:1.5px solid var(--accent);border-radius:14px;padding:14px;margin-bottom:12px';
+
+    return `<div style="${cardStyle}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+        <div style="font-size:16px;font-weight:800">${escapeHtml(ex.name)}</div>
+        <div style="font-size:12px;color:var(--muted)">${ex.sets.length}/${ex.targetSets} sets</div>
+      </div>
+      ${prevHtml}${setRows}${inputRow}
+    </div>`;
+  }).join('');
+}
+
+function logSet(exIdx) {
+  const session = getActiveSession();
+  if (!session) return;
+  const w = parseFloat(document.getElementById('s-w-'+exIdx)?.value) || 0;
+  const r = parseInt(document.getElementById('s-r-'+exIdx)?.value) || 0;
+  session.exercises[exIdx].sets.push({ set: session.exercises[exIdx].sets.length+1, weight: w, reps: r });
+  saveActiveSession(session);
+  renderActiveSession();
+  if (session.exercises[exIdx].sets.length < session.exercises[exIdx].targetSets) {
+    startRestTimer(60);
+  }
+}
+
+function skipExercise(exIdx) {
+  const session = getActiveSession();
+  if (!session) return;
+  session.exercises[exIdx].skipped = true;
+  saveActiveSession(session);
+  renderActiveSession();
+}
+
+function confirmEndSession() {
+  const session = getActiveSession();
+  if (!session) return;
+  const totalSets = session.exercises.reduce((s, e) => s + e.sets.length, 0);
+  if (totalSets === 0 && !confirm('No sets logged yet. End session anyway?')) return;
+  endSession();
+}
+
+function endSession() {
+  const session = getActiveSession();
+  if (!session) return;
+  if (_sessionElapsedTimer) { clearInterval(_sessionElapsedTimer); _sessionElapsedTimer = null; }
+  skipRest();
+
+  const duration = Math.round((Date.now() - new Date(session.startedAt).getTime()) / 1000);
+  const exercises = session.exercises.filter(ex => ex.sets.length > 0).map(ex => {
+    const avgW = ex.sets.reduce((s, st) => s + (st.weight||0), 0) / ex.sets.length;
+    const avgR = ex.sets.reduce((s, st) => s + (st.reps||0), 0) / ex.sets.length;
+    return { name: ex.name, sets: ex.sets, weight: Math.round(avgW*10)/10, reps: Math.round(avgR) };
+  });
+
+  if (!exercises.length) { clearActiveSession(); showSessionView('hub'); return; }
+
+  const date = new Date(session.startedAt).toISOString().slice(0,10);
+  const workouts = getLiftWorkouts().filter(w => !(w.date === date && w.type === session.type));
+  workouts.push({ date, type: session.type, duration, source: 'session', exercises });
+  saveLiftWorkouts(workouts);
+  markLocalChange();
+
+  clearActiveSession();
+  showLiftPage('lifthistory');
+  const mins = duration < 3600 ? Math.round(duration/60)+'m' : Math.floor(duration/3600)+'h '+Math.round((duration%3600)/60)+'m';
+  setTimeout(() => {
+    const h = document.getElementById('lift-history-list');
+    if (h) h.insertAdjacentHTML('afterbegin', `<div style="background:var(--accent2);color:#fff;border-radius:10px;padding:12px 16px;margin-bottom:12px;font-weight:700">&#10003; Workout saved! ${exercises.length} exercises, ${mins} total.</div>`);
+  }, 200);
+}
+
+// --- REST TIMER ---
+function startRestTimer(secs) {
+  _restRemaining = secs || 60;
+  const overlay = document.getElementById('rest-overlay');
+  if (overlay) overlay.style.display = 'flex';
+  updateRestDisplay();
+  if (_restTimer) clearInterval(_restTimer);
+  _restTimer = setInterval(() => {
+    _restRemaining--;
+    updateRestDisplay();
+    if (_restRemaining <= 0) skipRest();
+  }, 1000);
+}
+
+function updateRestDisplay() {
+  const el = document.getElementById('rest-countdown');
+  if (el) el.textContent = Math.max(0, _restRemaining);
+}
+
+function skipRest() {
+  if (_restTimer) { clearInterval(_restTimer); _restTimer = null; }
+  const overlay = document.getElementById('rest-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
+function addRestTime(delta) {
+  _restRemaining = Math.max(0, _restRemaining + delta);
+  updateRestDisplay();
+}
+
+function setRestDuration(secs) {
+  _restRemaining = secs;
+  updateRestDisplay();
+}
+// ===== END WORKOUT SESSION =====
 
 // ===== LIFT DATA STORE =====
 const UPPER_EXERCISES = [
