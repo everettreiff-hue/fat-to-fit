@@ -4624,10 +4624,10 @@ async function initFirebaseSync() {
         // Remote is newer — check whether the merge actually changes any counts.
         // If data is already identical (two devices bouncing the same state),
         // skip reload+push to avoid an infinite sync loop.
-        const prevCounts = [getData().length, getLiftWorkouts().length, getNutritionData().length];
+        const prevCounts = [getData().length, getLiftWorkouts().length, getNutritionData().length, getWorkoutTemplates().length];
         if (localTs === 0) mergeAllAppData(remote);
         else applyAllAppData(remote);
-        const newCounts = [getData().length, getLiftWorkouts().length, getNutritionData().length];
+        const newCounts = [getData().length, getLiftWorkouts().length, getNutritionData().length, getWorkoutTemplates().length];
         const dataChanged = prevCounts.some((c, i) => c !== newCounts[i]);
 
         localStorage.setItem('ht_last_modified', String(remoteTs));
@@ -4638,10 +4638,15 @@ async function initFirebaseSync() {
           setSyncStatus('☁️ synced ✓');
           setTimeout(() => location.reload(), 300);
         } else {
-          // No actual change — accept remote ts, no reload or push needed
+          // No actual change — accept remote ts, no reload needed
           fbLastWriteTs = remoteTs;
           localStorage.setItem('ht_fb_last_write', String(remoteTs));
           setSyncStatus('☁️ synced ✓');
+          // Refresh session hub in case templates updated without count change
+          if (typeof renderSessionHub === 'function') {
+            const hubEl = document.getElementById('session-hub');
+            if (hubEl && hubEl.style.display !== 'none') renderSessionHub();
+          }
         }
       } else if (localTs > remoteTs) {
         pushToFirestore();
@@ -4693,11 +4698,14 @@ function applyAllAppData(remote) {
   if (Array.isArray(remote.nutrition))
     localStorage.setItem('ht_nutrition', JSON.stringify(mergeByDate(getNutritionData(), remote.nutrition)));
   if (Array.isArray(remote.workoutTemplates) && remote.workoutTemplates.length > 0) {
-    // Merge templates by name — remote wins for new names, local wins for existing
+    // Merge by name — local entries win, remote fills in any missing templates
     const localT = getWorkoutTemplates();
     const localNames = new Set(localT.map(t => t.name));
     const merged = [...localT, ...remote.workoutTemplates.filter(t => !localNames.has(t.name))];
     localStorage.setItem('ht_workout_templates', JSON.stringify(merged));
+  } else if (!Array.isArray(remote.workoutTemplates) && getWorkoutTemplates().length > 0) {
+    // Local has templates but remote doesn't — schedule a push so remote gets them
+    setTimeout(() => pushToFirestore(), 2000);
   }
 }
 
@@ -4734,6 +4742,8 @@ function mergeAllAppData(remote) {
     const localNames = new Set(localT.map(t => t.name));
     const merged = [...localT, ...remote.workoutTemplates.filter(t => !localNames.has(t.name))];
     localStorage.setItem('ht_workout_templates', JSON.stringify(merged));
+  } else if (!Array.isArray(remote.workoutTemplates) && getWorkoutTemplates().length > 0) {
+    setTimeout(() => pushToFirestore(), 2000);
   }
 }
 
