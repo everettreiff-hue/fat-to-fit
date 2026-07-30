@@ -2294,9 +2294,17 @@ function renderActiveSession() {
       : `<div style="font-size:12px;color:var(--muted);margin-bottom:8px">No previous data</div>`;
 
     const setRows = ex.sets.map((st, si) => `
-      <div style="display:flex;align-items:center;gap:8px;padding:5px 0;opacity:0.6">
-        <div style="width:42px;text-align:center;font-size:12px;color:var(--accent2);font-weight:700">&#10003; ${si+1}</div>
-        <div style="flex:1;font-size:13px">${st.weight||'&mdash;'} lbs &times; ${st.reps||'&mdash;'} reps</div>
+      <div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid var(--border)">
+        <div style="width:30px;text-align:center;font-size:11px;color:var(--accent2);font-weight:700;flex-shrink:0">&#10003;${si+1}</div>
+        <input type="number" value="${st.weight||0}" min="0" step="2.5"
+          style="width:66px;padding:6px 4px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;text-align:center;font-weight:600"
+          onchange="editLoggedSet(${ei},${si},'weight',Number(this.value))">
+        <span style="color:var(--muted);font-size:13px">&#215;</span>
+        <input type="number" value="${st.reps||0}" min="0"
+          style="width:52px;padding:6px 4px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;text-align:center;font-weight:600"
+          onchange="editLoggedSet(${ei},${si},'reps',Number(this.value))">
+        <span style="color:var(--muted);font-size:12px;flex:1">reps</span>
+        <button onclick="removeLoggedSet(${ei},${si})" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:2px 4px;line-height:1;flex-shrink:0">&times;</button>
       </div>
     `).join('');
 
@@ -2330,6 +2338,32 @@ function renderActiveSession() {
       ${prevHtml}${setRows}${inputRow}
     </div>`;
   }).join('');
+}
+
+
+function editLoggedSet(exIdx, setIdx, field, val) {
+  const session = getActiveSession();
+  if (!session || !session.exercises[exIdx] || !session.exercises[exIdx].sets[setIdx]) return;
+  session.exercises[exIdx].sets[setIdx][field] = val;
+  saveActiveSession(session);
+  // Re-render counter but not full list to avoid losing focus
+  const completed = session.exercises.filter(e => e.sets.length >= e.targetSets || e.skipped).length;
+  const counterEl = document.getElementById('session-ex-counter');
+  if (counterEl) counterEl.textContent = completed + ' of ' + session.exercises.length + ' done';
+}
+
+function removeLoggedSet(exIdx, setIdx) {
+  const session = getActiveSession();
+  if (!session || !session.exercises[exIdx]) return;
+  session.exercises[exIdx].sets.splice(setIdx, 1);
+  // Re-number sets
+  session.exercises[exIdx].sets.forEach((s, i) => { s.set = i + 1; });
+  // If exercise was marked skipped, un-skip it
+  if (session.exercises[exIdx].skipped && session.exercises[exIdx].sets.length === 0) {
+    session.exercises[exIdx].skipped = false;
+  }
+  saveActiveSession(session);
+  renderActiveSession();
 }
 
 function logSet(exIdx) {
@@ -2383,6 +2417,8 @@ function endSession() {
   workouts.push({ date, type: session.type, duration, source: 'session', exercises });
   saveLiftWorkouts(workouts);
   markLocalChange();
+  // Force immediate push — don't rely on debounce in case user closes app
+  pushToFirestore();
 
   clearActiveSession();
   showLiftPage('lifthistory');
