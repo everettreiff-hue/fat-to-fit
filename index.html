@@ -145,8 +145,8 @@
 
   /* Mobile-only Drive connect/status icon — hidden on desktop since the
      full nav (with text status) is visible there instead. */
-  .cloud-sync-mobile { display:none; }
   .mode-tab:hover:not(.active) { border-color:var(--accent); color:var(--text); }
+  .tab-short { display: none; }
 
   /* LIFT LOG FORM */
   .lift-input { background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 14px; padding: 9px 12px; outline: none; transition: border-color .2s; }
@@ -254,26 +254,12 @@
     body { padding-bottom: env(safe-area-inset-bottom); }
     nav.bottom-nav { padding-bottom: calc(8px + env(safe-area-inset-bottom)); }
 
-    /* Top nav's Drive button is hidden along with the rest of nav.top-nav,
-       so show a compact icon-only Drive button in the always-visible
-       mode-switch bar instead. Tap behavior is identical (driveConnectClick). */
-    .app-mode-switch { justify-content: space-between; }
-    .cloud-sync-mobile {
-      display: flex !important;
-      align-items: center; justify-content: center;
-      position: relative; flex-shrink: 0;
-      width: 34px; height: 34px; padding: 0;
-      background: var(--surface2); border: 1px solid var(--border);
-      border-radius: 50%; font-size: 15px; cursor: pointer;
-    }
-    .cloud-sync-mobile::after {
-      content: ''; position: absolute; top: -1px; right: -1px;
-      width: 9px; height: 9px; border-radius: 50%;
-      background: var(--muted); border: 1.5px solid var(--surface);
-    }
-    .cloud-sync-mobile[data-state="synced"]::after { background: var(--accent2); }
-    .cloud-sync-mobile[data-state="busy"]::after { background: var(--warn); }
-    .cloud-sync-mobile[data-state="error"]::after { background: var(--danger); }
+    /* Mode tabs: compact on mobile so all 4 fit without scrolling */
+    .app-mode-switch { padding: 6px 4px; }
+    .mode-tabs { gap: 4px; }
+    .mode-tab { padding: 6px 8px; font-size: 11px; }
+    .tab-full { display: none; }
+    .tab-short { display: inline; }
 
     /* Top nav hidden on mobile, bottom nav shown */
     nav.top-nav { display: none; }
@@ -364,10 +350,10 @@ if (window.navigator.standalone) {
 
 <div class="app-mode-switch">
   <div class="mode-tabs">
-    <button class="mode-tab active" id="mode-btn-body" onclick="switchAppMode('body')">⚖️ Body Composition</button>
-    <button class="mode-tab" id="mode-btn-lift" onclick="switchAppMode('lift')">🏋️ Weight Lifting</button>
-    <button class="mode-tab" id="mode-btn-nutrition" onclick="switchAppMode('nutrition')">🥗 Nutrition</button>
-    <button class="mode-tab" id="mode-btn-coach" onclick="switchAppMode('coach')">🤖 AI Coach</button>
+    <button class="mode-tab active" id="mode-btn-body" onclick="switchAppMode('body')">⚖️ <span class="tab-full">Body Composition</span><span class="tab-short">Body</span></button>
+    <button class="mode-tab" id="mode-btn-lift" onclick="switchAppMode('lift')">🏋️ <span class="tab-full">Weight Lifting</span><span class="tab-short">Lifting</span></button>
+    <button class="mode-tab" id="mode-btn-nutrition" onclick="switchAppMode('nutrition')">🥗 <span class="tab-full">Nutrition</span><span class="tab-short">Nutrition</span></button>
+    <button class="mode-tab" id="mode-btn-coach" onclick="switchAppMode('coach')">🤖 <span class="tab-full">AI Coach</span><span class="tab-short">Coach</span></button>
   </div>
 </div>
 
