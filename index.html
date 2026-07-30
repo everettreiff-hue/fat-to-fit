@@ -2104,12 +2104,17 @@ function removeTemplateEx(tIdx, exIdx) {
 function loadTemplateToBuilder(idx) {
   const t = getWorkoutTemplates()[idx];
   if (!t) return;
+  // Set plan BEFORE showing builder — don't call initSessionBuilder which resets it
   _sessionPlan = {
     type: t.type,
     exercises: t.exercises.map(e => ({name: e.name, targetSets: e.sets||3, targetReps: e.reps||10, targetWeight: e.weight||''}))
   };
   _expandedTemplate = null;
-  initSessionBuilder('custom');
+  // Populate exercise picker
+  _sessionAllExercises = [...UPPER_EXERCISES, ...LOWER_EXERCISES].sort((a,b) => a.localeCompare(b));
+  renderSessionExPicker('');
+  setSessionType(t.type);
+  showSessionView('builder');
 }
 
 function startFromTemplate(idx) {
