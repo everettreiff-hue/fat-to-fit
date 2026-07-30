@@ -2052,7 +2052,7 @@ function renderSessionPlanList() {
     <div style="display:flex;align-items:center;gap:8px;padding:10px 0;${i < _sessionPlan.exercises.length-1 ? 'border-bottom:1px solid var(--border)' : ''}">
       <div style="color:var(--muted);font-size:13px;font-weight:700;width:20px;flex-shrink:0;text-align:center">${i+1}</div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:14px;font-weight:600;margin-bottom:4px">${escapeHtml(ex.name)}</div>
+        <div style="font-size:14px;font-weight:600;margin-bottom:4px">${escapeHtml(ex.name)}${ex.isNew ? '<span style="margin-left:7px;font-size:10px;background:var(--accent2);color:#fff;border-radius:6px;padding:2px 7px;font-weight:700;vertical-align:middle">✨ New</span>' : ''}</div>
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
           <input type="number" value="${ex.targetSets||3}" min="1" max="10" title="Sets"
             style="width:44px;padding:5px 6px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;text-align:center"
@@ -2314,18 +2314,16 @@ async function aiGenerateWorkout(splitType) {
   const typeMap = { 'Push': 'Upper', 'Pull': 'Upper', 'Lower': 'Lower', 'Full Body': 'Full' };
   setSessionType(typeMap[splitType] || 'Upper');
 
+  // Build known exercise set from history
+  const allWorkouts = getLiftWorkouts();
+  const knownExercises = new Set(
+    allWorkouts.flatMap(w => (w.exercises||[]).map(e => e.name.toLowerCase().trim()))
+  );
+
   // Get recent history for context
-  const recent = getLiftWorkouts().slice(-6).map(w => w.date + ' ' + w.type + ': ' + (w.exercises||[]).map(e => e.name).join(', ')).join('\n');
+  const recent = allWorkouts.slice(-6).map(w => w.date + ' ' + w.type + ': ' + (w.exercises||[]).map(e => e.name).join(', ')).join('\n');
 
-  const prompt = `You are a personal trainer. Generate a ${splitType} workout plan for today.
-
-Recent workout history:
-${recent || 'No history yet'}
-
-Respond ONLY with a JSON array (no explanation, no markdown fences), like:
-[{"name":"Exercise Name","sets":3,"reps":10,"weight":135},...]
-
-Include 5-7 exercises appropriate for a ${splitType} workout. Order them compound before isolation. Include realistic starting weights in lbs based on history if available, otherwise use reasonable defaults.`;
+  const prompt = 'You are a personal trainer. Generate a ' + splitType + ' workout plan for today.\n\nRecent workout history:\n' + (recent || 'No history yet') + '\n\nRules:\n- Respond ONLY with a JSON array, no explanation, no markdown.\n- Include 5-7 exercises for a ' + splitType + ' workout.\n- Order compound movements before isolation.\n- All reps must be between 6 and 8. Never suggest reps outside this range.\n- Include realistic weights in lbs based on history if available, otherwise use reasonable defaults.\n- Max 2 exercises may be ones not previously seen in the workout history above.\n\nFormat: [{"name":"Exercise Name","sets":3,"reps":8,"weight":135},...]';
 
   try {
     const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -2349,12 +2347,27 @@ Include 5-7 exercises appropriate for a ${splitType} workout. Order them compoun
     const jsonText = text.replace(/^```[\w]*/m, '').replace(/```$/m, '').trim();
     const exercises = JSON.parse(jsonText);
     if (!Array.isArray(exercises) || !exercises.length) throw new Error('Empty response');
-    _sessionPlan.exercises = exercises.map(ex => ({
-      name: ex.name,
-      targetSets: ex.sets || 3,
-      targetReps: ex.reps || 10,
-      targetWeight: ex.weight || ''
-    }));
+
+    // Enforce: max 2 new exercises, reps clamped 6–8
+    let newCount = 0;
+    _sessionPlan.exercises = exercises.map(ex => {
+      const isNew = !knownExercises.has((ex.name||'').toLowerCase().trim());
+      const clampedReps = Math.min(8, Math.max(6, ex.reps || 8));
+      if (isNew) newCount++;
+      return {
+        name: ex.name,
+        targetSets: ex.sets || 3,
+        targetReps: clampedReps,
+        targetWeight: ex.weight || '',
+        isNew: isNew && newCount <= 2  // only flag first 2 new ones
+      };
+    }).filter((ex, i, arr) => {
+      // If more than 2 new exercises, drop extras beyond 2
+      if (!ex.isNew) return true;
+      const newSoFar = arr.slice(0, i).filter(e => e.isNew).length;
+      return newSoFar < 2;
+    });
+
     renderSessionPlanList();
   } catch(e) {
     if (listEl) listEl.innerHTML = '<div style="color:#f87171;font-size:13px;text-align:center;padding:16px 0">⚠️ ' + escapeHtml(e.message) + '</div>';
