@@ -2014,21 +2014,18 @@ function initSessionBuilder(mode) {
   setSessionType('Upper');
 
   if (mode === 'ai') {
-    const raw = localStorage.getItem('ht_coach_suggested_workout');
-    if (raw) {
-      try {
-        const suggested = JSON.parse(raw);
-        if (Array.isArray(suggested) && suggested.length) {
-          _sessionPlan.exercises = suggested.map(ex => ({
-            name: ex.name, targetSets: ex.sets||3, targetReps: ex.reps||10, targetWeight: ex.weight||''
-          }));
-          autoOrderSessionPlan();
-          return;
-        }
-      } catch(e) {}
-    }
+    // Show AI type selector directly in the plan list area
     const listEl = document.getElementById('session-plan-list');
-    if (listEl) listEl.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:20px 0">Ask the AI Coach for a workout plan first, then come back here.</div>';
+    if (listEl) listEl.innerHTML = `
+      <div style="text-align:center;padding:8px 0 16px">
+        <div style="font-size:14px;font-weight:700;margin-bottom:14px;color:var(--text)">Choose your workout split:</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">
+          <button onclick="aiGenerateWorkout('Push')" class="ai-split-btn" style="background:var(--accent);border:none;border-radius:12px;color:#fff;padding:14px 22px;font-size:15px;font-weight:700;cursor:pointer;min-width:90px">💪 Push</button>
+          <button onclick="aiGenerateWorkout('Pull')" class="ai-split-btn" style="background:var(--accent);border:none;border-radius:12px;color:#fff;padding:14px 22px;font-size:15px;font-weight:700;cursor:pointer;min-width:90px">🤜 Pull</button>
+          <button onclick="aiGenerateWorkout('Lower')" class="ai-split-btn" style="background:var(--accent);border:none;border-radius:12px;color:#fff;padding:14px 22px;font-size:15px;font-weight:700;cursor:pointer;min-width:90px">🦵 Lower</button>
+          <button onclick="aiGenerateWorkout('Full Body')" class="ai-split-btn" style="background:var(--accent2);border:none;border-radius:12px;color:#fff;padding:14px 22px;font-size:15px;font-weight:700;cursor:pointer;min-width:90px">🏋️ Full Body</button>
+        </div>
+      </div>`;
   } else {
     renderSessionPlanList();
   }
@@ -2059,15 +2056,15 @@ function renderSessionPlanList() {
         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
           <input type="number" value="${ex.targetSets||3}" min="1" max="10" title="Sets"
             style="width:44px;padding:5px 6px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;text-align:center"
-            onchange="_sessionPlan.exercises[${i}].targetSets=Number(this.value)">
+            onchange="updateSessionEx(${i},'targetSets',Number(this.value))">
           <span style="color:var(--muted);font-size:11px">sets</span>
           <input type="number" value="${ex.targetReps||10}" min="1" max="100" title="Reps"
             style="width:44px;padding:5px 6px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;text-align:center"
-            onchange="_sessionPlan.exercises[${i}].targetReps=Number(this.value)">
+            onchange="updateSessionEx(${i},'targetReps',Number(this.value))">
           <span style="color:var(--muted);font-size:11px">reps @</span>
           <input type="number" value="${ex.targetWeight||''}" placeholder="lbs" min="0" step="2.5"
             style="width:58px;padding:5px 6px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:12px;text-align:center"
-            onchange="_sessionPlan.exercises[${i}].targetWeight=Number(this.value)||''">
+            onchange="updateSessionEx(${i},'targetWeight',Number(this.value)||'')">
         </div>
       </div>
       <button onclick="removeExFromPlan(${i})" style="background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px;line-height:1;flex-shrink:0">&times;</button>
@@ -2297,6 +2294,75 @@ function setRestDuration(secs) {
   _restRemaining = secs;
   updateRestDisplay();
 }
+
+function updateSessionEx(i, field, val) {
+  if (_sessionPlan && _sessionPlan.exercises && _sessionPlan.exercises[i]) {
+    _sessionPlan.exercises[i][field] = val;
+  }
+}
+
+async function aiGenerateWorkout(splitType) {
+  const apiKey = localStorage.getItem('ht_coach_api_key');
+  if (!apiKey) {
+    alert('No API key found. Go to AI Coach tab and add your Anthropic API key first.');
+    return;
+  }
+  const listEl = document.getElementById('session-plan-list');
+  if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:24px 0;color:var(--muted);font-size:14px">🤖 Generating ' + splitType + ' workout…</div>';
+
+  // Set workout type based on split
+  const typeMap = { 'Push': 'Upper', 'Pull': 'Upper', 'Lower': 'Lower', 'Full Body': 'Full' };
+  setSessionType(typeMap[splitType] || 'Upper');
+
+  // Get recent history for context
+  const recent = getLiftWorkouts().slice(-6).map(w => w.date + ' ' + w.type + ': ' + (w.exercises||[]).map(e => e.name).join(', ')).join('\n');
+
+  const prompt = `You are a personal trainer. Generate a ${splitType} workout plan for today.
+
+Recent workout history:
+${recent || 'No history yet'}
+
+Respond ONLY with a JSON array (no explanation, no markdown fences), like:
+[{"name":"Exercise Name","sets":3,"reps":10,"weight":135},...]
+
+Include 5-7 exercises appropriate for a ${splitType} workout. Order them compound before isolation. Include realistic starting weights in lbs based on history if available, otherwise use reasonable defaults.`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 1024,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'API error ' + res.status);
+    const text = data.content[0].text.trim();
+    // Parse JSON — strip any accidental markdown fences
+    const jsonText = text.replace(/^```[\w]*
+?/, '').replace(/
+?```$/, '').trim();
+    const exercises = JSON.parse(jsonText);
+    if (!Array.isArray(exercises) || !exercises.length) throw new Error('Empty response');
+    _sessionPlan.exercises = exercises.map(ex => ({
+      name: ex.name,
+      targetSets: ex.sets || 3,
+      targetReps: ex.reps || 10,
+      targetWeight: ex.weight || ''
+    }));
+    renderSessionPlanList();
+  } catch(e) {
+    if (listEl) listEl.innerHTML = '<div style="color:#f87171;font-size:13px;text-align:center;padding:16px 0">⚠️ ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
 // ===== END WORKOUT SESSION =====
 
 // ===== LIFT DATA STORE =====
