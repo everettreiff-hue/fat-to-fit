@@ -369,7 +369,6 @@ if (window.navigator.standalone) {
     <button class="mode-tab" id="mode-btn-nutrition" onclick="switchAppMode('nutrition')">🥗 Nutrition</button>
     <button class="mode-tab" id="mode-btn-coach" onclick="switchAppMode('coach')">🤖 AI Coach</button>
   </div>
-  <button class="cloud-sync-mobile" onclick="manualSync()" title="Firestore sync" data-state="idle">☁️</button>
 </div>
 
 <div id="wrap-body">
@@ -384,7 +383,6 @@ if (window.navigator.standalone) {
   <button onclick="showPage('measurements')">Measurements</button>
   <button onclick="showPage('import')">Import</button>
   <button onclick="saveJSON()" style="margin-left:auto;color:var(--accent2);border-bottom-color:transparent">📦 Save JSON</button>
-  <button class="cloud-sync-status" onclick="manualSync()" style="color:var(--muted);border-bottom-color:transparent;font-size:12px;white-space:nowrap" title="Firestore sync">☁️ synced ✓</button>
 </nav>
 
 <!-- Bottom nav — mobile only -->
@@ -844,7 +842,6 @@ if (window.navigator.standalone) {
   <button onclick="showLiftPage('lifthistory')">History</button>
   <button onclick="showLiftPage('liftprogress')">Progress</button>
   <button onclick="saveJSON()" style="margin-left:auto;color:var(--accent2);border-bottom-color:transparent">📦 Save JSON</button>
-  <button class="cloud-sync-status" onclick="manualSync()" style="color:var(--muted);border-bottom-color:transparent;font-size:12px;white-space:nowrap" title="Firestore sync">☁️ synced ✓</button>
 </nav>
 <nav class="bottom-nav" style="display:none">
   <button class="active" onclick="showLiftPage('liftlog')"><span class="nav-icon">✏️</span>Log</button>
