@@ -2008,7 +2008,7 @@ function deleteTemplate(idx) {
 function initSessionBuilder(mode) {
   _sessionPlan = { type: 'Upper', exercises: [] };
   showSessionView('builder');
-  const allEx = [...(typeof UPPER_EXERCISES !== 'undefined' ? UPPER_EXERCISES : []), ...(typeof LOWER_EXERCISES !== 'undefined' ? LOWER_EXERCISES : [])];
+  const allEx = [...(typeof UPPER_EXERCISES !== 'undefined' ? UPPER_EXERCISES : []), ...(typeof LOWER_EXERCISES !== 'undefined' ? LOWER_EXERCISES : [])].sort((a,b) => a.localeCompare(b));
   const dl = document.getElementById('session-ex-datalist');
   if (dl) dl.innerHTML = allEx.map(e => `<option value="${escapeHtml(e)}">`).join('');
   setSessionType('Upper');
@@ -2349,23 +2349,22 @@ async function aiGenerateWorkout(splitType) {
     if (!Array.isArray(exercises) || !exercises.length) throw new Error('Empty response');
 
     // Enforce: max 2 new exercises, reps clamped 6–8
-    let newCount = 0;
-    _sessionPlan.exercises = exercises.map(ex => {
+    const mapped = exercises.map(ex => {
       const isNew = !knownExercises.has((ex.name||'').toLowerCase().trim());
       const clampedReps = Math.min(8, Math.max(6, ex.reps || 8));
-      if (isNew) newCount++;
       return {
         name: ex.name,
         targetSets: ex.sets || 3,
         targetReps: clampedReps,
         targetWeight: ex.weight || '',
-        isNew: isNew && newCount <= 2  // only flag first 2 new ones
+        isNew: isNew
       };
-    }).filter((ex, i, arr) => {
-      // If more than 2 new exercises, drop extras beyond 2
+    });
+    let newCount = 0;
+    _sessionPlan.exercises = mapped.filter(ex => {
       if (!ex.isNew) return true;
-      const newSoFar = arr.slice(0, i).filter(e => e.isNew).length;
-      return newSoFar < 2;
+      newCount++;
+      return newCount <= 2;
     });
 
     renderSessionPlanList();
@@ -2378,16 +2377,20 @@ async function aiGenerateWorkout(splitType) {
 
 // ===== LIFT DATA STORE =====
 const UPPER_EXERCISES = [
-  'Pectoral Fly','Rear Deltoid','Inclined Bend (SMITH)','Lat Pulldown',
-  'Lower Chest Pull Down','Preacher Bar Curls','Bull Testicals',
-  'Dumbbell Curls','Behind Head Tricep Raises','Flat Bench (SMITH)',
-  'Seated Row','High-Low Cross Over (Lower Pec)','Shoulder Press',
-  'Chest Press','Bench','Declined Press (Berry)','Tricep Press','Bicep Curl',
-  'Cable Shoulder Raises','Low-High Double Cable (Lower Pec)'
+  'Behind Head Tricep Raises', 'Bench', 'Bicep Curl', 'Bull Testicals',
+  'Cable Shoulder Raises', 'Chest Press', 'Declined Press (Berry)',
+  'Dumbbell Curls', 'Flat Bench (SMITH)',
+  'High-Low Cross Over (Lower Pec)', 'Inclined Bench (SMITH)',
+  'Lat Pulldown', 'Low-High Double Cable (Lower Pec)',
+  'Lower Chest Pull Down', 'Pectoral Fly', 'Preacher Bar Curls',
+  'Rear Deltoid', 'Seated Row', 'Shoulder Press', 'Tricep Press'
 ];
 const LOWER_EXERCISES = [
-  'Seated Leg Curl','Leg Extension','Calf Raises (Squat Machine)',
-  'Calf Raises (SMITH)','Seated Leg Press (Machine)','Back Extension','Calf Extension'
+  'Abductor Machine', 'Adductor Machine', 'Back Extension',
+  'Calf Extension', 'Calf Raises (SMITH)', 'Calf Raises (Squat Machine)',
+  'Glute Kickback', 'Hip Thrust', 'Leg Extension', 'Leg Press', 'Lunge',
+  'Romanian Deadlift', 'Seated Calf Raise', 'Seated Leg Curl',
+  'Seated Leg Press (Machine)', 'Step Up', 'V-Squat'
 ];
 function getLiftWorkouts() {
   try { return JSON.parse(localStorage.getItem('ht_lift_workouts') || '[]'); } catch { return []; }
