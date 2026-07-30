@@ -2346,9 +2346,7 @@ Include 5-7 exercises appropriate for a ${splitType} workout. Order them compoun
     if (!res.ok) throw new Error(data.error?.message || 'API error ' + res.status);
     const text = data.content[0].text.trim();
     // Parse JSON — strip any accidental markdown fences
-    const jsonText = text.replace(/^```[\w]*
-?/, '').replace(/
-?```$/, '').trim();
+    const jsonText = text.replace(/^```[\w]*/m, '').replace(/```$/m, '').trim();
     const exercises = JSON.parse(jsonText);
     if (!Array.isArray(exercises) || !exercises.length) throw new Error('Empty response');
     _sessionPlan.exercises = exercises.map(ex => ({
