@@ -3842,7 +3842,7 @@ function initFirebaseSync() {
         // Remote is newer — merge and reload
         if (localTs === 0) mergeAllAppData(remote);
         else applyAllAppData(remote);
-        localStorage.setItem('ht_last_modified', String(remoteTs));
+        localStorage.setItem('ht_last_modified', String(Date.now())); // > remoteTs → triggers push after reload
         setSyncStatus('\u2601️ synced \u2713');
         setTimeout(() => location.reload(), 300);
       } else if (localTs > remoteTs) {
