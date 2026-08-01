@@ -383,6 +383,7 @@ if (window.navigator.standalone) {
   <button class="active" onclick="showPage('dashboard')">Dashboard</button>
   <button onclick="showPage('log')">Log Entry</button>
   <button onclick="showPage('inbody')">InBody</button>
+  <button onclick="showPage('segmental')">Segmental</button>
   <button onclick="showPage('charts')">Charts</button>
   <button onclick="showPage('history')">History</button>
   <button onclick="showPage('photos')">Photos</button>
@@ -396,9 +397,8 @@ if (window.navigator.standalone) {
   <button class="active" onclick="showPage('dashboard')"><span class="nav-icon">📊</span>Dashboard</button>
   <button onclick="showPage('log')"><span class="nav-icon">✏️</span>Log</button>
   <button onclick="showPage('inbody')"><span class="nav-icon">⚖️</span>InBody</button>
+  <button onclick="showPage('segmental')"><span class="nav-icon">🫀</span>Segmental</button>
   <button onclick="showPage('charts')"><span class="nav-icon">📈</span>Charts</button>
-  <button onclick="showPage('history')"><span class="nav-icon">🕘</span>History</button>
-  <button onclick="showPage('photos')"><span class="nav-icon">📷</span>Photos</button>
   <button onclick="showPage('import')"><span class="nav-icon">💾</span>Save</button>
 </nav>
 
@@ -827,6 +827,90 @@ if (window.navigator.standalone) {
   <div class="section-group"><span class="section-group-label">Scan History</span><div class="section-group-line"></div></div>
   <div class="card" style="overflow:auto">
     <div id="ib-history-table"></div>
+  </div>
+</div>
+
+
+<!-- ===== SEGMENTAL ANALYSIS ===== -->
+<div id="page-segmental" class="page">
+  <div class="section-title">Segmental Analysis</div>
+
+  <!-- View toggle -->
+  <div style="display:flex;gap:8px;margin-bottom:16px">
+    <button id="seg-btn-lean" class="btn btn-primary" onclick="setSegView('lean')" style="flex:1">Lean Mass (lbs)</button>
+    <button id="seg-btn-fat" class="btn btn-secondary" onclick="setSegView('fat')" style="flex:1">Fat %</button>
+  </div>
+
+  <!-- Body map card -->
+  <div class="card" style="margin-bottom:20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <h3 style="margin:0">Body Map</h3>
+      <span id="seg-scan-date" style="font-size:12px;color:var(--muted)"></span>
+    </div>
+    <div id="seg-no-data" style="display:none;text-align:center;padding:24px;color:var(--muted);font-size:13px">
+      No segmental data found. Log a scan with segmental values in the Log Entry tab.
+    </div>
+    <div id="seg-body-wrap" style="position:relative;max-width:340px;margin:0 auto">
+      <!-- SVG body figure -->
+      <svg id="seg-body-svg" viewBox="0 0 340 500" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">
+        <!-- Head -->
+        <ellipse cx="170" cy="52" rx="32" ry="36" fill="var(--surface2,#1e293b)" stroke="var(--border)" stroke-width="1.5"/>
+        <!-- Neck -->
+        <rect x="158" y="84" width="24" height="18" rx="4" fill="var(--surface2,#1e293b)" stroke="var(--border)" stroke-width="1.5"/>
+        <!-- Right arm (viewer's right = body's right) -->
+        <rect id="seg-svg-ra" x="52" y="102" width="52" height="140" rx="20" fill="#1e3a2f" stroke="#22c55e" stroke-width="2"/>
+        <!-- Left arm -->
+        <rect id="seg-svg-la" x="236" y="102" width="52" height="140" rx="20" fill="#1e3a2f" stroke="#22c55e" stroke-width="2"/>
+        <!-- Trunk -->
+        <rect id="seg-svg-tr" x="110" y="100" width="120" height="160" rx="14" fill="#1e3a2f" stroke="#22c55e" stroke-width="2"/>
+        <!-- Right leg -->
+        <rect id="seg-svg-rl" x="114" y="265" width="54" height="200" rx="20" fill="#1e3a2f" stroke="#22c55e" stroke-width="2"/>
+        <!-- Left leg -->
+        <rect id="seg-svg-ll" x="172" y="265" width="54" height="200" rx="20" fill="#1e3a2f" stroke="#22c55e" stroke-width="2"/>
+      </svg>
+
+      <!-- Overlay cards -->
+      <!-- Right Arm -->
+      <div id="seg-card-ra" style="position:absolute;top:110px;left:0;background:rgba(15,23,42,.88);border:1.5px solid var(--border);border-radius:10px;padding:7px 10px;min-width:78px;text-align:left;backdrop-filter:blur(4px)">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:2px">Right Arm</div>
+        <div id="seg-val-ra" style="font-size:17px;font-weight:700;color:#4ade80">—</div>
+        <div id="seg-lbl-ra" style="font-size:10px;color:var(--muted)">lbs</div>
+      </div>
+      <!-- Left Arm -->
+      <div id="seg-card-la" style="position:absolute;top:110px;right:0;background:rgba(15,23,42,.88);border:1.5px solid var(--border);border-radius:10px;padding:7px 10px;min-width:78px;text-align:left;backdrop-filter:blur(4px)">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:2px">Left Arm</div>
+        <div id="seg-val-la" style="font-size:17px;font-weight:700;color:#4ade80">—</div>
+        <div id="seg-lbl-la" style="font-size:10px;color:var(--muted)">lbs</div>
+      </div>
+      <!-- Trunk -->
+      <div id="seg-card-tr" style="position:absolute;top:155px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,.92);border:1.5px solid var(--border);border-radius:10px;padding:7px 12px;min-width:88px;text-align:center;backdrop-filter:blur(4px)">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:2px">Trunk</div>
+        <div id="seg-val-tr" style="font-size:19px;font-weight:700;color:#4ade80">—</div>
+        <div id="seg-lbl-tr" style="font-size:10px;color:var(--muted)">lbs</div>
+      </div>
+      <!-- Right Leg -->
+      <div id="seg-card-rl" style="position:absolute;bottom:20px;left:4px;background:rgba(15,23,42,.88);border:1.5px solid var(--border);border-radius:10px;padding:7px 10px;min-width:78px;text-align:left;backdrop-filter:blur(4px)">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:2px">Right Leg</div>
+        <div id="seg-val-rl" style="font-size:17px;font-weight:700;color:#4ade80">—</div>
+        <div id="seg-lbl-rl" style="font-size:10px;color:var(--muted)">lbs</div>
+      </div>
+      <!-- Left Leg -->
+      <div id="seg-card-ll" style="position:absolute;bottom:20px;right:4px;background:rgba(15,23,42,.88);border:1.5px solid var(--border);border-radius:10px;padding:7px 10px;min-width:78px;text-align:left;backdrop-filter:blur(4px)">
+        <div style="font-size:10px;color:var(--muted);margin-bottom:2px">Left Leg</div>
+        <div id="seg-val-ll" style="font-size:17px;font-weight:700;color:#4ade80">—</div>
+        <div id="seg-lbl-ll" style="font-size:10px;color:var(--muted)">lbs</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Historical charts -->
+  <div class="card" style="margin-bottom:20px">
+    <h3>Lean Mass History (lbs)</h3>
+    <canvas id="seg-chart-lean" height="200"></canvas>
+  </div>
+  <div class="card" style="margin-bottom:20px">
+    <h3>Fat % History</h3>
+    <canvas id="seg-chart-fat" height="200"></canvas>
   </div>
 </div>
 
@@ -1484,12 +1568,12 @@ function showPage(name) {
   document.getElementById('page-' + name).classList.add('active');
   // Top nav
   const topBtns = scope.querySelectorAll('nav.top-nav button');
-  const topLabels = ['dashboard','log','inbody','charts','history','photos','measurements','import'];
+  const topLabels = ['dashboard','log','inbody','segmental','charts','history','photos','measurements','import'];
   const topIdx = topLabels.indexOf(name);
   if (topIdx >= 0) topBtns[topIdx].classList.add('active');
   // Bottom nav
   const botBtns = scope.querySelectorAll('nav.bottom-nav button');
-  const botLabels = ['dashboard','log','inbody','charts','history','photos','import'];
+  const botLabels = ['dashboard','log','inbody','segmental','charts','import'];
   const botIdx = botLabels.indexOf(name);
   if (botIdx >= 0) botBtns[botIdx].classList.add('active');
   // Scroll to top on mobile
@@ -1500,6 +1584,7 @@ function showPage(name) {
   if (name === 'photos') renderPhotos();
   if (name === 'measurements') renderMeasurements();
   if (name === 'inbody') renderInBody();
+  if (name === 'segmental') renderSegmental();
 }
 
 // ===== NUTRITION =====
@@ -4124,6 +4209,132 @@ function deleteInBodyEntry(date) {
   const scans = getInBody().filter(s=>s.date!==date);
   saveInBody(scans);
   renderInBody();
+}
+
+
+// ===== SEGMENTAL ANALYSIS =====
+var _segView = 'lean';
+var _segChartLean = null;
+var _segChartFat = null;
+
+function setSegView(v) {
+  _segView = v;
+  document.getElementById('seg-btn-lean').className = v === 'lean' ? 'btn btn-primary' : 'btn btn-secondary';
+  document.getElementById('seg-btn-fat').className  = v === 'fat'  ? 'btn btn-primary' : 'btn btn-secondary';
+  renderSegmental();
+}
+
+function renderSegmental() {
+  var entries = getData().filter(function(e) {
+    return e.segRaLean != null || e.segRaFat != null;
+  }).sort(function(a, b) { return a.date.localeCompare(b.date); });
+
+  var wrap = document.getElementById('seg-body-wrap');
+  var noData = document.getElementById('seg-no-data');
+
+  if (!entries.length) {
+    noData.style.display = 'block';
+    wrap.style.display = 'none';
+    renderSegCharts([]);
+    return;
+  }
+  noData.style.display = 'none';
+  wrap.style.display = 'block';
+
+  var latest = entries[entries.length - 1];
+  document.getElementById('seg-scan-date').textContent = 'Latest: ' + fmtDate(latest.date);
+
+  var isLean = _segView === 'lean';
+  var segs = ['ra', 'la', 'tr', 'rl', 'll'];
+  var leanKey = {'ra':'segRaLean','la':'segLaLean','tr':'segTrLean','rl':'segRlLean','ll':'segLlLean'};
+  var fatKey  = {'ra':'segRaFat', 'la':'segLaFat', 'tr':'segTrFat', 'rl':'segRlFat', 'll':'segLlFat'};
+
+  // Color scale for fat % (green = low fat, orange = high)
+  function fatColor(pct) {
+    if (pct == null) return '#22c55e';
+    if (pct < 15) return '#22c55e';
+    if (pct < 20) return '#84cc16';
+    if (pct < 25) return '#f59e0b';
+    return '#ef4444';
+  }
+  // Color for lean mass (always green-ish)
+  function leanColor() { return '#22c55e'; }
+
+  segs.forEach(function(s) {
+    var val = isLean ? latest[leanKey[s]] : latest[fatKey[s]];
+    var color = isLean ? leanColor() : fatColor(val);
+    var display = val != null ? (isLean ? val.toFixed(1) : val.toFixed(1)) : '—';
+    var unit = isLean ? 'lbs' : '%';
+
+    document.getElementById('seg-val-' + s).textContent = display;
+    document.getElementById('seg-val-' + s).style.color = color;
+    document.getElementById('seg-lbl-' + s).textContent = unit;
+
+    // Color the SVG segment
+    var svgEl = document.getElementById('seg-svg-' + s);
+    if (svgEl) {
+      svgEl.setAttribute('fill', color + '22');
+      svgEl.setAttribute('stroke', color);
+    }
+  });
+
+  renderSegCharts(entries);
+}
+
+function renderSegCharts(entries) {
+  var labels = entries.map(function(e) { return fmtDate(e.date); });
+  var colors = ['#22c55e','#38bdf8','#f59e0b','#a78bfa','#fb7185'];
+  var segNames = ['Right Arm','Left Arm','Trunk','Right Leg','Left Leg'];
+  var leanKeys = ['segRaLean','segLaLean','segTrLean','segRlLean','segLlLean'];
+  var fatKeys  = ['segRaFat', 'segLaFat', 'segTrFat', 'segRlFat', 'segLlFat'];
+
+  function makeDatasets(keys) {
+    return keys.map(function(k, i) {
+      return {
+        label: segNames[i],
+        data: entries.map(function(e) { return e[k] != null ? e[k] : null; }),
+        borderColor: colors[i],
+        backgroundColor: colors[i] + '22',
+        fill: false,
+        tension: 0.3,
+        pointRadius: 4,
+        spanGaps: true
+      };
+    });
+  }
+
+  var chartOpts = {
+    responsive: true,
+    plugins: { legend: { labels: { color: '#94a3b8', boxWidth: 12 } } },
+    scales: {
+      x: { ticks: { color: '#64748b', maxRotation: 45 }, grid: { color: '#1e293b' } },
+      y: { ticks: { color: '#64748b' }, grid: { color: '#1e293b' } }
+    }
+  };
+
+  // Lean chart
+  var ctxL = document.getElementById('seg-chart-lean');
+  if (ctxL) {
+    if (_segChartLean) { _segChartLean.destroy(); _segChartLean = null; }
+    _segChartLean = new Chart(ctxL, {
+      type: 'line',
+      data: { labels: labels, datasets: makeDatasets(leanKeys) },
+      options: JSON.parse(JSON.stringify(chartOpts))
+    });
+  }
+
+  // Fat chart
+  var ctxF = document.getElementById('seg-chart-fat');
+  if (ctxF) {
+    if (_segChartFat) { _segChartFat.destroy(); _segChartFat = null; }
+    var fatOpts = JSON.parse(JSON.stringify(chartOpts));
+    fatOpts.scales.y.ticks.callback = function(v) { return v + '%'; };
+    _segChartFat = new Chart(ctxF, {
+      type: 'line',
+      data: { labels: labels, datasets: makeDatasets(fatKeys) },
+      options: fatOpts
+    });
+  }
 }
 
 // ===== HUME BODY POD — SCREENSHOT IMPORT (Claude Vision, multi-image) =====
