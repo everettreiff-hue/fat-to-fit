@@ -4229,362 +4229,326 @@ function deleteInBodyEntry(date) {
 async function generateBodyCompReport() {
   var apiKey = localStorage.getItem('ht_coach_api_key');
   if (!apiKey) {
-    document.getElementById('gen-report-status').innerHTML = '<span style="color:var(--danger)">Set your API key above first.</span>';
+    document.getElementById('gen-report-status').innerHTML = '<span style="color:var(--danger)">Set API key first.</span>';
     return;
   }
   var btn = document.getElementById('gen-report-btn');
   var status = document.getElementById('gen-report-status');
-  btn.disabled = true; btn.textContent = 'Generating…';
-  status.innerHTML = '⏳ Opening report with charts… AI narrative loading (~20s)…';
+  btn.disabled = true; btn.textContent = 'Generating\u2026';
+  status.innerHTML = '\u23F3 Calling AI coach\u2026 (~20 seconds)';
 
   var entries = getData().sort(function(a,b){return a.date.localeCompare(b.date);});
   var inbody  = getInBody().sort(function(a,b){return a.date.localeCompare(b.date);});
   var reportDate = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
 
-  var w = openReportWindow(reportDate, entries, inbody);
-  status.innerHTML = '⏳ Report open — AI narrative loading (~20s)…';
-
-  // Build prompt
   function fmtE(e) {
     var p=[];
-    if(e.weight) p.push('Wt:'+e.weight);
-    if(e.bodyFat) p.push('BF%:'+e.bodyFat);
-    if(e.visceralFat) p.push('VF:'+e.visceralFat);
+    if(e.weight)        p.push('Wt:'+e.weight);
+    if(e.bodyFat)       p.push('BF%:'+e.bodyFat);
+    if(e.visceralFat)   p.push('VF:'+e.visceralFat);
     if(e.skeletalMuscle) p.push('SMM:'+e.skeletalMuscle);
-    if(e.leanMass) p.push('LBM:'+e.leanMass);
-    if(e.bodyFatMass) p.push('BFMass:'+e.bodyFatMass);
-    if(e.bmi) p.push('BMI:'+e.bmi);
+    if(e.leanMass)      p.push('LBM:'+e.leanMass);
+    if(e.bodyFatMass)   p.push('BFMass:'+e.bodyFatMass);
+    if(e.bmi)           p.push('BMI:'+e.bmi);
     if(e.visceralFatIndex) p.push('VFI:'+e.visceralFatIndex);
-    if(e.metabolicAge) p.push('MetAge:'+e.metabolicAge);
-    if(e.bmr) p.push('BMR:'+e.bmr);
-    if(e.bodyCellMass) p.push('BCM:'+e.bodyCellMass);
-    if(e.segRaLean!=null) p.push('SegLean(RA/LA/TR/RL/LL):'+[e.segRaLean,e.segLaLean,e.segTrLean,e.segRlLean,e.segLlLean].join('/'));
+    if(e.metabolicAge)  p.push('MetAge:'+e.metabolicAge);
+    if(e.bmr)           p.push('BMR:'+e.bmr);
+    if(e.bodyCellMass)  p.push('BCM:'+e.bodyCellMass);
+    if(e.segRaLean!=null) p.push('SegLean:'+[e.segRaLean,e.segLaLean,e.segTrLean,e.segRlLean,e.segLlLean].join('/'));
     if(e.segRaFat!=null)  p.push('SegFat%:'+[e.segRaFat,e.segLaFat,e.segTrFat,e.segRlFat,e.segLlFat].join('/'));
     return '['+e.date+'] '+p.join(', ');
   }
   function fmtIB(s) {
-    var p=['[InBody '+s.date+' '+(s.time||'')+']'];
-    if(s.weight) p.push('Wt:'+s.weight); if(s.pbf) p.push('BF%:'+s.pbf);
-    if(s.bodyFatMass) p.push('BFMass:'+s.bodyFatMass); if(s.leanBodyMass) p.push('LBM:'+s.leanBodyMass);
-    if(s.smm) p.push('SMM:'+s.smm); if(s.visceralFat) p.push('VFLvl:'+s.visceralFat);
-    if(s.bmi) p.push('BMI:'+s.bmi); if(s.bmr) p.push('BMR:'+s.bmr);
-    if(s.smi) p.push('SMI:'+s.smi); if(s.ecwTbw) p.push('ECW/TBW:'+s.ecwTbw);
-    if(s.icw) p.push('ICW:'+s.icw); if(s.ecw) p.push('ECW:'+s.ecw); if(s.tbw) p.push('TBW:'+s.tbw);
-    if(s.segLean) p.push('SegLean(RA/LA/TR/RL/LL):'+[s.segLean.ra,s.segLean.la,s.segLean.tr,s.segLean.rl,s.segLean.ll].join('/'));
-    if(s.segFat)  p.push('SegFatMass:'+[s.segFat.ra,s.segFat.la,s.segFat.tr,s.segFat.rl,s.segFat.ll].join('/'));
+    var p=['[InBody '+s.date+']'];
+    if(s.weight)      p.push('Wt:'+s.weight);
+    if(s.pbf)         p.push('BF%:'+s.pbf);
+    if(s.bodyFatMass) p.push('BFMass:'+s.bodyFatMass);
+    if(s.leanBodyMass) p.push('LBM:'+s.leanBodyMass);
+    if(s.smm)         p.push('SMM:'+s.smm);
+    if(s.visceralFat) p.push('VFLvl:'+s.visceralFat);
+    if(s.bmi)         p.push('BMI:'+s.bmi);
+    if(s.bmr)         p.push('BMR:'+s.bmr);
+    if(s.segLean)     p.push('SegLean:'+[s.segLean.ra,s.segLean.la,s.segLean.tr,s.segLean.rl,s.segLean.ll].join('/'));
+    if(s.segFat)      p.push('SegFatMass:'+[s.segFat.ra,s.segFat.la,s.segFat.tr,s.segFat.rl,s.segFat.ll].join('/'));
     return p.join(', ');
   }
 
   var recentEntries = entries.filter(function(e){return e.bodyFat||e.weight;}).slice(-30).map(fmtE).join('\n');
   var inbodyStr = inbody.map(fmtIB).join('\n');
 
-  var prompt = 'You are an expert body composition analyst. Generate a comprehensive body composition report for a 33-year-old male, 6ft 0in.\n\n' +
-    'INBODY SCAN DATA (highest accuracy — weight most heavily):\n' + (inbodyStr||'None') + '\n\n' +
-    'RECENT DAILY LOG ENTRIES (consumer BIA — trends only, less accurate):\n' + recentEntries + '\n\n' +
-    'Note: InBody July 29 = gold standard. Hume Body Pod Aug 1 = second source. Daily logs = directional trends only.\n\n' +
-    'Generate a detailed report. Use these EXACT section headers:\n' +
-    '## EXECUTIVE SUMMARY\n## BODY FAT PERCENTAGE\n## LEAN BODY MASS\n## SKELETAL MUSCLE MASS\n## VISCERAL FAT\n## BODY MASS INDEX\n## BASAL METABOLIC RATE\n## BODY WATER & HYDRATION\n## SEGMENTAL ANALYSIS\n## PROGRESS SINCE BASELINE\n## CONFIDENCE ASSESSMENT\n## RECOMMENDATIONS\n\n' +
-    'For each metric section format as:\nBest estimate: X | Confidence range: X–X\nData reliability: High/Medium/Low — reason\nHealthy range for profile: X–X\nStatus & Trend: specific numbers and direction\n\n' +
-    'Be specific. Use actual data values. Report date: ' + reportDate;
+  var promptLines = [
+    'You are an expert body composition analyst. Report for 33-year-old male, 6ft 0in.',
+    '',
+    'INBODY SCAN DATA (highest accuracy):',
+    inbodyStr||'None',
+    '',
+    'RECENT DAILY LOG (30 days):',
+    recentEntries,
+    '',
+    'Weighting: InBody = 60%, Hume Body Pod = 30%, daily logs = 10%.',
+    '',
+    'Use EXACTLY these section headers (## prefix):',
+    '## EXECUTIVE SUMMARY',
+    '## BODY FAT PERCENTAGE',
+    '## LEAN BODY MASS',
+    '## SKELETAL MUSCLE MASS',
+    '## VISCERAL FAT',
+    '## BODY MASS INDEX',
+    '## BASAL METABOLIC RATE',
+    '## BODY WATER & HYDRATION',
+    '## SEGMENTAL ANALYSIS',
+    '## PROGRESS SINCE BASELINE',
+    '## CONFIDENCE ASSESSMENT',
+    '## RECOMMENDATIONS',
+    '',
+    'For BF%, LBM, SMM, VF, BMI, BMR the FIRST line MUST be:',
+    'Best estimate: X | Confidence range: X-X',
+    '(numbers only, no units in range values)',
+    '',
+    'Report date: '+reportDate
+  ];
 
   try {
     var res = await fetch('https://api.anthropic.com/v1/messages', {
-      method:'POST',
-      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:4096,messages:[{role:'user',content:prompt}]})
+      method: 'POST',
+      headers: {'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body: JSON.stringify({model:'claude-sonnet-4-6',max_tokens:4096,messages:[{role:'user',content:promptLines.join('\n')}]})
     });
     var data = await res.json();
-    btn.disabled = false; btn.textContent = 'Generate PDF Report';
-    if (!res.ok) { status.innerHTML = '<span style="color:var(--danger)">Error: '+(data.error&&data.error.message||'API error')+'</span>'; return; }
+    if (!res.ok) {
+      btn.disabled=false; btn.textContent='Generate PDF Report';
+      status.innerHTML='<span style="color:var(--danger)">API Error: '+((data.error&&data.error.message)||'unknown')+'</span>';
+      return;
+    }
     var reportText = data.content[0].text;
-    status.innerHTML = '\u2713 Report complete. Click <strong>Save as PDF</strong> inside the report window.';
-    if (w && !w.closed) { try { w.injectNarrative(reportText, null); } catch(e) { console.error('injectNarrative failed:', e); } }
-  } catch(e) {
-    btn.disabled = false; btn.textContent = 'Generate PDF Report';
-    status.innerHTML = '<span style="color:var(--danger)">Error: '+(e.message||e)+'</span>'; if (w && !w.closed) { try { w.injectNarrative('', 'API error: '+(e.message||e)); } catch(ex) {} }
+    var aiEst = parseAIEstimates(reportText);
+    status.innerHTML='\u23F3 Building report\u2026';
+    openReportWindow(reportDate, entries, inbody, aiEst, reportText);
+    btn.disabled=false; btn.textContent='Generate PDF Report';
+    status.innerHTML='\u2713 Report ready \u2014 click <strong>Save as PDF</strong> in the report window.';
+    sendReportEmail(reportDate, aiEst, entries, reportText);
+  } catch(err) {
+    btn.disabled=false; btn.textContent='Generate PDF Report';
+    status.innerHTML='<span style="color:var(--danger)">Error: '+(err.message||err)+'</span>';
   }
 }
 
-function openReportWindow(reportDate, entries, inbody) {
-  var sorted  = entries.filter(function(e){return e.weight;}).sort(function(a,b){return a.date.localeCompare(b.date);});
+function parseAIEstimates(text) {
+  function sec(header) {
+    var idx = text.search(new RegExp('## '+header,'i'));
+    return idx>=0 ? text.slice(idx,idx+600) : '';
+  }
+  function val(block) {
+    var m = block.match(/Best estimate:\s*([\d,.]+)/i);
+    return m ? parseFloat(m[1].replace(',','')) : null;
+  }
+  function rng(block) {
+    var m = block.match(/Confidence range:\s*([\d.]+)[^\d]+([\d.]+)/i);
+    return m ? [parseFloat(m[1]),parseFloat(m[2])] : null;
+  }
+  var bfB=sec('BODY FAT'), lbmB=sec('LEAN BODY'), smmB=sec('SKELETAL MUSCLE');
+  var vfB=sec('VISCERAL FAT'), bmiB=sec('BODY MASS'), bmrB=sec('BASAL METABOLIC');
+  var bfR=rng(bfB),vfR=rng(vfB),lbmR=rng(lbmB),smmR=rng(smmB);
+  return {
+    bf:val(bfB),   bfLo:bfR ?bfR[0] :null, bfHi:bfR ?bfR[1] :null,
+    lbm:val(lbmB), lbmLo:lbmR?lbmR[0]:null, lbmHi:lbmR?lbmR[1]:null,
+    smm:val(smmB), smmLo:smmR?smmR[0]:null, smmHi:smmR?smmR[1]:null,
+    vf:val(vfB),   vfLo:vfR ?vfR[0] :null, vfHi:vfR ?vfR[1] :null,
+    bmi:val(bmiB), bmr:val(bmrB)
+  };
+}
+
+function sendReportEmail(reportDate, aiEst, entries, aiText) {
+  var sorted=entries.filter(function(e){return e.weight;}).sort(function(a,b){return a.date.localeCompare(b.date);});
+  var latestWt=null;
+  for(var i=sorted.length-1;i>=0;i--){if(sorted[i].weight!=null){latestWt=sorted[i].weight;break;}}
+  function f(v,u){return v!=null?v+(u||''):'\u2014';}
+  var bodyLines=[
+    'Body Composition Report \u2014 '+reportDate,'',
+    'BEST ESTIMATES (AI-weighted: InBody 60% / Hume 30% / Daily 10%)',
+    '---',
+    'Weight:               '+(latestWt?latestWt.toFixed(1)+' lbs (daily scale)':'\u2014'),
+    'Body Fat %:           '+f(aiEst.bf,'%')+(aiEst.bfLo?' (confidence '+aiEst.bfLo+'\u2013'+aiEst.bfHi+'%)':''),
+    'Lean Body Mass:       '+f(aiEst.lbm,' lbs')+(aiEst.lbmLo?' (confidence '+aiEst.lbmLo+'\u2013'+aiEst.lbmHi+' lbs)':''),
+    'Skeletal Muscle Mass: '+f(aiEst.smm,' lbs')+(aiEst.smmLo?' (confidence '+aiEst.smmLo+'\u2013'+aiEst.smmHi+' lbs)':''),
+    'Visceral Fat Level:   '+f(aiEst.vf)+(aiEst.vfLo?' (confidence '+aiEst.vfLo+'\u2013'+aiEst.vfHi+')':''),
+    'BMI:                  '+f(aiEst.bmi),
+    'BMR:                  '+f(aiEst.bmr,' kcal/day'),'',
+    '---','',
+    aiText.slice(0,1500)+(aiText.length>1500?'\n\n[Open app for full analysis]':''),'',
+    'https://everettreiff-hue.github.io/fat-to-fit/'
+  ];
+  var subject='Body Composition Report \u2014 '+reportDate;
+  try{window.open('mailto:everett.reiff@gmail.com?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(bodyLines.join('\n')));}catch(ignored){}
+}
+
+function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
+  var sorted   = entries.filter(function(e){return e.weight;}).sort(function(a,b){return a.date.localeCompare(b.date);});
   var ibSorted = inbody.slice().sort(function(a,b){return a.date.localeCompare(b.date);});
-  var first   = sorted[0] || {};
-  var firstIB = ibSorted.length ? ibSorted[0] : null;
+  var first=sorted[0]||{}, firstIB=ibSorted.length?ibSorted[0]:null, latestIB=ibSorted.length?ibSorted[ibSorted.length-1]:null;
+  var humeEntries=sorted.filter(function(e){return e.leanMass!=null&&e.bmi!=null;});
+  var latestWt=null;
+  for(var i=sorted.length-1;i>=0;i--){if(sorted[i].weight!=null){latestWt=sorted[i].weight;break;}}
 
-  // Hume entries = log entries that have both leanMass and bmi fields
-  var humeEntries = sorted.filter(function(e){return e.leanMass!=null && e.bmi!=null;});
+  function delta(now,then,dec){if(now==null||then==null)return null;return (+(now-then)).toFixed(dec!=null?dec:1);}
+  var wtDelta=delta(latestWt,first.weight,1);
+  var bfDelta=delta(aiEst.bf,firstIB?firstIB.pbf:first.bodyFat,1);
+  var lbmDelta=delta(aiEst.lbm,firstIB?firstIB.leanBodyMass:null,1);
+  var smmDelta=delta(aiEst.smm,firstIB?firstIB.smm:null,1);
+  var vfDelta=delta(aiEst.vf,firstIB?firstIB.visceralFat:null,1);
 
-  // ------------------------------------------------------------------
-  // WEIGHTED ESTIMATES
-  // Strategy: InBody = 60%, Hume = 30%, daily log = 10%
-  // Within each source: most-recent entry gets 2x weight vs oldest
-  // ------------------------------------------------------------------
-  function wAvg(arr, fn, recency) {
-    var v = arr.map(fn).filter(function(x){return x!=null;});
-    if (!v.length) return null;
-    var w = v.map(function(_,i){return 1 + i*recency/Math.max(v.length-1,1);});
-    var sw = w.reduce(function(a,b){return a+b;},0);
-    return v.reduce(function(acc,x,i){return acc+x*w[i];},0)/sw;
-  }
+  var bfLo=aiEst.bfLo||(aiEst.bf?+(aiEst.bf-1.5).toFixed(1):null);
+  var bfHi=aiEst.bfHi||(aiEst.bf?+(aiEst.bf+1.5).toFixed(1):null);
+  var vfLo=aiEst.vfLo||(aiEst.vf?Math.max(1,Math.floor(aiEst.vf-1.5)):null);
+  var vfHi=aiEst.vfHi||(aiEst.vf?Math.ceil(aiEst.vf+1.5):null);
+  var lbmLo=aiEst.lbmLo||(aiEst.lbm?+(aiEst.lbm-5).toFixed(1):null);
+  var lbmHi=aiEst.lbmHi||(aiEst.lbm?+(aiEst.lbm+5).toFixed(1):null);
 
-  // Weight: most recent daily log entry (scale is freshest)
-  var bestWt = latest(sorted, function(e){return e.weight;});
-
-  // BF%
-  var ibBF   = wAvg(ibSorted,    function(s){return s.pbf;},       1);
-  var humeBF = wAvg(humeEntries, function(e){return e.bodyFat;},   1);
-  var logBF  = wAvg(sorted.filter(function(e){return e.bodyFat&&!e.leanMass;}), function(e){return e.bodyFat;}, 0.5);
-  var bestBF = combine([ibBF,0.6],[humeBF,0.3],[logBF,0.1]);
-
-  // LBM: compute from bestWt + bestBF if both present; else weighted direct
-  var ibLBMavg   = wAvg(ibSorted,    function(s){return s.leanBodyMass;}, 1);
-  var humeLBMavg = wAvg(humeEntries, function(e){return e.leanMass;},     1);
-  var bestLBM = (bestWt&&bestBF) ? +(bestWt*(1-bestBF/100)).toFixed(1) : combine([ibLBMavg,0.65],[humeLBMavg,0.35]);
-
-  // SMM
-  var ibSMM   = wAvg(ibSorted,    function(s){return s.smm;},           1);
-  var humeSMM = wAvg(humeEntries, function(e){return e.skeletalMuscle;},1);
-  var logSMM  = wAvg(sorted.filter(function(e){return e.skeletalMuscle&&!e.leanMass;}),function(e){return e.skeletalMuscle;},0.5);
-  var bestSMM = combine([ibSMM,0.6],[humeSMM,0.3],[logSMM,0.1]);
-
-  // VF: InBody uses 1-20 level; Hume uses VFI (same scale)
-  var ibVF   = wAvg(ibSorted,    function(s){return s.visceralFat;},    1);
-  var humeVF = wAvg(humeEntries, function(e){return e.visceralFatIndex;},1);
-  var logVF  = wAvg(sorted.filter(function(e){return e.visceralFat&&!e.leanMass;}),function(e){return e.visceralFat;},0.5);
-  var bestVF = combine([ibVF,0.6],[humeVF,0.3],[logVF,0.1]);
-  if (bestVF) bestVF = Math.round(bestVF*10)/10;
-
-  // BMI & BMR: prefer InBody/Hume, fall back to log
-  var ibBMI  = wAvg(ibSorted,    function(s){return s.bmi;},1);
-  var humBMI = wAvg(humeEntries, function(e){return e.bmi;},1);
-  var bestBMI= combine([ibBMI,0.6],[humBMI,0.4]);
-  var ibBMR  = wAvg(ibSorted,    function(s){return s.bmr;},1);
-  var humBMR = wAvg(humeEntries, function(e){return e.bmr;},1);
-  var bestBMR= combine([ibBMR,0.6],[humBMR,0.4]);
-
-  function latest(arr, fn) {
-    for (var i=arr.length-1;i>=0;i--) { var v=fn(arr[i]); if(v!=null) return v; }
-    return null;
-  }
-  function combine() {
-    var tot=0, sum=0;
-    for (var i=0;i<arguments.length;i++) {
-      var val=arguments[i][0], w=arguments[i][1];
-      if (val!=null) { sum+=val*w; tot+=w; }
-    }
-    return tot>0 ? Math.round((sum/tot)*10)/10 : null;
-  }
-  // (Re-run combine now that fn is defined — JS hoisting handles it above)
-
-  // Deltas vs baseline
-  function delta(now, then, dec) {
-    if (now==null||then==null) return null;
-    return (+(now-then)).toFixed(dec!=null?dec:1);
-  }
-  var latestIB = ibSorted.length ? ibSorted[ibSorted.length-1] : null;
-  var wtDelta  = delta(bestWt,  first.weight, 1);
-  var bfDelta  = delta(bestBF,  firstIB ? firstIB.pbf : first.bodyFat, 1);
-  var lbmDelta = delta(bestLBM, firstIB ? firstIB.leanBodyMass : null, 1);
-  var smmDelta = delta(bestSMM, firstIB ? firstIB.smm : null, 1);
-  var vfDelta  = delta(bestVF,  firstIB ? firstIB.visceralFat : null, 1);
-
-  // Confidence ranges
-  var bfLo = bestBF ? +(bestBF-1.5).toFixed(1) : null;
-  var bfHi = bestBF ? +(bestBF+1.5).toFixed(1) : null;
-  var vfLo = bestVF ? Math.max(1,Math.floor(bestVF-1.5)) : null;
-  var vfHi = bestVF ? Math.ceil(bestVF+1.5) : null;
-  var lbmLo = bestLBM ? +(bestLBM-5).toFixed(1) : null;
-  var lbmHi = bestLBM ? +(bestLBM+5).toFixed(1) : null;
-  var smmLo = bestSMM ? +(bestSMM-3).toFixed(1) : null;
-  var smmHi = bestSMM ? +(bestSMM+3).toFixed(1) : null;
-
-  // ------------------------------------------------------------------
-  // CHART DATA — use timestamps (ms) on x-axis, no adapter needed
-  // ------------------------------------------------------------------
-  function ts(d) { return new Date(d+'T12:00:00').getTime(); }
-  var wtData  = sorted.map(function(e){return {x:ts(e.date),y:e.weight};});
-  var bfData  = sorted.filter(function(e){return e.bodyFat!=null;}).map(function(e){return {x:ts(e.date),y:e.bodyFat};});
-  var smmData = sorted.filter(function(e){return e.skeletalMuscle!=null;}).map(function(e){return {x:ts(e.date),y:e.skeletalMuscle};});
-  var lbmData = humeEntries.map(function(e){return {x:ts(e.date),y:e.leanMass};});
-
-  var ibWt   = ibSorted.map(function(s){return {x:ts(s.date),y:s.weight};});
-  var ibBfPts= ibSorted.map(function(s){return {x:ts(s.date),y:s.pbf};});
-  var ibSMMp = ibSorted.map(function(s){return {x:ts(s.date),y:s.smm};});
-  var ibLBMp = ibSorted.map(function(s){return {x:ts(s.date),y:s.leanBodyMass};});
-  var humeWt  = humeEntries.map(function(e){return {x:ts(e.date),y:e.weight};});
+  function ts(d){return new Date(d+'T12:00:00').getTime();}
+  var wtData=sorted.map(function(e){return {x:ts(e.date),y:e.weight};});
+  var bfData=sorted.filter(function(e){return e.bodyFat!=null;}).map(function(e){return {x:ts(e.date),y:e.bodyFat};});
+  var smmData=sorted.filter(function(e){return e.skeletalMuscle!=null;}).map(function(e){return {x:ts(e.date),y:e.skeletalMuscle};});
+  var lbmData=humeEntries.map(function(e){return {x:ts(e.date),y:e.leanMass};});
+  var ibWt=ibSorted.map(function(s){return {x:ts(s.date),y:s.weight};});
+  var ibBfPts=ibSorted.map(function(s){return {x:ts(s.date),y:s.pbf};});
+  var ibSMMp=ibSorted.map(function(s){return {x:ts(s.date),y:s.smm};});
+  var ibLBMp=ibSorted.map(function(s){return {x:ts(s.date),y:s.leanBodyMass};});
+  var humeWt=humeEntries.map(function(e){return {x:ts(e.date),y:e.weight};});
   var humeBfPts=humeEntries.map(function(e){return {x:ts(e.date),y:e.bodyFat};});
-  var humeSMMp= humeEntries.map(function(e){return {x:ts(e.date),y:e.skeletalMuscle};});
+  var humeSMMp=humeEntries.map(function(e){return {x:ts(e.date),y:e.skeletalMuscle};});
 
-  var chartJSON = JSON.stringify({wtData:wtData,bfData:bfData,smmData:smmData,lbmData:lbmData,ibWt:ibWt,ibBf:ibBfPts,ibSMM:ibSMMp,ibLBM:ibLBMp,humeWt:humeWt,humeBf:humeBfPts,humeSMM:humeSMMp});
+  var segSrc=null;
+  if(latestIB&&latestIB.segLean){
+    segSrc={ra:latestIB.segLean.ra,la:latestIB.segLean.la,tr:latestIB.segLean.tr,rl:latestIB.segLean.rl,ll:latestIB.segLean.ll,
+            raF:latestIB.segFat?latestIB.segFat.ra:null,laF:latestIB.segFat?latestIB.segFat.la:null,
+            trF:latestIB.segFat?latestIB.segFat.tr:null,rlF:latestIB.segFat?latestIB.segFat.rl:null,
+            llF:latestIB.segFat?latestIB.segFat.ll:null,src:'InBody '+latestIB.date};
+  } else {
+    for(var si=sorted.length-1;si>=0;si--){var se=sorted[si];if(se.segRaLean!=null){segSrc={ra:se.segRaLean,la:se.segLaLean,tr:se.segTrLean,rl:se.segRlLean,ll:se.segLlLean,raF:se.segRaFat,laF:se.segLaFat,trF:se.segTrFat,rlF:se.segRlFat,llF:se.segLlFat,src:'Log '+se.date};break;}}
+  }
 
-  // ------------------------------------------------------------------
-  // GAUGE builder
-  // ------------------------------------------------------------------
-  function gauge(label, value, lo, hi, zones, unit) {
-    if (value==null) return '';
-    var mn=zones[0].from, mx=zones[zones.length-1].to, rng=mx-mn;
-    var rects=zones.map(function(z){
-      var x=((z.from-mn)/rng*100).toFixed(2), w=((z.to-z.from)/rng*100).toFixed(2);
-      return '<div style="position:absolute;left:'+x+'%;width:'+w+'%;height:100%;background:'+z.color+';display:flex;align-items:center;justify-content:center"><span style="font-size:9px;color:rgba(255,255,255,.9);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90%;padding:0 2px">'+z.label+'</span></div>';
-    }).join('');
-    var conf=(lo!=null&&hi!=null) ? (function(){
-      var cx=((lo-mn)/rng*100).toFixed(2), cw=Math.max(1,((hi-lo)/rng*100)).toFixed(2);
-      return '<div style="position:absolute;left:'+cx+'%;width:'+cw+'%;height:100%;background:rgba(255,255,255,.3);border:2px solid rgba(255,255,255,.8);border-radius:3px;pointer-events:none"></div>';
-    })() : '';
+  function gauge(label,value,lo,hi,zones,unit){
+    if(value==null)return '';
+    var mn=zones[0].from,mx=zones[zones.length-1].to,rng=mx-mn;
+    var rects=zones.map(function(z){var x=((z.from-mn)/rng*100).toFixed(2),w=((z.to-z.from)/rng*100).toFixed(2);return '<div style="position:absolute;left:'+x+'%;width:'+w+'%;height:100%;background:'+z.color+';display:flex;align-items:center;justify-content:center"><span style="font-size:9px;color:rgba(255,255,255,.9);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90%;padding:0 2px">'+z.label+'</span></div>';}).join('');
+    var conf='';if(lo!=null&&hi!=null){var cx=((lo-mn)/rng*100).toFixed(2),cw=Math.max(1,((hi-lo)/rng*100)).toFixed(2);conf='<div style="position:absolute;left:'+cx+'%;width:'+cw+'%;height:100%;background:rgba(255,255,255,.3);border:2px solid rgba(255,255,255,.8);border-radius:3px;pointer-events:none"></div>';}
     var vx=Math.max(0.5,Math.min(99.5,((value-mn)/rng*100)));
-    var marker='<div style="position:absolute;left:'+vx.toFixed(2)+'%;transform:translateX(-50%);top:-10px;text-align:center">'+
-      '<div style="font-size:10px;font-weight:800;color:#0f172a;white-space:nowrap">'+value+unit+'</div>'+
-      '<div style="width:2px;height:calc(100% + 20px);background:#0f172a;margin:0 auto"></div></div>';
-    return '<div style="margin-bottom:22px">'+
-      '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px">'+
-        '<span style="font-size:13px;font-weight:700;color:#1e293b">'+label+'</span>'+
-        (lo!=null&&hi!=null?'<span style="font-size:11px;color:#64748b">Confidence: '+lo+'–'+hi+unit+'</span>':'')+
-      '</div>'+
-      '<div style="position:relative;height:28px;border-radius:6px;overflow:visible">'+
-        '<div style="position:absolute;inset:0;border-radius:6px;overflow:hidden;display:flex">'+rects+'</div>'+
-        conf+marker+
-      '</div>'+
-      '<div style="display:flex;justify-content:space-between;margin-top:14px">'+
-        zones.map(function(z){return '<span style="font-size:10px;color:'+z.color+';font-weight:600">'+z.label+'</span>';}).join('')+
-      '</div></div>';
+    var marker='<div style="position:absolute;left:'+vx.toFixed(2)+'%;transform:translateX(-50%);top:-10px;text-align:center"><div style="font-size:10px;font-weight:800;color:#0f172a;white-space:nowrap">'+value+unit+'</div><div style="width:2px;height:calc(100% + 20px);background:#0f172a;margin:0 auto"></div></div>';
+    var legend=zones.map(function(z){return '<span style="font-size:10px;color:'+z.color+';font-weight:600">'+z.label+'</span>';}).join('');
+    var cl=lo!=null&&hi!=null?'<span style="font-size:11px;color:#64748b">Confidence: '+lo+'\u2013'+hi+unit+'</span>':'';
+    return '<div style="margin-bottom:22px"><div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px"><span style="font-size:13px;font-weight:700;color:#1e293b">'+label+'</span>'+cl+'</div><div style="position:relative;height:28px;border-radius:6px;overflow:visible"><div style="position:absolute;inset:0;border-radius:6px;overflow:hidden;display:flex">'+rects+'</div>'+conf+marker+'</div><div style="display:flex;justify-content:space-between;margin-top:14px">'+legend+'</div></div>';
   }
 
-  var bfGauge  = gauge('Body Fat %', bestBF ? +bestBF.toFixed(1) : null, bfLo, bfHi,[
-    {label:'Essential',from:2,to:6,color:'#7c3aed'},{label:'Athletic',from:6,to:14,color:'#2563eb'},
-    {label:'Fitness',from:14,to:18,color:'#16a34a'},{label:'Average',from:18,to:25,color:'#d97706'},
-    {label:'Above Avg',from:25,to:32,color:'#ea580c'},{label:'Obese',from:32,to:40,color:'#dc2626'}
-  ],'%');
-  var vfGauge  = gauge('Visceral Fat', bestVF ? +bestVF.toFixed(1) : null, vfLo, vfHi,[
-    {label:'Healthy',from:1,to:10,color:'#16a34a'},{label:'Excess',from:10,to:15,color:'#d97706'},
-    {label:'High Risk',from:15,to:20,color:'#dc2626'}
-  ],'');
-  var bmiGauge = bestBMI ? gauge('BMI', +bestBMI.toFixed(1), +(bestBMI-0.5).toFixed(1), +(bestBMI+0.5).toFixed(1),[
-    {label:'Under',from:10,to:18.5,color:'#7c3aed'},{label:'Normal',from:18.5,to:25,color:'#16a34a'},
-    {label:'Overweight',from:25,to:30,color:'#d97706'},{label:'Obese',from:30,to:40,color:'#dc2626'}
-  ],'') : '';
+  var bfGauge=gauge('Body Fat %',aiEst.bf?+aiEst.bf.toFixed(1):null,bfLo,bfHi,[{label:'Essential',from:2,to:6,color:'#7c3aed'},{label:'Athletic',from:6,to:14,color:'#2563eb'},{label:'Fitness',from:14,to:18,color:'#16a34a'},{label:'Average',from:18,to:25,color:'#d97706'},{label:'Above Avg',from:25,to:32,color:'#ea580c'},{label:'Obese',from:32,to:40,color:'#dc2626'}],'%');
+  var vfGauge=gauge('Visceral Fat',aiEst.vf?+aiEst.vf.toFixed(1):null,vfLo,vfHi,[{label:'Healthy',from:1,to:10,color:'#16a34a'},{label:'Excess',from:10,to:15,color:'#d97706'},{label:'High Risk',from:15,to:20,color:'#dc2626'}],'');
+  var bmiGauge=aiEst.bmi?gauge('BMI',+aiEst.bmi.toFixed(1),+(aiEst.bmi-0.5).toFixed(1),+(aiEst.bmi+0.5).toFixed(1),[{label:'Under',from:10,to:18.5,color:'#7c3aed'},{label:'Normal',from:18.5,to:25,color:'#16a34a'},{label:'Overweight',from:25,to:30,color:'#d97706'},{label:'Obese',from:30,to:40,color:'#dc2626'}],''):'';
 
-  // ------------------------------------------------------------------
-  // STAT CARDS
-  // ------------------------------------------------------------------
-  function statCard(label, val, unit, dlt, posGood, note) {
-    var dHtml='';
-    if (dlt!=null) {
-      var d=parseFloat(dlt), arrow=d>0?'▲':'▼';
-      var col=(posGood ? d>=0 : d<=0)?'#16a34a':'#dc2626';
-      dHtml='<div style="font-size:11px;color:'+col+';margin-top:3px">'+arrow+' '+Math.abs(d).toFixed(1)+' '+unit+' from start</div>';
-    }
-    return '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.04)">'+
-      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:5px">'+label+'</div>'+
-      '<div style="font-size:24px;font-weight:800;color:#0f172a;line-height:1">'+(val!=null?val:'—')+'<span style="font-size:13px;font-weight:400;color:#94a3b8"> '+unit+'</span></div>'+
-      dHtml+
-      (note?'<div style="font-size:10px;color:#94a3b8;margin-top:3px">'+note+'</div>':'')+
-      '</div>';
+  function statCard(label,val,unit,dlt,posGood,note){
+    var dHtml='';if(dlt!=null){var d=parseFloat(dlt),arrow=d>0?'\u25b2':'\u25bc',col=(posGood?d>=0:d<=0)?'#16a34a':'#dc2626';dHtml='<div style="font-size:11px;color:'+col+';margin-top:3px">'+arrow+' '+Math.abs(d).toFixed(1)+' '+unit+' from start</div>';}
+    return '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.04)"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:5px">'+label+'</div><div style="font-size:24px;font-weight:800;color:#0f172a;line-height:1">'+(val!=null?val:'\u2014')+'<span style="font-size:13px;font-weight:400;color:#94a3b8"> '+unit+'</span></div>'+dHtml+(note?'<div style="font-size:10px;color:#94a3b8;margin-top:3px">'+note+'</div>':'')+'</div>';
   }
+  var statsHtml=
+    statCard('Weight',latestWt?latestWt.toFixed(1):null,'lbs',wtDelta,false,'daily scale')+
+    statCard('Body Fat',aiEst.bf?aiEst.bf.toFixed(1):null,'%',bfDelta,false,'AI best estimate')+
+    statCard('Lean Mass',aiEst.lbm?aiEst.lbm.toFixed(1):null,'lbs',lbmDelta,true,'AI best estimate')+
+    statCard('Skeletal Muscle',aiEst.smm?aiEst.smm.toFixed(1):null,'lbs',smmDelta,true,'AI best estimate')+
+    statCard('Visceral Fat',aiEst.vf?aiEst.vf.toFixed(1):null,'lvl',vfDelta,false,'AI best estimate')+
+    statCard('BMI',aiEst.bmi?aiEst.bmi.toFixed(1):null,'',null,false,'AI best estimate')+
+    statCard('BMR',aiEst.bmr?Math.round(aiEst.bmr):null,'kcal',null,false,'AI best estimate');
 
-  var statsHtml =
-    statCard('Weight',          bestWt  ? bestWt.toFixed(1)  : null, 'lbs', wtDelta,  false, 'daily scale') +
-    statCard('Body Fat',        bestBF  ? bestBF.toFixed(1)  : null, '%',   bfDelta,  false, 'weighted estimate') +
-    statCard('Lean Mass',       bestLBM ? bestLBM.toFixed(1) : null, 'lbs', lbmDelta, true,  'derived') +
-    statCard('Skeletal Muscle', bestSMM ? bestSMM.toFixed(1) : null, 'lbs', smmDelta, true,  'weighted estimate') +
-    statCard('Visceral Fat',    bestVF  ? bestVF.toFixed(1)  : null, 'lvl', vfDelta,  false, 'weighted estimate') +
-    statCard('BMI',             bestBMI ? bestBMI.toFixed(1) : null, '',    null,     false, 'weighted estimate') +
-    statCard('BMR',             bestBMR ? Math.round(bestBMR): null, 'kcal',null,     false, 'weighted estimate');
+  function mdToHtml(t){return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/^## (.+)$/gm,'<div class="ai-h2">$1</div>').replace(/^### (.+)$/gm,'<div class="ai-h3">$1</div>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>').replace(/^- (.+)$/gm,'<div class="ai-li">&bull; $1</div>').split('\n\n').join('</p><p class="ai-p">').split('\n').join('<br>');}
+  var aiHtml='<p class="ai-p">'+mdToHtml(aiText)+'</p>';
 
-  // ------------------------------------------------------------------
-  // HTML ASSEMBLY — no time adapter, pure linear timestamps
-  // ------------------------------------------------------------------
-  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Body Composition Report</title>'+
-    '<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"><\/script>'+
-    '<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f8fafc;color:#1e293b;font-size:13px;line-height:1.6}'+
-    '.cover{background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 60%,#0e4f6b 100%);color:#fff;padding:48px 48px 36px}'+
-    '.cover h1{font-size:32px;font-weight:800;letter-spacing:-1px;margin-bottom:6px}'+
-    '.cover .sub{font-size:11px;letter-spacing:.15em;text-transform:uppercase;opacity:.6}'+
-    '.cover .date{font-size:12px;opacity:.5;margin-top:18px}'+
-    '.wrap{padding:28px 40px 60px;max-width:1050px;margin:0 auto}'+
-    '.sec{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:24px 28px;margin-bottom:18px;box-shadow:0 1px 4px rgba(0,0,0,.04)}'+
-    '.sec-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#64748b;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #f1f5f9}'+
-    '.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}'+
-    '.chart-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:18px 20px;box-shadow:0 1px 4px rgba(0,0,0,.04)}'+
-    '.chart-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#334155;margin-bottom:14px}'+
-    '.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}'+
-    '.legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:#64748b}'+
-    '.ldot{width:8px;height:8px;border-radius:50%;flex-shrink:0}'+
-    '.ai-sec{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:24px 28px;margin-bottom:18px}'+
-    '.ai-h2{font-size:14px;font-weight:700;color:#1e3a5f;margin:20px 0 6px;padding-bottom:4px;border-bottom:1px solid #e2e8f0}'+
-    '.ai-p{color:#334155;margin:6px 0}.ai-li{margin:4px 0;color:#334155}'+
-    '.print-btn{position:fixed;bottom:24px;right:24px;background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;border:none;border-radius:12px;padding:13px 26px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(37,99,235,.4);z-index:999}'+
-    '@media print{.print-btn{display:none!important}.cover,.sec,.chart-card,.ai-sec{-webkit-print-color-adjust:exact;print-color-adjust:exact}.sec,.chart-card,.ai-sec{box-shadow:none;page-break-inside:avoid}}'+
-    '<\/style></head><body>'+
-    '<div class="cover"><div class="sub">Personal Health Report</div><h1>Body Composition Analysis</h1>'+
-    '<div style="font-size:13px;opacity:.7;margin-top:8px">InBody \xb7 Hume Body Pod \xb7 Daily Tracking</div>'+
-    '<div class="date">Generated '+reportDate+'</div></div>'+
-    '<div class="wrap">'+
-    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:24px 0 18px">'+statsHtml+'</div>'+
-    '<div class="sec"><div class="sec-title">Current Status — Where You Stand</div>'+bfGauge+vfGauge+bmiGauge+
-    '<div style="font-size:11px;color:#94a3b8;margin-top:4px">Vertical line = weighted best estimate • White band = confidence range • Weighted: InBody 60% / Hume 30% / Daily 10%</div></div>'+
-    '<div class="sec-title" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#64748b;margin-bottom:12px">Progress Over Time</div>'+
-    '<div class="charts-grid">'+
-      '<div class="chart-card"><div class="chart-title">Weight (lbs)</div><canvas id="c-wt" height="160"></canvas><div class="legend">'+
-        '<div class="legend-item"><div class="ldot" style="background:#94a3b8"></div>Daily log</div>'+
-        '<div class="legend-item"><div class="ldot" style="background:#f59e0b;outline:2px solid #92400e;outline-offset:1px"></div>InBody</div>'+
-        '<div class="legend-item"><div class="ldot" style="background:#38bdf8"></div>Hume</div></div></div>'+
-      '<div class="chart-card"><div class="chart-title">Body Fat %</div><canvas id="c-bf" height="160"></canvas><div class="legend">'+
-        '<div class="legend-item"><div class="ldot" style="background:#94a3b8"></div>Daily log</div>'+
-        '<div class="legend-item"><div class="ldot" style="background:#f59e0b;outline:2px solid #92400e;outline-offset:1px"></div>InBody</div>'+
-        '<div class="legend-item"><div class="ldot" style="background:#38bdf8"></div>Hume</div></div></div>'+
-      '<div class="chart-card"><div class="chart-title">Lean Body Mass (lbs)</div><canvas id="c-lbm" height="160"></canvas><div class="legend">'+
-        '<div class="legend-item"><div class="ldot" style="background:#a78bfa"></div>Hume</div>'+
-        '<div class="legend-item"><div class="ldot" style="background:#f59e0b;outline:2px solid #92400e;outline-offset:1px"></div>InBody</div></div></div>'+
-      '<div class="chart-card"><div class="chart-title">Skeletal Muscle (lbs)</div><canvas id="c-smm" height="160"></canvas><div class="legend">'+
-        '<div class="legend-item"><div class="ldot" style="background:#94a3b8"></div>Daily log</div>'+
-        '<div class="legend-item"><div class="ldot" style="background:#f59e0b;outline:2px solid #92400e;outline-offset:1px"></div>InBody</div>'+
-        '<div class="legend-item"><div class="ldot" style="background:#38bdf8"></div>Hume</div></div></div>'+
-    '</div>'+
-    '<div class="ai-sec" id="ai-section"><div class="sec-title">AI Analysis</div>'+
-    '<div id="ai-loading" style="color:#94a3b8;font-style:italic;text-align:center;padding:20px 0">⏳ Generating detailed analysis… (~20 seconds)</div>'+
-    '<div id="ai-content" style="display:none"></div></div>'+
-    '</div>'+
-    '<button class="print-btn" onclick="window.print()">🖨 Save as PDF</button>'+
-    '<script>'+
-    'var _d='+chartJSON+';'+
-    'function fmtDate(ms){var d=new Date(ms);return (d.getMonth()+1)+"/"+(d.getDate());}'+
-    'function mk(id,sets){'+
-      'var c=document.getElementById(id);if(!c)return;'+
-      'try{new Chart(c,{type:"scatter",data:{datasets:sets},options:{responsive:true,'+
-        'plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+" "+ctx.parsed.y;}}}},'+
-        'scales:{'+
-          'x:{type:"linear",ticks:{callback:fmtDate,color:"#94a3b8",font:{size:9},maxRotation:35},grid:{color:"#f1f5f9"}},'+
-          'y:{ticks:{color:"#94a3b8",font:{size:10}},grid:{color:"#f1f5f9"}}'+
-        '},animation:{duration:500}}});}catch(e){c.parentNode.innerHTML+="<div style=\'color:red;font-size:11px\'>Chart error: "+e.message+"</div>";}'+
-    '}'+
-    'function line(data,col,lbl){return {type:"line",label:lbl||"",data:data,borderColor:col,backgroundColor:col+"44",fill:false,tension:0.3,pointRadius:2,pointHoverRadius:5,borderWidth:1.5,showLine:true,spanGaps:true,order:3};}'+
-    'function pts(data,col,r,lbl){return {type:"scatter",label:lbl||"",data:data,borderColor:col,backgroundColor:col,pointRadius:r,pointStyle:"circle",pointHoverRadius:r+2,borderWidth:0,order:1};}'+
-    'function init(){'+
-      'mk("c-wt",[line(_d.wtData,"#94a3b8","Daily"),pts(_d.ibWt,"#f59e0b",8,"InBody"),pts(_d.humeWt,"#38bdf8",5,"Hume")]);'+
-      'mk("c-bf",[line(_d.bfData,"#94a3b8","Daily"),pts(_d.ibBf,"#f59e0b",8,"InBody"),pts(_d.humeBf,"#38bdf8",5,"Hume")]);'+
-      'mk("c-lbm",[line(_d.lbmData,"#a78bfa","Hume"),pts(_d.ibLBM,"#f59e0b",8,"InBody")]);'+
-      'mk("c-smm",[line(_d.smmData,"#94a3b8","Daily"),pts(_d.ibSMM,"#f59e0b",8,"InBody"),pts(_d.humeSMM,"#38bdf8",5,"Hume")]);'+
-    '}'+
-    'if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",init);}else{setTimeout(init,100);}'+
-    'function mdToHtml(t){return t'+
-      '.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")'+
-      '.replace(/^## (.+)$/gm,"<div class=\\"ai-h2\\">$1</div>")'+
-      '.replace(/^### (.+)$/gm,"<div style=\\"font-size:13px;font-weight:600;color:#334155;margin:10px 0 4px\\">$1</div>")'+
-      '.replace(/\\*\\*(.+?)\\*\\*/g,"<strong>$1</strong>")'+
-      '.replace(/\\*(.+?)\\*/g,"<em>$1</em>")'+
-      '.replace(/^- (.+)$/gm,"<div class=\\"ai-li\\">&bull; $1</div>")'+
-      '.replace(/\\n\\n/g,"</p><p class=\\"ai-p\\">")'+
-      '.replace(/\\n/g,"<br>");}'+
-    'window.injectNarrative=function(text,err){'+
-      'document.getElementById("ai-loading").style.display="none";'+
-      'var el=document.getElementById("ai-content");el.style.display="block";'+
-      'if(err){el.innerHTML="<div style=\'color:#dc2626;padding:12px;background:#fef2f2;border-radius:8px\'>"+err+"</div>";return;}'+
-      'el.innerHTML="<p class=\\"ai-p\\">"+mdToHtml(text)+"</p>";};'+
-    '<\/script>'+
-    '</body></html>';
+  var CHART_JSON=JSON.stringify({wtData:wtData,bfData:bfData,smmData:smmData,lbmData:lbmData,ibWt:ibWt,ibBf:ibBfPts,ibSMM:ibSMMp,ibLBM:ibLBMp,humeWt:humeWt,humeBf:humeBfPts,humeSMM:humeSMMp});
+  var SEG_JSON=JSON.stringify(segSrc||{});
 
-  var w = window.open('', '_blank', 'width=1050,height=820,scrollbars=yes');
-  if (w) { w.document.write(html); w.document.close(); }
+  var css=[
+    '*{box-sizing:border-box;margin:0;padding:0}',
+    'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f8fafc;color:#1e293b;font-size:13px;line-height:1.6}',
+    '.cover{background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 60%,#0e4f6b 100%);color:#fff;padding:48px 48px 36px}',
+    '.cover h1{font-size:32px;font-weight:800;letter-spacing:-1px;margin-bottom:6px}',
+    '.cover .sub{font-size:11px;letter-spacing:.15em;text-transform:uppercase;opacity:.6}',
+    '.cover .date{font-size:12px;opacity:.5;margin-top:18px}',
+    '.wrap{padding:28px 40px 60px;max-width:1050px;margin:0 auto}',
+    '.sec{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:24px 28px;margin-bottom:18px;box-shadow:0 1px 4px rgba(0,0,0,.04)}',
+    '.sec-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#64748b;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #f1f5f9}',
+    '.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}',
+    '.chart-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:18px 20px;box-shadow:0 1px 4px rgba(0,0,0,.04)}',
+    '.chart-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#334155;margin-bottom:14px}',
+    '.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}',
+    '.legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:#64748b}',
+    '.ldot{width:8px;height:8px;border-radius:50%;flex-shrink:0}',
+    '.ai-sec{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:24px 28px;margin-bottom:18px}',
+    '.ai-h2{font-size:14px;font-weight:700;color:#1e3a5f;margin:20px 0 6px;padding-bottom:4px;border-bottom:1px solid #e2e8f0}',
+    '.ai-h3{font-size:13px;font-weight:600;color:#334155;margin:10px 0 4px}',
+    '.ai-p{color:#334155;margin:6px 0}',
+    '.ai-li{margin:4px 0;color:#334155}',
+    '.print-btn{position:fixed;bottom:24px;right:24px;background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;border:none;border-radius:12px;padding:13px 26px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(37,99,235,.4);z-index:999}',
+    '@media print{.print-btn{display:none!important}.cover,.sec,.chart-card,.ai-sec{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-shadow:none;page-break-inside:avoid}}'
+  ].join('');
+
+  var legendHtml='<div class="legend"><div class="legend-item"><div class="ldot" style="background:#94a3b8"></div>Daily</div><div class="legend-item"><div class="ldot" style="background:#f59e0b"></div>InBody</div><div class="legend-item"><div class="ldot" style="background:#38bdf8"></div>Hume</div></div>';
+  var legendLBM='<div class="legend"><div class="legend-item"><div class="ldot" style="background:#a78bfa"></div>Hume</div><div class="legend-item"><div class="ldot" style="background:#f59e0b"></div>InBody</div></div>';
+
+  var reportHTML=[
+    '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Body Composition Report</title>',
+    '<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"><\/script>',
+    '<style>'+css+'<\/style></head><body>',
+    '<div class="cover"><div class="sub">Personal Health Report</div><h1>Body Composition Analysis</h1>',
+    '<div style="font-size:13px;opacity:.7;margin-top:8px">InBody &middot; Hume Body Pod &middot; Daily Tracking</div>',
+    '<div class="date">Generated '+reportDate+'</div></div>',
+    '<div class="wrap">',
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:24px 0 18px">'+statsHtml+'</div>',
+    '<div class="sec"><div class="sec-title">Current Status</div>'+bfGauge+vfGauge+bmiGauge,
+    '<div style="font-size:11px;color:#94a3b8;margin-top:4px">Marker = AI best estimate &bull; White band = confidence range &bull; InBody 60% / Hume 30% / Daily 10%</div></div>',
+    '<div class="sec" id="seg-section"><div class="sec-title">Segmental Body Composition</div><div id="seg-content"><em style="color:#94a3b8">No segmental data available.</em></div></div>',
+    '<div class="sec-title" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#64748b;margin-bottom:12px">Progress Over Time</div>',
+    '<div class="charts-grid">',
+    '<div class="chart-card"><div class="chart-title">Weight (lbs)</div><canvas id="c-wt" height="160"></canvas>'+legendHtml+'</div>',
+    '<div class="chart-card"><div class="chart-title">Body Fat %</div><canvas id="c-bf" height="160"></canvas>'+legendHtml+'</div>',
+    '<div class="chart-card"><div class="chart-title">Lean Body Mass (lbs)</div><canvas id="c-lbm" height="160"></canvas>'+legendLBM+'</div>',
+    '<div class="chart-card"><div class="chart-title">Skeletal Muscle (lbs)</div><canvas id="c-smm" height="160"></canvas>'+legendHtml+'</div>',
+    '</div>',
+    '<div class="ai-sec"><div class="sec-title">Full AI Analysis</div>'+aiHtml+'</div>',
+    '</div>',
+    '<button class="print-btn" onclick="window.print()">&#x1F5A8; Save as PDF</button>',
+    '<script>(function(){',
+    'var _d='+CHART_JSON+';',
+    'var _s='+SEG_JSON+';',
+    'function fmtDate(ms){var d=new Date(ms);return (d.getMonth()+1)+"/"+d.getDate();}',
+    'function mk(id,sets){var c=document.getElementById(id);if(!c)return;try{new Chart(c,{type:"scatter",data:{datasets:sets},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+" "+ctx.parsed.y;}}}},scales:{x:{type:"linear",ticks:{callback:fmtDate,color:"#94a3b8",font:{size:9},maxRotation:35},grid:{color:"#f1f5f9"}},y:{ticks:{color:"#94a3b8",font:{size:10}},grid:{color:"#f1f5f9"}}},animation:{duration:500}}});}catch(ex){var ed=document.createElement("div");ed.style.color="red";ed.textContent="Chart error: "+ex.message;c.parentNode.appendChild(ed);}}',
+    'function line(data,col,lbl){return {type:"line",label:lbl,data:data,borderColor:col,backgroundColor:col+"44",fill:false,tension:0.3,pointRadius:2,borderWidth:1.5,showLine:true,spanGaps:true,order:3};}',
+    'function pts(data,col,r,lbl){return {type:"scatter",label:lbl,data:data,borderColor:col,backgroundColor:col,pointRadius:r,borderWidth:0,order:1};}',
+    'function initCharts(){mk("c-wt",[line(_d.wtData,"#94a3b8","Daily"),pts(_d.ibWt,"#f59e0b",8,"InBody"),pts(_d.humeWt,"#38bdf8",5,"Hume")]);mk("c-bf",[line(_d.bfData,"#94a3b8","Daily"),pts(_d.ibBf,"#f59e0b",8,"InBody"),pts(_d.humeBf,"#38bdf8",5,"Hume")]);mk("c-lbm",[line(_d.lbmData,"#a78bfa","Hume"),pts(_d.ibLBM,"#f59e0b",8,"InBody")]);mk("c-smm",[line(_d.smmData,"#94a3b8","Daily"),pts(_d.ibSMM,"#f59e0b",8,"InBody"),pts(_d.humeSMM,"#38bdf8",5,"Hume")]);}',
+    'function segColor(lean,fat){if(lean==null)return "#1e3a2f";var p=lean/(lean+(fat||0));return p>0.88?"#15803d":p>0.82?"#16a34a":p>0.76?"#d97706":p>0.70?"#ea580c":"#dc2626";}',
+    'function initSeg(){var s=_s;if(!s||s.ra==null)return;var raC=segColor(s.ra,s.raF),laC=segColor(s.la,s.laF),trC=segColor(s.tr,s.trF),rlC=segColor(s.rl,s.rlF),llC=segColor(s.ll,s.llF);',
+    'function el(tag,attrs){var e=document.createElementNS("http://www.w3.org/2000/svg",tag);Object.keys(attrs).forEach(function(k){e.setAttribute(k,attrs[k]);});return e;}',
+    'function txt(x,y,t){var e=el("text",{"x":x,"y":y,"text-anchor":"middle","fill":"white","font-size":"10","font-weight":"700"});e.textContent=t;return e;}',
+    'var svg=document.createElementNS("http://www.w3.org/2000/svg","svg");svg.setAttribute("viewBox","0 0 340 520");svg.style.cssText="width:200px;height:auto;display:block;margin:0 auto";',
+    'svg.appendChild(el("ellipse",{"cx":"170","cy":"42","rx":"32","ry":"38","fill":"#1e3a2f","stroke":"#22c55e","stroke-width":"1.5"}));',
+    'svg.appendChild(el("rect",{"x":"158","y":"76","width":"24","height":"22","fill":"#1e3a2f"}));',
+    'svg.appendChild(el("rect",{"x":"110","y":"98","width":"120","height":"160","rx":"14","fill":trC,"stroke":"#22c55e","stroke-width":"2"}));',
+    'svg.appendChild(el("rect",{"x":"52","y":"100","width":"52","height":"140","rx":"20","fill":raC,"stroke":"#22c55e","stroke-width":"2"}));',
+    'svg.appendChild(el("rect",{"x":"236","y":"100","width":"52","height":"140","rx":"20","fill":laC,"stroke":"#22c55e","stroke-width":"2"}));',
+    'svg.appendChild(el("rect",{"x":"112","y":"263","width":"56","height":"210","rx":"20","fill":rlC,"stroke":"#22c55e","stroke-width":"2"}));',
+    'svg.appendChild(el("rect",{"x":"172","y":"263","width":"56","height":"210","rx":"20","fill":llC,"stroke":"#22c55e","stroke-width":"2"}));',
+    'svg.appendChild(txt(78,175,"RA"));svg.appendChild(txt(262,175,"LA"));svg.appendChild(txt(170,182,"Trunk"));svg.appendChild(txt(140,375,"RL"));svg.appendChild(txt(200,375,"LL"));',
+    'var segs=[["Right Arm",s.ra,s.raF],["Left Arm",s.la,s.laF],["Trunk",s.tr,s.trF],["Right Leg",s.rl,s.rlF],["Left Leg",s.ll,s.llF]];',
+    'var tbl=document.createElement("table");tbl.style.cssText="margin-top:16px;width:100%;border-collapse:collapse;font-size:12px";',
+    'tbl.innerHTML="<thead><tr style=\"background:#f8fafc\"><th style=\"padding:8px 12px;text-align:left;color:#475569;border-bottom:2px solid #e2e8f0\">Segment</th><th style=\"padding:8px 12px;text-align:right;color:#475569;border-bottom:2px solid #e2e8f0\">Lean (lbs)</th><th style=\"padding:8px 12px;text-align:right;color:#475569;border-bottom:2px solid #e2e8f0\">Fat (lbs)</th><th style=\"padding:8px 12px;text-align:right;color:#475569;border-bottom:2px solid #e2e8f0\">% Lean</th></tr></thead><tbody></tbody>";',
+    'var tb=tbl.querySelector("tbody");',
+    'segs.forEach(function(sg,i){var lean=sg[1],fat=sg[2],pct=lean&&fat?Math.round(lean/(lean+fat)*100):null;var tr=document.createElement("tr");tr.style.background=i%2===0?"#fff":"#f8fafc";tr.innerHTML="<td style=\"padding:8px 12px;color:#334155;font-weight:600\">"+sg[0]+"</td><td style=\"padding:8px 12px;text-align:right\">"+(lean!=null?lean.toFixed(1):"\u2014")+"</td><td style=\"padding:8px 12px;text-align:right\">"+(fat!=null?fat.toFixed(1):"\u2014")+"</td><td style=\"padding:8px 12px;text-align:right\"><span style=\"background:"+segColor(lean,fat)+";color:white;padding:2px 8px;border-radius:10px;font-size:11px\">"+(pct!=null?pct+"%":"\u2014")+"</span></td>";tb.appendChild(tr);});',
+    'var note=document.createElement("div");note.style.cssText="font-size:10px;color:#94a3b8;margin-top:8px";note.textContent="Source: "+s.src+" \u2022 Color = lean:fat ratio";',
+    'var tw=document.createElement("div");tw.style.flex="1";tw.appendChild(tbl);tw.appendChild(note);',
+    'var w=document.createElement("div");w.style.cssText="display:flex;gap:24px;align-items:flex-start";w.appendChild(svg);w.appendChild(tw);',
+    'var sc=document.getElementById("seg-content");sc.innerHTML="";sc.appendChild(w);}',
+    'if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){initCharts();initSeg();});}else{setTimeout(function(){initCharts();initSeg();},100);}',
+    '})();<\/script>',
+    '</body></html>'
+  ].join('');
+
+  var w = window.open('', '_blank', 'width=1100,height=900,scrollbars=yes');
+  if (w) { w.document.write(reportHTML); w.document.close(); }
   return w;
 }
 
