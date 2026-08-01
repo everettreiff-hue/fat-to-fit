@@ -556,7 +556,63 @@ if (window.navigator.standalone) {
       </div>
     </div>
 
-    <div class="btn-row">
+    <hr class="divider">
+
+    <!-- Hume Body Composition -->
+    <button class="optional-toggle" style="margin-top:4px" onclick="toggleLogSection('log-opt-hume', this, 'Hume Body Composition')">＋ Add Hume Body Composition</button>
+    <div class="optional-section" id="log-opt-hume">
+      <div class="form-grid" style="margin-top:12px">
+        <div class="field"><label>BMI</label><input type="number" id="log-bmi" step="0.1" placeholder="26.9"></div>
+        <div class="field"><label>Body Fat Mass (lbs)</label><input type="number" id="log-bfm" step="0.1" placeholder="39.7"></div>
+        <div class="field"><label>Lean Mass (lbs)</label><input type="number" id="log-lean" step="0.1" placeholder="145.9"></div>
+        <div class="field"><label>Lean Mass %</label><input type="number" id="log-leanpct" step="0.1" placeholder="74.2"></div>
+        <div class="field"><label>Subcutaneous Fat Mass (lbs)</label><input type="number" id="log-sfm" step="0.1" placeholder="34.5"></div>
+        <div class="field"><label>Visceral Fat Index (1–20)</label><input type="number" id="log-vfi" step="1" placeholder="9"></div>
+        <div class="field"><label>Skeletal Mass (lbs)</label><input type="number" id="log-skeletal" step="0.1" placeholder="25.3"></div>
+        <div class="field"><label>Bone Mineral Content (lbs)</label><input type="number" id="log-bmc" step="0.1" placeholder="8.6"></div>
+        <div class="field"><label>Body Cell Mass (lbs)</label><input type="number" id="log-bcm" step="0.1" placeholder="103.4"></div>
+      </div>
+    </div>
+
+    <!-- Hydration & Minerals -->
+    <button class="optional-toggle" style="margin-top:12px" onclick="toggleLogSection('log-opt-hydration', this, 'Hydration &amp; Minerals')">＋ Add Hydration &amp; Minerals</button>
+    <div class="optional-section" id="log-opt-hydration">
+      <div class="form-grid" style="margin-top:12px">
+        <div class="field"><label>Body Water %</label><input type="number" id="log-hydpct" step="0.1" placeholder="58.4"></div>
+        <div class="field"><label>Intracellular Water (lbs)</label><input type="number" id="log-icw" step="0.1" placeholder="72.5"></div>
+        <div class="field"><label>Extracellular Water (lbs)</label><input type="number" id="log-ecw" step="0.1" placeholder="42.3"></div>
+        <div class="field"><label>Mineral Mass (lbs)</label><input type="number" id="log-mineral" step="0.1" placeholder="2.2"></div>
+      </div>
+    </div>
+
+    <!-- Metabolic Indicators -->
+    <button class="optional-toggle" style="margin-top:12px" onclick="toggleLogSection('log-opt-metabolic', this, 'Metabolic Indicators')">＋ Add Metabolic Indicators</button>
+    <div class="optional-section" id="log-opt-metabolic">
+      <div class="form-grid" style="margin-top:12px">
+        <div class="field"><label>Basal Metabolic Rate (cal)</label><input type="number" id="log-bmr" step="1" placeholder="1939"></div>
+        <div class="field"><label>Metabolic Age (yrs)</label><input type="number" id="log-metage" step="1" placeholder="25"></div>
+        <div class="field"><label>Heart Rate (BPM)</label><input type="number" id="log-hr" step="1" placeholder="92"></div>
+      </div>
+    </div>
+
+    <!-- Segmental Analysis -->
+    <button class="optional-toggle" style="margin-top:12px" onclick="toggleLogSection('log-opt-segmental', this, 'Segmental Analysis')">＋ Add Segmental Analysis</button>
+    <div class="optional-section" id="log-opt-segmental">
+      <div style="margin-top:12px;overflow:auto">
+        <table>
+          <thead><tr><th>Segment</th><th>Lean Mass (lbs)</th><th>Fat %</th></tr></thead>
+          <tbody>
+            <tr><td>Right Arm</td><td><input type="number" id="log-seg-ra-lean" step="0.1" style="width:90px" placeholder="9.0"></td><td><input type="number" id="log-seg-ra-fat" step="0.1" style="width:90px" placeholder="17.7"></td></tr>
+            <tr><td>Left Arm</td><td><input type="number" id="log-seg-la-lean" step="0.1" style="width:90px" placeholder="8.5"></td><td><input type="number" id="log-seg-la-fat" step="0.1" style="width:90px" placeholder="19.3"></td></tr>
+            <tr><td>Trunk</td><td><input type="number" id="log-seg-tr-lean" step="0.1" style="width:90px" placeholder="73.8"></td><td><input type="number" id="log-seg-tr-fat" step="0.1" style="width:90px" placeholder="19.7"></td></tr>
+            <tr><td>Right Leg</td><td><input type="number" id="log-seg-rl-lean" step="0.1" style="width:90px" placeholder="27.6"></td><td><input type="number" id="log-seg-rl-fat" step="0.1" style="width:90px" placeholder="13.3"></td></tr>
+            <tr><td>Left Leg</td><td><input type="number" id="log-seg-ll-lean" step="0.1" style="width:90px" placeholder="26.2"></td><td><input type="number" id="log-seg-ll-fat" step="0.1" style="width:90px" placeholder="14.4"></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="btn-row" style="margin-top:20px">
       <button class="btn btn-primary" onclick="saveEntry()">Save Entry</button>
       <button class="btn btn-secondary" onclick="prefillToday()">Pre-fill from last entry</button>
     </div>
@@ -659,10 +715,11 @@ if (window.navigator.standalone) {
           After your scan: in the Hume app, open your results → take a screenshot → upload it here.
         </div>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <input type="file" id="hume-photo-input" accept="image/*" style="display:none" onchange="handleHumePhotoImport(this.files[0])">
+          <input type="file" id="hume-photo-input" accept="image/*" multiple style="display:none" onchange="handleHumePhotoImport(this.files)">
           <button class="btn btn-primary" onclick="document.getElementById('hume-photo-input').click()" style="display:flex;align-items:center;gap:6px">
-            <span>📸</span> Upload Hume Screenshot
+            <span>📸</span> Upload Hume Screenshots
           </button>
+          <span style="font-size:12px;color:var(--muted)">Select all screenshots at once</span>
           <span id="hume-photo-status" style="font-size:12px;color:var(--muted)"></span>
         </div>
         <div id="hume-photo-progress" style="margin-top:10px;font-size:13px;min-height:18px"></div>
@@ -3605,6 +3662,31 @@ function saveEntry() {
     hips: n('log-hips'),
     arm: n('log-arm'),
     thigh: n('log-thigh'),
+    // Hume Body Composition
+    bmi: n('log-bmi'),
+    bodyFatMass: n('log-bfm'),
+    leanMass: n('log-lean'),
+    leanMassPct: n('log-leanpct'),
+    subcutFatMass: n('log-sfm'),
+    visceralFatIndex: n('log-vfi'),
+    skeletalMass: n('log-skeletal'),
+    boneMineralContent: n('log-bmc'),
+    bodyCellMass: n('log-bcm'),
+    // Hydration & Minerals
+    bodyWaterPct: n('log-hydpct'),
+    icw: n('log-icw'),
+    ecw: n('log-ecw'),
+    mineralMass: n('log-mineral'),
+    // Metabolic
+    bmr: n('log-bmr'),
+    metabolicAge: n('log-metage'),
+    heartRate: n('log-hr'),
+    // Segmental
+    segRaLean: n('log-seg-ra-lean'), segRaFat: n('log-seg-ra-fat'),
+    segLaLean: n('log-seg-la-lean'), segLaFat: n('log-seg-la-fat'),
+    segTrLean: n('log-seg-tr-lean'), segTrFat: n('log-seg-tr-fat'),
+    segRlLean: n('log-seg-rl-lean'), segRlFat: n('log-seg-rl-fat'),
+    segLlLean: n('log-seg-ll-lean'), segLlFat: n('log-seg-ll-fat'),
   };
 
   const entries = getData();
@@ -3626,6 +3708,12 @@ function toggleOptional() {
   const s=document.getElementById('opt-measurements');
   s.classList.toggle('open');
   document.querySelector('.optional-toggle').textContent = s.classList.contains('open') ? '− Hide Measurements' : '＋ Add Body Measurements (optional)';
+}
+
+function toggleLogSection(id, btn, label) {
+  const s = document.getElementById(id);
+  s.classList.toggle('open');
+  btn.textContent = s.classList.contains('open') ? ('− Hide ' + label) : ('＋ Add ' + label);
 }
 
 // ===== HISTORY =====
@@ -4038,9 +4126,9 @@ function deleteInBodyEntry(date) {
   renderInBody();
 }
 
-// ===== HUME BODY POD — SCREENSHOT IMPORT (Claude Vision) =====
-function handleHumePhotoImport(file) {
-  if (!file) return;
+// ===== HUME BODY POD — SCREENSHOT IMPORT (Claude Vision, multi-image) =====
+function handleHumePhotoImport(files) {
+  if (!files || files.length === 0) return;
   const prog = document.getElementById('hume-photo-progress');
   const preview = document.getElementById('hume-photo-preview');
   const status = document.getElementById('hume-photo-status');
@@ -4051,39 +4139,57 @@ function handleHumePhotoImport(file) {
     return;
   }
 
-  status.textContent = 'Reading image…';
-  prog.innerHTML = '⏳ Reading image…';
+  const fileArr = Array.from(files);
+  prog.innerHTML = '⏳ Reading ' + fileArr.length + ' image' + (fileArr.length > 1 ? 's' : '') + '…';
   preview.innerHTML = '';
+  status.textContent = '';
 
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    const dataUrl = e.target.result;
-    const base64 = dataUrl.split(',')[1];
-    const mediaType = file.type || 'image/jpeg';
+  // Read all files as base64 in parallel
+  Promise.all(fileArr.map(f => new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = e => res({ base64: e.target.result.split(',')[1], mediaType: f.type || 'image/jpeg' });
+    r.onerror = rej;
+    r.readAsDataURL(f);
+  }))).then(async (images) => {
+    prog.innerHTML = '⏳ Sending ' + images.length + ' screenshot' + (images.length > 1 ? 's' : '') + ' to AI — extracting all metrics…';
 
-    prog.innerHTML = '⏳ Sending to AI — extracting all metrics…';
+    // Build content array: all images first, then the prompt
+    const imageBlocks = images.map(img => ({
+      type: 'image',
+      source: { type: 'base64', media_type: img.mediaType, data: img.base64 }
+    }));
 
-    const prompt = `This is a body composition scan result from a Hume Body Pod (or similar device). Extract every visible metric and return ONLY a valid JSON object with these field names where available:
-- date (YYYY-MM-DD if visible, otherwise omit)
+    const prompt = 'These are ' + images.length + ' screenshot' + (images.length > 1 ? 's' : '') + ' of a Hume Body Pod body composition scan result, showing different sections of the same scan. Read ALL screens and combine every visible metric into a single JSON object.
+
+Extract every number you can see and return ONLY a valid JSON object using these field names:
+- date (YYYY-MM-DD if visible)
 - weight (lbs)
-- pbf (body fat %, as a number like 24.3)
+- pbf (body fat % as a number, e.g. 24.3)
 - bodyFatMass (lbs)
 - leanBodyMass (lbs)
 - smm (skeletal muscle mass, lbs)
-- bmi (number)
-- visceralFat (level number, 1-20 scale)
+- muscleMass (lbs, if separate from smm)
+- bmi
+- visceralFat (level 1-20)
+- metabolicAge
 - bmr (kcal)
-- smi (skeletal muscle index, kg/m²)
-- ecwTbw (ECW/TBW ratio, like 0.363)
+- smi (kg/m²)
+- ecwTbw (ratio like 0.363)
 - icw (intracellular water, lbs)
 - ecw (extracellular water, lbs)
 - tbw (total body water, lbs)
-- dryLeanMass (lbs)
-- boneMass (lbs, if shown)
-- vo2max (if shown)
-- notes (any other notable metrics as a short string)
+- proteinMass (lbs)
+- boneMass (lbs)
+- muscleFatRatio
+- hydrationLevel
+- healthScore
+- bodyCompGrade
+- metabolicAgeValue
+- segFatRA, segFatLA, segFatTR, segFatRL, segFatLL (segmental fat %, right arm / left arm / trunk / right leg / left leg)
+- segLeanRA, segLeanLA, segLeanTR, segLeanRL, segLeanLL (segmental lean/muscle lbs)
+- notes (any other metrics not listed above, as a short string)
 
-Only include fields clearly visible. Return ONLY the JSON, no explanation, no markdown.`;
+Only include fields clearly visible across any of the screenshots. Return ONLY the JSON, no explanation, no markdown fences.';
 
     try {
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
@@ -4096,14 +4202,8 @@ Only include fields clearly visible. Return ONLY the JSON, no explanation, no ma
         },
         body: JSON.stringify({
           model: 'claude-haiku-4-5',
-          max_tokens: 600,
-          messages: [{
-            role: 'user',
-            content: [
-              { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
-              { type: 'text', text: prompt }
-            ]
-          }]
+          max_tokens: 1200,
+          messages: [{ role: 'user', content: [...imageBlocks, { type: 'text', text: prompt }] }]
         })
       });
 
@@ -4115,44 +4215,40 @@ Only include fields clearly visible. Return ONLY the JSON, no explanation, no ma
       const data = await resp.json();
       const text = data.content?.[0]?.text || '';
 
-      // Parse JSON from response
       let parsed;
       try {
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
       } catch {
-        prog.innerHTML = '<span style="color:var(--danger)">⚠️ Could not parse AI response. Make sure the screenshot clearly shows the scan results.</span>';
+        prog.innerHTML = '<span style="color:var(--danger)">⚠️ Could not parse AI response. Make sure the screenshots clearly show the scan results.</span>';
         console.error('Raw AI response:', text);
         return;
       }
 
-      // Show extracted values
       const fields = Object.entries(parsed).filter(([,v]) => v != null && v !== '');
-      const fieldRows = fields.map(([k, v]) => `<tr><td style="color:var(--muted);padding:2px 8px 2px 0">${k}</td><td><strong>${v}</strong></td></tr>`).join('');
+      const fieldRows = fields.map(([k, v]) => `<tr><td style="color:var(--muted);padding:2px 8px 2px 0;font-size:12px">${k}</td><td style="font-size:13px"><strong>${v}</strong></td></tr>`).join('');
 
-      prog.innerHTML = `✓ Extracted <strong>${fields.length}</strong> metrics from screenshot.`;
+      prog.innerHTML = `✓ Extracted <strong>${fields.length}</strong> metrics from ${images.length} screenshot${images.length > 1 ? 's' : ''}.`;
       preview.innerHTML = `
-        <div style="overflow:auto;margin-bottom:12px">
-          <table style="font-size:13px"><tbody>${fieldRows}</tbody></table>
+        <div style="overflow:auto;margin-bottom:12px;max-height:300px">
+          <table style="font-size:13px;width:100%"><tbody>${fieldRows}</tbody></table>
         </div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Review above then confirm to save as a new InBody scan.</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Review above, then save.</div>
         <div class="btn-row">
           <button class="btn btn-primary" onclick="saveHumePhotoScan()">Save Scan</button>
           <button class="btn btn-secondary" onclick="cancelHumePhotoImport()">Cancel</button>
         </div>`;
 
-      // Store for confirm step — inject today's date if not detected
       parsed.date = parsed.date || new Date().toISOString().slice(0, 10);
-      parsed.notes = (parsed.notes ? parsed.notes + ' · ' : '') + 'Imported via Hume screenshot (AI scan)';
+      parsed.notes = (parsed.notes ? parsed.notes + ' · ' : '') + 'Imported via Hume screenshots (' + images.length + ' screens, AI scan)';
       window._humePendingScan = parsed;
-      status.textContent = '';
 
     } catch(e) {
       prog.innerHTML = '<span style="color:var(--danger)">⚠️ Error: ' + (e.message || e) + '</span>';
-      status.textContent = '';
     }
-  };
-  reader.readAsDataURL(file);
+  }).catch(e => {
+    prog.innerHTML = '<span style="color:var(--danger)">⚠️ Error reading images: ' + (e.message || e) + '</span>';
+  });
 }
 
 function saveHumePhotoScan() {
