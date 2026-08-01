@@ -1033,7 +1033,28 @@ if (window.navigator.standalone) {
       <button onclick="toggleSessionPause()" style="background:var(--accent2);border:none;border-radius:16px;color:#fff;padding:18px 48px;font-size:18px;font-weight:800;cursor:pointer;margin-top:8px">▶ Resume</button>
     </div>
     <div id="session-active-list"></div>
-    <div style="margin-top:16px;padding-bottom:32px">
+
+    <!-- Add exercise mid-session -->
+    <div style="margin-top:8px;margin-bottom:8px">
+      <div id="session-add-mid-row" style="display:none;background:var(--surface2);border-radius:12px;padding:14px;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:0.5px">Add Exercise</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input id="session-mid-ex-input" type="text" placeholder="Search exercise..."
+            style="flex:1;padding:11px 12px;border-radius:9px;border:1.5px solid var(--border);background:var(--surface);color:var(--text);font-size:15px"
+            oninput="filterMidSessionExList(this.value)"
+            onkeydown="if(event.key==='Enter')addMidSessionEx()">
+          <button onclick="addMidSessionEx()" style="background:var(--accent);border:none;border-radius:9px;color:#fff;padding:11px 16px;font-size:18px;font-weight:700;cursor:pointer">+</button>
+        </div>
+        <div id="session-mid-ex-picker" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;max-height:160px;overflow-y:auto;display:none;margin-bottom:8px"></div>
+        <button onclick="document.getElementById('session-add-mid-row').style.display='none'" style="background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer;padding:0">Cancel</button>
+      </div>
+      <button onclick="document.getElementById('session-add-mid-row').style.display='';document.getElementById('session-mid-ex-input').focus();filterMidSessionExList('')"
+        style="width:100%;background:none;border:1.5px dashed var(--border);border-radius:12px;color:var(--muted);padding:12px;font-size:14px;font-weight:600;cursor:pointer;margin-bottom:10px">
+        + Add Exercise
+      </button>
+    </div>
+
+    <div style="padding-bottom:32px">
       <button onclick="confirmEndSession()" style="width:100%;background:var(--accent2);border:none;border-radius:14px;color:#fff;padding:16px;font-size:17px;font-weight:800;cursor:pointer">✅ Finish &amp; Save Workout</button>
     </div>
   </div>
@@ -2345,6 +2366,67 @@ function renderActiveSession() {
   }).join('');
 }
 
+
+
+function filterMidSessionExList(val) {
+  const picker = document.getElementById('session-mid-ex-picker');
+  if (!picker) return;
+  const f = (val||'').toLowerCase().trim();
+  const all = _sessionAllExercises.length ? _sessionAllExercises : [...UPPER_EXERCISES, ...LOWER_EXERCISES].sort((a,b) => a.localeCompare(b));
+  const filtered = f ? all.filter(e => e.toLowerCase().includes(f)) : all;
+  if (!filtered.length) { picker.style.display = 'none'; return; }
+  picker.style.display = '';
+  picker.innerHTML = filtered.map(e => `
+    <div onclick="selectMidSessionEx('${escapeHtml(e)}')"
+      style="padding:10px 14px;cursor:pointer;font-size:14px;border-bottom:1px solid var(--border)"
+      onmouseover="this.style.background='var(--accent)';this.style.color='#fff'"
+      onmouseout="this.style.background='';this.style.color=''">
+      ${escapeHtml(e)}
+    </div>`).join('');
+}
+
+function selectMidSessionEx(name) {
+  const input = document.getElementById('session-mid-ex-input');
+  if (input) input.value = name;
+  const picker = document.getElementById('session-mid-ex-picker');
+  if (picker) picker.style.display = 'none';
+  addMidSessionEx();
+}
+
+function addMidSessionEx() {
+  const input = document.getElementById('session-mid-ex-input');
+  const name = input ? input.value.trim() : '';
+  if (!name) return;
+  const session = getActiveSession();
+  if (!session) return;
+  // Check if already in session
+  if (session.exercises.some(e => e.name.toLowerCase() === name.toLowerCase())) {
+    alert(name + ' is already in your session.');
+    return;
+  }
+  session.exercises.push({
+    name,
+    order: session.exercises.length,
+    targetSets: 3,
+    targetReps: 8,
+    targetWeight: '',
+    sets: [],
+    skipped: false,
+    prevPerf: getPrevPerformance(name)
+  });
+  saveActiveSession(session);
+  // Hide the add row
+  const row = document.getElementById('session-add-mid-row');
+  if (row) row.style.display = 'none';
+  if (input) input.value = '';
+  renderActiveSession();
+  // Scroll to the new exercise card
+  setTimeout(() => {
+    const cards = document.querySelectorAll('#session-active-list > div');
+    const last = cards[cards.length - 1];
+    if (last) last.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 100);
+}
 
 function editLoggedSet(exIdx, setIdx, field, val) {
   const session = getActiveSession();
