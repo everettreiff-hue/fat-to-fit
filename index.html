@@ -641,6 +641,23 @@ if (window.navigator.standalone) {
     <div id="ib-msg" style="margin-top:12px;font-size:13px"></div>
   </div>
 
+  <div class="card" style="margin-bottom:24px">
+    <h3 style="display:flex;align-items:center;gap:8px"><span>🍎</span> Import from Apple Health Export</h3>
+    <p style="font-size:13px;color:var(--muted);margin:8px 0 14px">
+      The Hume Body Pod syncs to Apple Health. To import all your scan data here:<br>
+      <strong>iPhone Health app → Profile photo → Export All Health Data → Share the .zip file to yourself → upload it below.</strong>
+    </p>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <input type="file" id="apple-health-zip" accept=".zip" style="display:none" onchange="handleAppleHealthImport(this.files[0])">
+      <button class="btn btn-secondary" onclick="document.getElementById('apple-health-zip').click()" style="display:flex;align-items:center;gap:6px">
+        <span>📁</span> Choose Apple Health Export (.zip)
+      </button>
+      <span style="font-size:12px;color:var(--muted)">Hume records are detected automatically</span>
+    </div>
+    <div id="ah-import-progress" style="margin-top:12px;font-size:13px;min-height:18px"></div>
+    <div id="ah-import-preview" style="margin-top:4px"></div>
+  </div>
+
   <div class="section-group"><span class="section-group-label">Latest Snapshot</span><div class="section-group-line"></div></div>
   <div class="grid grid-4" id="ib-headline-stats" style="margin-bottom:24px"></div>
 
@@ -3951,6 +3968,221 @@ function deleteInBodyEntry(date) {
   const scans = getInBody().filter(s=>s.date!==date);
   saveInBody(scans);
   renderInBody();
+}
+
+// ===== APPLE HEALTH / HUME IMPORT =====
+async function loadJSZip() {
+  if (window.JSZip) return window.JSZip;
+  return new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    s.onload = () => resolve(window.JSZip);
+    s.onerror = () => reject(new Error('Failed to load JSZip'));
+    document.head.appendChild(s);
+  });
+}
+
+async function handleAppleHealthImport(file) {
+  if (!file) return;
+  const prog = document.getElementById('ah-import-progress');
+  const preview = document.getElementById('ah-import-preview');
+  prog.innerHTML = '⏳ Loading JSZip library...';
+  preview.innerHTML = '';
+
+  try {
+    const JSZip = await loadJSZip();
+    prog.innerHTML = '⏳ Reading zip file...';
+
+    const zip = await JSZip.loadAsync(file);
+
+    // Find export.xml (may be in a subfolder like apple_health_export/)
+    let xmlFile = null;
+    zip.forEach((path, f) => {
+      if (path.endsWith('export.xml') && !f.dir) xmlFile = f;
+    });
+
+    if (!xmlFile) {
+      prog.innerHTML = '<span style="color:var(--danger)">⚠️ Could not find export.xml in the zip. Make sure you exported from iPhone Health app: Profile photo → Export All Health Data.</span>';
+      return;
+    }
+
+    prog.innerHTML = '⏳ Parsing body composition data... (may take a moment for large exports)';
+
+    const xmlStr = await xmlFile.async('string');
+    const scans = parseAppleHealthBodyComp(xmlStr);
+
+    if (scans.length === 0) {
+      prog.innerHTML = '<span style="color:var(--danger)">⚠️ No body composition data found. Make sure Hume Health has permission to write to Apple Health (Settings → Health → Data Access & Devices → Hume Health → Body Composition) and you have completed at least one scan.</span>';
+      return;
+    }
+
+    const humeCount = scans.filter(s => s._source === 'hume').length;
+    const srcNote = humeCount > 0
+      ? `(${humeCount} from Hume, ${scans.length - humeCount} from other sources)`
+      : '(not all may be from Hume — filtering by date range recommended)';
+
+    prog.innerHTML = `✓ Found <strong>${scans.length}</strong> body composition record${scans.length !== 1 ? 's' : ''} ${srcNote}`;
+
+    const rows = scans.slice(-10).reverse().map(s => `
+      <tr>
+        <td style="white-space:nowrap">${fmtDate(s.date)}</td>
+        <td>${s.weight != null ? s.weight.toFixed(1) + ' lbs' : '—'}</td>
+        <td>${s.pbf != null ? s.pbf.toFixed(1) + '%' : '—'}</td>
+        <td>${s.leanBodyMass != null ? s.leanBodyMass.toFixed(1) + ' lbs' : '—'}</td>
+        <td>${s.bmi != null ? s.bmi.toFixed(1) : '—'}</td>
+        <td style="font-size:11px;color:var(--muted)">${s._source || ''}</td>
+      </tr>`).join('');
+
+    preview.innerHTML = `
+      <div style="font-size:12px;color:var(--muted);margin-bottom:6px">Most recent ${Math.min(scans.length, 10)} records (showing latest first):</div>
+      <div style="overflow:auto;margin-bottom:14px">
+        <table>
+          <thead><tr><th>Date</th><th>Weight</th><th>Body Fat %</th><th>Lean Mass</th><th>BMI</th><th>Source</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        ${scans.length > 10 ? `<div style="font-size:12px;color:var(--muted);margin-top:6px">...and ${scans.length - 10} earlier records</div>` : ''}
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Existing scans for the same date will be merged (imported values fill in blank fields only).</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="confirmAppleHealthImport()">Import ${scans.length} Scan${scans.length !== 1 ? 's' : ''}</button>
+        <button class="btn btn-secondary" onclick="cancelAppleHealthImport()">Cancel</button>
+      </div>`;
+
+    window._ahPendingScans = scans;
+
+  } catch(e) {
+    prog.innerHTML = '<span style="color:var(--danger)">⚠️ Error: ' + (e.message || e) + '</span>';
+    console.error('Apple Health import error:', e);
+  }
+}
+
+function parseAppleHealthBodyComp(xmlStr) {
+  const KG_TO_LBS = 2.20462;
+  const TARGET_TYPES = new Set([
+    'HKQuantityTypeIdentifierBodyMass',
+    'HKQuantityTypeIdentifierBodyFatPercentage',
+    'HKQuantityTypeIdentifierLeanBodyMass',
+    'HKQuantityTypeIdentifierBodyMassIndex',
+  ]);
+  const FIELD_MAP = {
+    'HKQuantityTypeIdentifierBodyMass': 'weight',
+    'HKQuantityTypeIdentifierBodyFatPercentage': 'pbf',
+    'HKQuantityTypeIdentifierLeanBodyMass': 'leanBodyMass',
+    'HKQuantityTypeIdentifierBodyMassIndex': 'bmi',
+  };
+
+  const byDate = {};
+
+  // Line-by-line parse — far faster and lighter than DOMParser for 100MB+ exports
+  const lines = xmlStr.split('
+');
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.includes('HKQuantityTypeIdentifierBody')) continue;
+    if (!line.includes('<Record')) continue;
+
+    // Fast attribute extractor: no regex, just indexOf
+    const getAttr = (attr) => {
+      const key = attr + '="';
+      const start = line.indexOf(key);
+      if (start < 0) return null;
+      const valStart = start + key.length;
+      const end = line.indexOf('"', valStart);
+      return end > valStart ? line.substring(valStart, end) : null;
+    };
+
+    const type = getAttr('type');
+    if (!type || !TARGET_TYPES.has(type)) continue;
+
+    const startDate = getAttr('startDate');
+    if (!startDate) continue;
+    const date = startDate.substring(0, 10);
+
+    const unit = getAttr('unit') || '';
+    let val = parseFloat(getAttr('value'));
+    if (isNaN(val)) continue;
+
+    // Unit conversions
+    if (type === 'HKQuantityTypeIdentifierBodyMass' || type === 'HKQuantityTypeIdentifierLeanBodyMass') {
+      if (unit === 'kg') val = val * KG_TO_LBS;
+      // if unit is 'lb' or 'lbs', no conversion needed
+    } else if (type === 'HKQuantityTypeIdentifierBodyFatPercentage') {
+      if (val <= 1) val = val * 100; // Apple Health stores as 0–1 decimal
+    }
+
+    const source = (getAttr('sourceName') || '').toLowerCase();
+    const isHume = source.includes('hume');
+    const field = FIELD_MAP[type];
+
+    if (!byDate[date]) byDate[date] = { date, _source: '' };
+
+    // Prefer Hume source; otherwise take first value seen
+    if (isHume || byDate[date][field] == null) {
+      byDate[date][field] = Math.round(val * 10) / 10;
+      if (isHume && !byDate[date]._source.includes('hume')) {
+        byDate[date]._source = 'hume';
+      } else if (!byDate[date]._source) {
+        byDate[date]._source = getAttr('sourceName') || 'unknown';
+      }
+    }
+  }
+
+  return Object.values(byDate)
+    .filter(s => s.weight != null || s.pbf != null)
+    .map(s => {
+      // Derive body fat mass from weight × body fat %
+      if (s.weight != null && s.pbf != null && s.bodyFatMass == null) {
+        s.bodyFatMass = Math.round(s.weight * (s.pbf / 100) * 10) / 10;
+      }
+      s.notes = 'Imported from Apple Health' + (s._source === 'hume' ? ' (Hume Body Pod)' : '');
+      return s;
+    })
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function confirmAppleHealthImport() {
+  const scans = window._ahPendingScans;
+  if (!scans || !scans.length) return;
+
+  const existing = getInBody();
+  let added = 0, merged = 0;
+
+  scans.forEach(scan => {
+    // Strip internal tracking field before saving
+    const { _source, ...scanData } = scan;
+    const idx = existing.findIndex(s => s.date === scanData.date);
+    if (idx >= 0) {
+      // Merge: only fill in fields that are currently null/missing
+      Object.keys(scanData).forEach(k => {
+        if (scanData[k] != null && (existing[idx][k] == null || existing[idx][k] === '')) {
+          existing[idx][k] = scanData[k];
+        }
+      });
+      merged++;
+    } else {
+      existing.push(scanData);
+      added++;
+    }
+  });
+
+  existing.sort((a, b) => a.date.localeCompare(b.date));
+  saveInBody(existing);
+  pushToFirestore();
+
+  window._ahPendingScans = null;
+  document.getElementById('ah-import-preview').innerHTML = '';
+  document.getElementById('ah-import-progress').innerHTML =
+    `<span style="color:var(--good)">✅ Done! Added ${added} new scan${added !== 1 ? 's' : ''}, merged ${merged} existing.</span>`;
+  document.getElementById('apple-health-zip').value = '';
+
+  renderInBody();
+}
+
+function cancelAppleHealthImport() {
+  window._ahPendingScans = null;
+  document.getElementById('ah-import-preview').innerHTML = '';
+  document.getElementById('ah-import-progress').innerHTML = '';
+  document.getElementById('apple-health-zip').value = '';
 }
 
 // ===== IMPORT/EXPORT =====
