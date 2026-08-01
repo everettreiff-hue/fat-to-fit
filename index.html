@@ -4298,10 +4298,10 @@ async function generateBodyCompReport() {
     if (!res.ok) { status.innerHTML = '<span style="color:var(--danger)">Error: '+(data.error&&data.error.message||'API error')+'</span>'; return; }
     var reportText = data.content[0].text;
     status.innerHTML = '\u2713 Report complete. Click <strong>Save as PDF</strong> inside the report window.';
-    if (w && !w.closed) { try { w.injectNarrative(reportText); } catch(e) {} }
+    if (w && !w.closed) { try { w.injectNarrative(reportText, null); } catch(e) { console.error('injectNarrative failed:', e); } }
   } catch(e) {
     btn.disabled = false; btn.textContent = 'Generate PDF Report';
-    status.innerHTML = '<span style="color:var(--danger)">Error: '+(e.message||e)+'</span>';
+    status.innerHTML = '<span style="color:var(--danger)">Error: '+(e.message||e)+'</span>'; if (w && !w.closed) { try { w.injectNarrative('', 'API error: '+(e.message||e)); } catch(ex) {} }
   }
 }
 
@@ -4309,176 +4309,278 @@ function openReportWindow(reportDate, entries, inbody) {
   var sorted  = entries.filter(function(e){return e.weight;}).sort(function(a,b){return a.date.localeCompare(b.date);});
   var ibSorted = inbody.slice().sort(function(a,b){return a.date.localeCompare(b.date);});
   var first   = sorted[0] || {};
-  var latest  = sorted[sorted.length-1] || {};
-  var latestIB = ibSorted.length ? ibSorted[ibSorted.length-1] : null;
-  var firstIB  = ibSorted.length ? ibSorted[0] : null;
+  var firstIB = ibSorted.length ? ibSorted[0] : null;
 
-  // Best estimates
-  var bestWt   = latestIB ? latestIB.weight : latest.weight;
-  var bestBF   = latestIB ? latestIB.pbf    : latest.bodyFat;
-  var bestLBM  = latestIB ? latestIB.leanBodyMass : null;
-  var bestSMM  = latestIB ? latestIB.smm    : latest.skeletalMuscle;
-  var bestVF   = latestIB ? latestIB.visceralFat : latest.visceralFat;
-  var bestBMI  = latestIB ? latestIB.bmi    : latest.bmi;
-  var bestBMR  = latestIB ? latestIB.bmr    : null;
+  // Hume entries = log entries that have both leanMass and bmi fields
+  var humeEntries = sorted.filter(function(e){return e.leanMass!=null && e.bmi!=null;});
 
-  // Confidence ranges (InBody ±1.5%, consumer scale ±4%)
-  var bfLo = bestBF ? +(bestBF - 1.5).toFixed(1) : null;
-  var bfHi = bestBF ? +(bestBF + 1.5).toFixed(1) : null;
-  var vfLo = bestVF ? Math.max(1, bestVF - 1) : null;
-  var vfHi = bestVF ? bestVF + 2 : null;
-  var lbmLo = bestLBM ? +(bestLBM - 5).toFixed(0) : null;
-  var lbmHi = bestLBM ? +(bestLBM + 5).toFixed(0) : null;
-  var smmLo = bestSMM ? +(bestSMM - 3).toFixed(1) : null;
-  var smmHi = bestSMM ? +(bestSMM + 3).toFixed(1) : null;
-
-  // Deltas
-  function delta(now, then, decimals) {
-    if (now == null || then == null) return null;
-    return (+(now - then)).toFixed(decimals != null ? decimals : 1);
+  // ------------------------------------------------------------------
+  // WEIGHTED ESTIMATES
+  // Strategy: InBody = 60%, Hume = 30%, daily log = 10%
+  // Within each source: most-recent entry gets 2x weight vs oldest
+  // ------------------------------------------------------------------
+  function wAvg(arr, fn, recency) {
+    var v = arr.map(fn).filter(function(x){return x!=null;});
+    if (!v.length) return null;
+    var w = v.map(function(_,i){return 1 + i*recency/Math.max(v.length-1,1);});
+    var sw = w.reduce(function(a,b){return a+b;},0);
+    return v.reduce(function(acc,x,i){return acc+x*w[i];},0)/sw;
   }
-  var wtDelta  = delta(bestWt, first.weight, 1);
-  var bfDelta  = delta(bestBF, firstIB ? firstIB.pbf : first.bodyFat, 1);
+
+  // Weight: most recent daily log entry (scale is freshest)
+  var bestWt = latest(sorted, function(e){return e.weight;});
+
+  // BF%
+  var ibBF   = wAvg(ibSorted,    function(s){return s.pbf;},       1);
+  var humeBF = wAvg(humeEntries, function(e){return e.bodyFat;},   1);
+  var logBF  = wAvg(sorted.filter(function(e){return e.bodyFat&&!e.leanMass;}), function(e){return e.bodyFat;}, 0.5);
+  var bestBF = combine([ibBF,0.6],[humeBF,0.3],[logBF,0.1]);
+
+  // LBM: compute from bestWt + bestBF if both present; else weighted direct
+  var ibLBMavg   = wAvg(ibSorted,    function(s){return s.leanBodyMass;}, 1);
+  var humeLBMavg = wAvg(humeEntries, function(e){return e.leanMass;},     1);
+  var bestLBM = (bestWt&&bestBF) ? +(bestWt*(1-bestBF/100)).toFixed(1) : combine([ibLBMavg,0.65],[humeLBMavg,0.35]);
+
+  // SMM
+  var ibSMM   = wAvg(ibSorted,    function(s){return s.smm;},           1);
+  var humeSMM = wAvg(humeEntries, function(e){return e.skeletalMuscle;},1);
+  var logSMM  = wAvg(sorted.filter(function(e){return e.skeletalMuscle&&!e.leanMass;}),function(e){return e.skeletalMuscle;},0.5);
+  var bestSMM = combine([ibSMM,0.6],[humeSMM,0.3],[logSMM,0.1]);
+
+  // VF: InBody uses 1-20 level; Hume uses VFI (same scale)
+  var ibVF   = wAvg(ibSorted,    function(s){return s.visceralFat;},    1);
+  var humeVF = wAvg(humeEntries, function(e){return e.visceralFatIndex;},1);
+  var logVF  = wAvg(sorted.filter(function(e){return e.visceralFat&&!e.leanMass;}),function(e){return e.visceralFat;},0.5);
+  var bestVF = combine([ibVF,0.6],[humeVF,0.3],[logVF,0.1]);
+  if (bestVF) bestVF = Math.round(bestVF*10)/10;
+
+  // BMI & BMR: prefer InBody/Hume, fall back to log
+  var ibBMI  = wAvg(ibSorted,    function(s){return s.bmi;},1);
+  var humBMI = wAvg(humeEntries, function(e){return e.bmi;},1);
+  var bestBMI= combine([ibBMI,0.6],[humBMI,0.4]);
+  var ibBMR  = wAvg(ibSorted,    function(s){return s.bmr;},1);
+  var humBMR = wAvg(humeEntries, function(e){return e.bmr;},1);
+  var bestBMR= combine([ibBMR,0.6],[humBMR,0.4]);
+
+  function latest(arr, fn) {
+    for (var i=arr.length-1;i>=0;i--) { var v=fn(arr[i]); if(v!=null) return v; }
+    return null;
+  }
+  function combine() {
+    var tot=0, sum=0;
+    for (var i=0;i<arguments.length;i++) {
+      var val=arguments[i][0], w=arguments[i][1];
+      if (val!=null) { sum+=val*w; tot+=w; }
+    }
+    return tot>0 ? Math.round((sum/tot)*10)/10 : null;
+  }
+  // (Re-run combine now that fn is defined — JS hoisting handles it above)
+
+  // Deltas vs baseline
+  function delta(now, then, dec) {
+    if (now==null||then==null) return null;
+    return (+(now-then)).toFixed(dec!=null?dec:1);
+  }
+  var latestIB = ibSorted.length ? ibSorted[ibSorted.length-1] : null;
+  var wtDelta  = delta(bestWt,  first.weight, 1);
+  var bfDelta  = delta(bestBF,  firstIB ? firstIB.pbf : first.bodyFat, 1);
   var lbmDelta = delta(bestLBM, firstIB ? firstIB.leanBodyMass : null, 1);
   var smmDelta = delta(bestSMM, firstIB ? firstIB.smm : null, 1);
-  var vfDelta  = delta(bestVF, firstIB ? firstIB.visceralFat : null, 0);
+  var vfDelta  = delta(bestVF,  firstIB ? firstIB.visceralFat : null, 1);
 
-  // Chart data arrays
-  var wtData   = sorted.map(function(e){return {x:e.date,y:e.weight};});
-  var bfData   = sorted.filter(function(e){return e.bodyFat!=null;}).map(function(e){return {x:e.date,y:e.bodyFat};});
-  var smmData  = sorted.filter(function(e){return e.skeletalMuscle!=null;}).map(function(e){return {x:e.date,y:e.skeletalMuscle};});
-  var lbmData  = sorted.filter(function(e){return e.leanMass!=null;}).map(function(e){return {x:e.date,y:e.leanMass};});
+  // Confidence ranges
+  var bfLo = bestBF ? +(bestBF-1.5).toFixed(1) : null;
+  var bfHi = bestBF ? +(bestBF+1.5).toFixed(1) : null;
+  var vfLo = bestVF ? Math.max(1,Math.floor(bestVF-1.5)) : null;
+  var vfHi = bestVF ? Math.ceil(bestVF+1.5) : null;
+  var lbmLo = bestLBM ? +(bestLBM-5).toFixed(1) : null;
+  var lbmHi = bestLBM ? +(bestLBM+5).toFixed(1) : null;
+  var smmLo = bestSMM ? +(bestSMM-3).toFixed(1) : null;
+  var smmHi = bestSMM ? +(bestSMM+3).toFixed(1) : null;
 
-  // InBody points
-  var ibWt   = ibSorted.map(function(s){return {x:s.date,y:s.weight};});
-  var ibBf   = ibSorted.map(function(s){return {x:s.date,y:s.pbf};});
-  var ibSMM  = ibSorted.map(function(s){return {x:s.date,y:s.smm};});
-  var ibLBM  = ibSorted.map(function(s){return {x:s.date,y:s.leanBodyMass};});
+  // ------------------------------------------------------------------
+  // CHART DATA — use timestamps (ms) on x-axis, no adapter needed
+  // ------------------------------------------------------------------
+  function ts(d) { return new Date(d+'T12:00:00').getTime(); }
+  var wtData  = sorted.map(function(e){return {x:ts(e.date),y:e.weight};});
+  var bfData  = sorted.filter(function(e){return e.bodyFat!=null;}).map(function(e){return {x:ts(e.date),y:e.bodyFat};});
+  var smmData = sorted.filter(function(e){return e.skeletalMuscle!=null;}).map(function(e){return {x:ts(e.date),y:e.skeletalMuscle};});
+  var lbmData = humeEntries.map(function(e){return {x:ts(e.date),y:e.leanMass};});
 
-  // Hume points (entries with leanMass + bmi = Hume entries)
-  var humeEntries = sorted.filter(function(e){return e.leanMass!=null && e.bmi!=null;});
-  var humeWt   = humeEntries.map(function(e){return {x:e.date,y:e.weight};});
-  var humeBf   = humeEntries.map(function(e){return {x:e.date,y:e.bodyFat};});
-  var humeSMM  = humeEntries.map(function(e){return {x:e.date,y:e.skeletalMuscle};});
-  var humeLBM  = humeEntries.map(function(e){return {x:e.date,y:e.leanMass};});
+  var ibWt   = ibSorted.map(function(s){return {x:ts(s.date),y:s.weight};});
+  var ibBfPts= ibSorted.map(function(s){return {x:ts(s.date),y:s.pbf};});
+  var ibSMMp = ibSorted.map(function(s){return {x:ts(s.date),y:s.smm};});
+  var ibLBMp = ibSorted.map(function(s){return {x:ts(s.date),y:s.leanBodyMass};});
+  var humeWt  = humeEntries.map(function(e){return {x:ts(e.date),y:e.weight};});
+  var humeBfPts=humeEntries.map(function(e){return {x:ts(e.date),y:e.bodyFat};});
+  var humeSMMp= humeEntries.map(function(e){return {x:ts(e.date),y:e.skeletalMuscle};});
 
-  var chartJSON = JSON.stringify({wtData:wtData,bfData:bfData,smmData:smmData,lbmData:lbmData,ibWt:ibWt,ibBf:ibBf,ibSMM:ibSMM,ibLBM:ibLBM,humeWt:humeWt,humeBf:humeBf,humeSMM:humeSMM,humeLBM:humeLBM});
+  var chartJSON = JSON.stringify({wtData:wtData,bfData:bfData,smmData:smmData,lbmData:lbmData,ibWt:ibWt,ibBf:ibBfPts,ibSMM:ibSMMp,ibLBM:ibLBMp,humeWt:humeWt,humeBf:humeBfPts,humeSMM:humeSMMp});
 
-  // Gauge builder (returns HTML string)
+  // ------------------------------------------------------------------
+  // GAUGE builder
+  // ------------------------------------------------------------------
   function gauge(label, value, lo, hi, zones, unit) {
-    if (value == null) return '';
-    var totalMin = zones[0].from, totalMax = zones[zones.length-1].to;
-    var range = totalMax - totalMin, W = 100;
-    var rectHtml = zones.map(function(z) {
-      var x = ((z.from-totalMin)/range*100).toFixed(2);
-      var w = ((z.to-z.from)/range*100).toFixed(2);
-      return '<div style="position:absolute;left:'+x+'%;width:'+w+'%;height:100%;background:'+z.color+';display:flex;align-items:center;justify-content:center"><span style="font-size:9px;color:rgba(255,255,255,0.9);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90%;padding:0 2px">'+z.label+'</span></div>';
+    if (value==null) return '';
+    var mn=zones[0].from, mx=zones[zones.length-1].to, rng=mx-mn;
+    var rects=zones.map(function(z){
+      var x=((z.from-mn)/rng*100).toFixed(2), w=((z.to-z.from)/rng*100).toFixed(2);
+      return '<div style="position:absolute;left:'+x+'%;width:'+w+'%;height:100%;background:'+z.color+';display:flex;align-items:center;justify-content:center"><span style="font-size:9px;color:rgba(255,255,255,.9);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90%;padding:0 2px">'+z.label+'</span></div>';
     }).join('');
-    var confHtml = (lo != null && hi != null) ? (function(){
-      var cx = ((lo-totalMin)/range*100).toFixed(2);
-      var cw = Math.max(1,((hi-lo)/range*100)).toFixed(2);
-      return '<div style="position:absolute;left:'+cx+'%;width:'+cw+'%;height:100%;background:rgba(255,255,255,0.3);border:2px solid rgba(255,255,255,0.8);border-radius:3px;pointer-events:none"></div>';
+    var conf=(lo!=null&&hi!=null) ? (function(){
+      var cx=((lo-mn)/rng*100).toFixed(2), cw=Math.max(1,((hi-lo)/rng*100)).toFixed(2);
+      return '<div style="position:absolute;left:'+cx+'%;width:'+cw+'%;height:100%;background:rgba(255,255,255,.3);border:2px solid rgba(255,255,255,.8);border-radius:3px;pointer-events:none"></div>';
     })() : '';
-    var vx = Math.max(0.5, Math.min(99.5, ((value-totalMin)/range*100)));
-    var markerHtml = '<div style="position:absolute;left:'+vx.toFixed(2)+'%;transform:translateX(-50%);top:-10px;text-align:center">' +
-      '<div style="font-size:10px;font-weight:800;color:#0f172a;white-space:nowrap">'+value+unit+'</div>' +
-      '<div style="width:2px;height:calc(100% + 20px);background:#0f172a;margin:0 auto;position:relative;top:0"></div>' +
-      '</div>';
-    return '<div style="margin-bottom:22px">' +
-      '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px">' +
-        '<span style="font-size:13px;font-weight:700;color:#1e293b">'+label+'</span>' +
-        (lo!=null&&hi!=null?'<span style="font-size:11px;color:#64748b">Confidence range: '+lo+'\u2013'+hi+unit+'</span>':'') +
-      '</div>' +
-      '<div style="position:relative;height:28px;border-radius:6px;overflow:visible">' +
-        '<div style="position:absolute;inset:0;border-radius:6px;overflow:hidden;display:flex">'+rectHtml+'</div>' +
-        confHtml + markerHtml +
-      '</div>' +
-      '<div style="display:flex;justify-content:space-between;margin-top:14px">' +
-        zones.map(function(z){return '<span style="font-size:10px;color:'+z.color+';font-weight:600">'+z.label+'</span>';}).join('') +
-      '</div>' +
-    '</div>';
+    var vx=Math.max(0.5,Math.min(99.5,((value-mn)/rng*100)));
+    var marker='<div style="position:absolute;left:'+vx.toFixed(2)+'%;transform:translateX(-50%);top:-10px;text-align:center">'+
+      '<div style="font-size:10px;font-weight:800;color:#0f172a;white-space:nowrap">'+value+unit+'</div>'+
+      '<div style="width:2px;height:calc(100% + 20px);background:#0f172a;margin:0 auto"></div></div>';
+    return '<div style="margin-bottom:22px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px">'+
+        '<span style="font-size:13px;font-weight:700;color:#1e293b">'+label+'</span>'+
+        (lo!=null&&hi!=null?'<span style="font-size:11px;color:#64748b">Confidence: '+lo+'–'+hi+unit+'</span>':'')+
+      '</div>'+
+      '<div style="position:relative;height:28px;border-radius:6px;overflow:visible">'+
+        '<div style="position:absolute;inset:0;border-radius:6px;overflow:hidden;display:flex">'+rects+'</div>'+
+        conf+marker+
+      '</div>'+
+      '<div style="display:flex;justify-content:space-between;margin-top:14px">'+
+        zones.map(function(z){return '<span style="font-size:10px;color:'+z.color+';font-weight:600">'+z.label+'</span>';}).join('')+
+      '</div></div>';
   }
 
-  var bfGauge = gauge('Body Fat %', bestBF ? +bestBF.toFixed(1) : null, bfLo, bfHi, [
-    {label:'Essential',from:2,to:6,color:'#7c3aed'},
-    {label:'Athletic',from:6,to:14,color:'#2563eb'},
-    {label:'Fitness',from:14,to:18,color:'#16a34a'},
-    {label:'Average',from:18,to:25,color:'#d97706'},
-    {label:'Above Avg',from:25,to:32,color:'#ea580c'},
-    {label:'Obese',from:32,to:40,color:'#dc2626'}
-  ], '%');
-
-  var vfGauge = gauge('Visceral Fat Index', bestVF, vfLo, vfHi, [
-    {label:'Healthy',from:1,to:10,color:'#16a34a'},
-    {label:'Excess',from:10,to:15,color:'#d97706'},
+  var bfGauge  = gauge('Body Fat %', bestBF ? +bestBF.toFixed(1) : null, bfLo, bfHi,[
+    {label:'Essential',from:2,to:6,color:'#7c3aed'},{label:'Athletic',from:6,to:14,color:'#2563eb'},
+    {label:'Fitness',from:14,to:18,color:'#16a34a'},{label:'Average',from:18,to:25,color:'#d97706'},
+    {label:'Above Avg',from:25,to:32,color:'#ea580c'},{label:'Obese',from:32,to:40,color:'#dc2626'}
+  ],'%');
+  var vfGauge  = gauge('Visceral Fat', bestVF ? +bestVF.toFixed(1) : null, vfLo, vfHi,[
+    {label:'Healthy',from:1,to:10,color:'#16a34a'},{label:'Excess',from:10,to:15,color:'#d97706'},
     {label:'High Risk',from:15,to:20,color:'#dc2626'}
-  ], '');
+  ],'');
+  var bmiGauge = bestBMI ? gauge('BMI', +bestBMI.toFixed(1), +(bestBMI-0.5).toFixed(1), +(bestBMI+0.5).toFixed(1),[
+    {label:'Under',from:10,to:18.5,color:'#7c3aed'},{label:'Normal',from:18.5,to:25,color:'#16a34a'},
+    {label:'Overweight',from:25,to:30,color:'#d97706'},{label:'Obese',from:30,to:40,color:'#dc2626'}
+  ],'') : '';
 
-  var bmiGauge = bestBMI ? gauge('BMI', +bestBMI.toFixed(1), +bestBMI.toFixed(1)-0.5, +bestBMI.toFixed(1)+0.5, [
-    {label:'Underweight',from:10,to:18.5,color:'#7c3aed'},
-    {label:'Normal',from:18.5,to:25,color:'#16a34a'},
-    {label:'Overweight',from:25,to:30,color:'#d97706'},
-    {label:'Obese',from:30,to:40,color:'#dc2626'}
-  ], '') : '';
-
-  function statCard(label, val, unit, delta, positiveGood) {
-    var dHtml = '';
-    if (delta != null) {
-      var d = parseFloat(delta);
-      var good = positiveGood ? d <= 0 : d >= 0;
-      if (positiveGood) good = d >= 0;
-      var arrow = d > 0 ? '\u25b2' : '\u25bc';
-      var col = (positiveGood ? d >= 0 : d <= 0) ? '#16a34a' : '#dc2626';
-      dHtml = '<div style="font-size:11px;color:'+col+';margin-top:3px">'+arrow+' '+Math.abs(d).toFixed(1)+' '+unit+' since start</div>';
+  // ------------------------------------------------------------------
+  // STAT CARDS
+  // ------------------------------------------------------------------
+  function statCard(label, val, unit, dlt, posGood, note) {
+    var dHtml='';
+    if (dlt!=null) {
+      var d=parseFloat(dlt), arrow=d>0?'▲':'▼';
+      var col=(posGood ? d>=0 : d<=0)?'#16a34a':'#dc2626';
+      dHtml='<div style="font-size:11px;color:'+col+';margin-top:3px">'+arrow+' '+Math.abs(d).toFixed(1)+' '+unit+' from start</div>';
     }
-    return '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.04)">' +
-      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:5px">'+label+'</div>' +
-      '<div style="font-size:24px;font-weight:800;color:#0f172a;line-height:1">'+(val!=null?val:'\u2014')+'<span style="font-size:13px;font-weight:400;color:#94a3b8"> '+unit+'</span></div>' +
-      dHtml + '</div>';
+    return '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.04)">'+
+      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:5px">'+label+'</div>'+
+      '<div style="font-size:24px;font-weight:800;color:#0f172a;line-height:1">'+(val!=null?val:'—')+'<span style="font-size:13px;font-weight:400;color:#94a3b8"> '+unit+'</span></div>'+
+      dHtml+
+      (note?'<div style="font-size:10px;color:#94a3b8;margin-top:3px">'+note+'</div>':'')+
+      '</div>';
   }
 
   var statsHtml =
-    statCard('Weight', bestWt ? bestWt.toFixed(1) : null, 'lbs', wtDelta, false) +
-    statCard('Body Fat', bestBF ? bestBF.toFixed(1) : null, '%', bfDelta, false) +
-    statCard('Lean Mass', bestLBM ? bestLBM.toFixed(1) : null, 'lbs', lbmDelta, true) +
-    statCard('Skeletal Muscle', bestSMM ? bestSMM.toFixed(1) : null, 'lbs', smmDelta, true) +
-    statCard('Visceral Fat', bestVF, 'level', vfDelta, false) +
-    statCard('BMI', bestBMI ? bestBMI.toFixed(1) : null, '', null, false) +
-    statCard('BMR', bestBMR, 'kcal', null, false);
+    statCard('Weight',          bestWt  ? bestWt.toFixed(1)  : null, 'lbs', wtDelta,  false, 'daily scale') +
+    statCard('Body Fat',        bestBF  ? bestBF.toFixed(1)  : null, '%',   bfDelta,  false, 'weighted estimate') +
+    statCard('Lean Mass',       bestLBM ? bestLBM.toFixed(1) : null, 'lbs', lbmDelta, true,  'derived') +
+    statCard('Skeletal Muscle', bestSMM ? bestSMM.toFixed(1) : null, 'lbs', smmDelta, true,  'weighted estimate') +
+    statCard('Visceral Fat',    bestVF  ? bestVF.toFixed(1)  : null, 'lvl', vfDelta,  false, 'weighted estimate') +
+    statCard('BMI',             bestBMI ? bestBMI.toFixed(1) : null, '',    null,     false, 'weighted estimate') +
+    statCard('BMR',             bestBMR ? Math.round(bestBMR): null, 'kcal',null,     false, 'weighted estimate');
 
-  // Build HTML for report window
-  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Body Composition Report</title>' +
-    '<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"><\/script>' +
-    '<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/3.0.0/chartjs-adapter-date-fns.bundle.min.js"><\/script>' +
-    '<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f8fafc;color:#1e293b;font-size:13px;line-height:1.6}.cover{background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 60%,#0e4f6b 100%);color:#fff;padding:48px 48px 36px}.cover h1{font-size:32px;font-weight:800;letter-spacing:-1px;margin-bottom:6px}.cover .sub{font-size:11px;letter-spacing:.15em;text-transform:uppercase;opacity:.6}.cover .date{font-size:12px;opacity:.5;margin-top:18px}.wrap{padding:28px 40px 60px;max-width:1050px;margin:0 auto}.sec{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:24px 28px;margin-bottom:18px;box-shadow:0 1px 4px rgba(0,0,0,.04)}.sec-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#64748b;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #f1f5f9}.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}.chart-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:18px 20px;box-shadow:0 1px 4px rgba(0,0,0,.04)}.chart-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#334155;margin-bottom:14px}.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}.legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:#64748b}.ldot{width:8px;height:8px;border-radius:50%;flex-shrink:0}.ai-sec{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:24px 28px;margin-bottom:18px;box-shadow:0 1px 4px rgba(0,0,0,.04)}.ai-h2{font-size:14px;font-weight:700;color:#1e3a5f;margin:20px 0 6px;padding-bottom:4px;border-bottom:1px solid #e2e8f0}.ai-p{color:#334155;margin:6px 0}.ai-li{margin:4px 0;color:#334155}.print-btn{position:fixed;bottom:24px;right:24px;background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;border:none;border-radius:12px;padding:13px 26px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(37,99,235,.4);z-index:999}@media print{.print-btn{display:none!important}.cover{-webkit-print-color-adjust:exact;print-color-adjust:exact}.sec,.chart-card,.ai-sec{box-shadow:none;page-break-inside:avoid}.charts-grid{grid-template-columns:1fr 1fr}}<\/style></head><body>' +
-    '<div class="cover"><div class="sub">Personal Health Report</div><h1>Body Composition Analysis</h1><div style="font-size:13px;opacity:.7;margin-top:8px">InBody &middot; Hume Body Pod &middot; Daily Tracking</div><div class="date">Generated ' + reportDate + '</div></div>' +
-    '<div class="wrap">' +
-    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:24px 0 18px">' + statsHtml + '</div>' +
-    '<div class="sec"><div class="sec-title">Current Status &mdash; Where You Stand</div>' + bfGauge + vfGauge + bmiGauge +
-    '<div style="font-size:11px;color:#94a3b8;margin-top:4px">Vertical line = current value &nbsp;&bull;&nbsp; White band = confidence range &nbsp;&bull;&nbsp; Source: InBody July 29 (gold standard)</div></div>' +
-    '<div class="sec-title" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#64748b;margin-bottom:12px">Progress Over Time</div>' +
-    '<div class="charts-grid">' +
-      '<div class="chart-card"><div class="chart-title">Weight (lbs)</div><canvas id="c-wt" height="160"></canvas><div class="legend"><div class="legend-item"><div class="ldot" style="background:#94a3b8"></div>Daily log</div><div class="legend-item"><div class="ldot" style="background:#f59e0b;outline:2px solid #92400e;outline-offset:1px"></div>InBody scan</div><div class="legend-item"><div class="ldot" style="background:#38bdf8"></div>Hume</div></div></div>' +
-      '<div class="chart-card"><div class="chart-title">Body Fat %</div><canvas id="c-bf" height="160"></canvas><div class="legend"><div class="legend-item"><div class="ldot" style="background:#94a3b8"></div>Daily log</div><div class="legend-item"><div class="ldot" style="background:#f59e0b;outline:2px solid #92400e;outline-offset:1px"></div>InBody</div><div class="legend-item"><div class="ldot" style="background:#38bdf8"></div>Hume</div></div></div>' +
-      '<div class="chart-card"><div class="chart-title">Lean Body Mass (lbs)</div><canvas id="c-lbm" height="160"></canvas><div class="legend"><div class="legend-item"><div class="ldot" style="background:#a78bfa"></div>Hume daily</div><div class="legend-item"><div class="ldot" style="background:#f59e0b;outline:2px solid #92400e;outline-offset:1px"></div>InBody</div></div></div>' +
-      '<div class="chart-card"><div class="chart-title">Skeletal Muscle Mass (lbs)</div><canvas id="c-smm" height="160"></canvas><div class="legend"><div class="legend-item"><div class="ldot" style="background:#94a3b8"></div>Daily log</div><div class="legend-item"><div class="ldot" style="background:#f59e0b;outline:2px solid #92400e;outline-offset:1px"></div>InBody</div><div class="legend-item"><div class="ldot" style="background:#38bdf8"></div>Hume</div></div></div>' +
-    '</div>' +
-    '<div class="ai-sec" id="ai-section"><div class="sec-title">AI Analysis</div><div id="ai-loading" style="color:#94a3b8;font-style:italic;text-align:center;padding:20px 0">&#9203; Generating detailed analysis&hellip; (~20 seconds)</div><div id="ai-content" style="display:none"></div></div>' +
-    '</div>' +
-    '<button class="print-btn" onclick="window.print()">&#x1F5A8; Save as PDF</button>' +
-    '<script>var _d=' + chartJSON + ';' +
-    'function mk(id,sets){var c=document.getElementById(id);if(!c)return;new Chart(c,{type:"line",data:{datasets:sets},options:{responsive:true,plugins:{legend:{display:false},tooltip:{mode:"index",intersect:false}},scales:{x:{type:"time",time:{unit:"week",displayFormats:{week:"MMM d"}},ticks:{color:"#94a3b8",font:{size:9},maxRotation:35},grid:{color:"#f1f5f9"}},y:{ticks:{color:"#94a3b8",font:{size:10}},grid:{color:"#f1f5f9"}}},animation:{duration:500}}});}' +
-    'function line(data,col,r){return {data:data.map(function(d){return {x:d.x,y:d.y};}),borderColor:col,backgroundColor:col+"44",fill:false,tension:0.3,pointRadius:r,pointHoverRadius:5,borderWidth:r>3?0:1.5,showLine:r<=3,spanGaps:true,order:r>3?1:3};}' +
-    'function pts(data,col,r,shape){return {data:data.map(function(d){return {x:d.x,y:d.y};}),borderColor:col,backgroundColor:col,fill:false,tension:0,pointRadius:r,pointStyle:shape||"circle",pointHoverRadius:r+2,borderWidth:0,showLine:false,order:1};}' +
-    'function init(){' +
-      'mk("c-wt",[line(_d.wtData,"#94a3b8",2),pts(_d.ibWt,"#f59e0b",8,"diamond"),pts(_d.humeWt,"#38bdf8",5)]);' +
-      'mk("c-bf",[line(_d.bfData,"#94a3b8",2),pts(_d.ibBf,"#f59e0b",8,"diamond"),pts(_d.humeBf,"#38bdf8",5)]);' +
-      'mk("c-lbm",[line(_d.lbmData,"#a78bfa",3),pts(_d.ibLBM,"#f59e0b",8,"diamond")]);' +
-      'mk("c-smm",[line(_d.smmData,"#94a3b8",2),pts(_d.ibSMM,"#f59e0b",8,"diamond"),pts(_d.humeSMM,"#38bdf8",5)]);' +
-    '}' +
-    'if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",init);}else{setTimeout(init,200);}' +
-    'function mdToHtml(t){return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/^## (.+)$/gm,"<div class=\"ai-h2\">$1</div>").replace(/^### (.+)$/gm,"<div style=\"font-size:13px;font-weight:600;color:#334155;margin:10px 0 4px\">$1</div>").replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/\*(.+?)\*/g,"<em>$1</em>").replace(/^- (.+)$/gm,"<div class=\"ai-li\">&bull; $1</div>").replace(/\n\n/g,"</p><p class=\"ai-p\">").replace(/\n/g,"<br>");}' +
-    'window.injectNarrative=function(text){document.getElementById("ai-loading").style.display="none";var el=document.getElementById("ai-content");el.style.display="block";el.innerHTML="<p class=\"ai-p\">"+mdToHtml(text)+"</p>";};<\/script>' +
+  // ------------------------------------------------------------------
+  // HTML ASSEMBLY — no time adapter, pure linear timestamps
+  // ------------------------------------------------------------------
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Body Composition Report</title>'+
+    '<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"><\/script>'+
+    '<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f8fafc;color:#1e293b;font-size:13px;line-height:1.6}'+
+    '.cover{background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 60%,#0e4f6b 100%);color:#fff;padding:48px 48px 36px}'+
+    '.cover h1{font-size:32px;font-weight:800;letter-spacing:-1px;margin-bottom:6px}'+
+    '.cover .sub{font-size:11px;letter-spacing:.15em;text-transform:uppercase;opacity:.6}'+
+    '.cover .date{font-size:12px;opacity:.5;margin-top:18px}'+
+    '.wrap{padding:28px 40px 60px;max-width:1050px;margin:0 auto}'+
+    '.sec{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:24px 28px;margin-bottom:18px;box-shadow:0 1px 4px rgba(0,0,0,.04)}'+
+    '.sec-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#64748b;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #f1f5f9}'+
+    '.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}'+
+    '.chart-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:18px 20px;box-shadow:0 1px 4px rgba(0,0,0,.04)}'+
+    '.chart-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#334155;margin-bottom:14px}'+
+    '.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}'+
+    '.legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:#64748b}'+
+    '.ldot{width:8px;height:8px;border-radius:50%;flex-shrink:0}'+
+    '.ai-sec{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:24px 28px;margin-bottom:18px}'+
+    '.ai-h2{font-size:14px;font-weight:700;color:#1e3a5f;margin:20px 0 6px;padding-bottom:4px;border-bottom:1px solid #e2e8f0}'+
+    '.ai-p{color:#334155;margin:6px 0}.ai-li{margin:4px 0;color:#334155}'+
+    '.print-btn{position:fixed;bottom:24px;right:24px;background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;border:none;border-radius:12px;padding:13px 26px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(37,99,235,.4);z-index:999}'+
+    '@media print{.print-btn{display:none!important}.cover,.sec,.chart-card,.ai-sec{-webkit-print-color-adjust:exact;print-color-adjust:exact}.sec,.chart-card,.ai-sec{box-shadow:none;page-break-inside:avoid}}'+
+    '<\/style></head><body>'+
+    '<div class="cover"><div class="sub">Personal Health Report</div><h1>Body Composition Analysis</h1>'+
+    '<div style="font-size:13px;opacity:.7;margin-top:8px">InBody \xb7 Hume Body Pod \xb7 Daily Tracking</div>'+
+    '<div class="date">Generated '+reportDate+'</div></div>'+
+    '<div class="wrap">'+
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:24px 0 18px">'+statsHtml+'</div>'+
+    '<div class="sec"><div class="sec-title">Current Status — Where You Stand</div>'+bfGauge+vfGauge+bmiGauge+
+    '<div style="font-size:11px;color:#94a3b8;margin-top:4px">Vertical line = weighted best estimate • White band = confidence range • Weighted: InBody 60% / Hume 30% / Daily 10%</div></div>'+
+    '<div class="sec-title" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#64748b;margin-bottom:12px">Progress Over Time</div>'+
+    '<div class="charts-grid">'+
+      '<div class="chart-card"><div class="chart-title">Weight (lbs)</div><canvas id="c-wt" height="160"></canvas><div class="legend">'+
+        '<div class="legend-item"><div class="ldot" style="background:#94a3b8"></div>Daily log</div>'+
+        '<div class="legend-item"><div class="ldot" style="background:#f59e0b;outline:2px solid #92400e;outline-offset:1px"></div>InBody</div>'+
+        '<div class="legend-item"><div class="ldot" style="background:#38bdf8"></div>Hume</div></div></div>'+
+      '<div class="chart-card"><div class="chart-title">Body Fat %</div><canvas id="c-bf" height="160"></canvas><div class="legend">'+
+        '<div class="legend-item"><div class="ldot" style="background:#94a3b8"></div>Daily log</div>'+
+        '<div class="legend-item"><div class="ldot" style="background:#f59e0b;outline:2px solid #92400e;outline-offset:1px"></div>InBody</div>'+
+        '<div class="legend-item"><div class="ldot" style="background:#38bdf8"></div>Hume</div></div></div>'+
+      '<div class="chart-card"><div class="chart-title">Lean Body Mass (lbs)</div><canvas id="c-lbm" height="160"></canvas><div class="legend">'+
+        '<div class="legend-item"><div class="ldot" style="background:#a78bfa"></div>Hume</div>'+
+        '<div class="legend-item"><div class="ldot" style="background:#f59e0b;outline:2px solid #92400e;outline-offset:1px"></div>InBody</div></div></div>'+
+      '<div class="chart-card"><div class="chart-title">Skeletal Muscle (lbs)</div><canvas id="c-smm" height="160"></canvas><div class="legend">'+
+        '<div class="legend-item"><div class="ldot" style="background:#94a3b8"></div>Daily log</div>'+
+        '<div class="legend-item"><div class="ldot" style="background:#f59e0b;outline:2px solid #92400e;outline-offset:1px"></div>InBody</div>'+
+        '<div class="legend-item"><div class="ldot" style="background:#38bdf8"></div>Hume</div></div></div>'+
+    '</div>'+
+    '<div class="ai-sec" id="ai-section"><div class="sec-title">AI Analysis</div>'+
+    '<div id="ai-loading" style="color:#94a3b8;font-style:italic;text-align:center;padding:20px 0">⏳ Generating detailed analysis… (~20 seconds)</div>'+
+    '<div id="ai-content" style="display:none"></div></div>'+
+    '</div>'+
+    '<button class="print-btn" onclick="window.print()">🖨 Save as PDF</button>'+
+    '<script>'+
+    'var _d='+chartJSON+';'+
+    'function fmtDate(ms){var d=new Date(ms);return (d.getMonth()+1)+"/"+(d.getDate());}'+
+    'function mk(id,sets){'+
+      'var c=document.getElementById(id);if(!c)return;'+
+      'try{new Chart(c,{type:"scatter",data:{datasets:sets},options:{responsive:true,'+
+        'plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+" "+ctx.parsed.y;}}}},'+
+        'scales:{'+
+          'x:{type:"linear",ticks:{callback:fmtDate,color:"#94a3b8",font:{size:9},maxRotation:35},grid:{color:"#f1f5f9"}},'+
+          'y:{ticks:{color:"#94a3b8",font:{size:10}},grid:{color:"#f1f5f9"}}'+
+        '},animation:{duration:500}}});}catch(e){c.parentNode.innerHTML+="<div style=\'color:red;font-size:11px\'>Chart error: "+e.message+"</div>";}'+
+    '}'+
+    'function line(data,col,lbl){return {type:"line",label:lbl||"",data:data,borderColor:col,backgroundColor:col+"44",fill:false,tension:0.3,pointRadius:2,pointHoverRadius:5,borderWidth:1.5,showLine:true,spanGaps:true,order:3};}'+
+    'function pts(data,col,r,lbl){return {type:"scatter",label:lbl||"",data:data,borderColor:col,backgroundColor:col,pointRadius:r,pointStyle:"circle",pointHoverRadius:r+2,borderWidth:0,order:1};}'+
+    'function init(){'+
+      'mk("c-wt",[line(_d.wtData,"#94a3b8","Daily"),pts(_d.ibWt,"#f59e0b",8,"InBody"),pts(_d.humeWt,"#38bdf8",5,"Hume")]);'+
+      'mk("c-bf",[line(_d.bfData,"#94a3b8","Daily"),pts(_d.ibBf,"#f59e0b",8,"InBody"),pts(_d.humeBf,"#38bdf8",5,"Hume")]);'+
+      'mk("c-lbm",[line(_d.lbmData,"#a78bfa","Hume"),pts(_d.ibLBM,"#f59e0b",8,"InBody")]);'+
+      'mk("c-smm",[line(_d.smmData,"#94a3b8","Daily"),pts(_d.ibSMM,"#f59e0b",8,"InBody"),pts(_d.humeSMM,"#38bdf8",5,"Hume")]);'+
+    '}'+
+    'if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",init);}else{setTimeout(init,100);}'+
+    'function mdToHtml(t){return t'+
+      '.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")'+
+      '.replace(/^## (.+)$/gm,"<div class=\\"ai-h2\\">$1</div>")'+
+      '.replace(/^### (.+)$/gm,"<div style=\\"font-size:13px;font-weight:600;color:#334155;margin:10px 0 4px\\">$1</div>")'+
+      '.replace(/\\*\\*(.+?)\\*\\*/g,"<strong>$1</strong>")'+
+      '.replace(/\\*(.+?)\\*/g,"<em>$1</em>")'+
+      '.replace(/^- (.+)$/gm,"<div class=\\"ai-li\\">&bull; $1</div>")'+
+      '.replace(/\\n\\n/g,"</p><p class=\\"ai-p\\">")'+
+      '.replace(/\\n/g,"<br>");}'+
+    'window.injectNarrative=function(text,err){'+
+      'document.getElementById("ai-loading").style.display="none";'+
+      'var el=document.getElementById("ai-content");el.style.display="block";'+
+      'if(err){el.innerHTML="<div style=\'color:#dc2626;padding:12px;background:#fef2f2;border-radius:8px\'>"+err+"</div>";return;}'+
+      'el.innerHTML="<p class=\\"ai-p\\">"+mdToHtml(text)+"</p>";};'+
+    '<\/script>'+
     '</body></html>';
 
   var w = window.open('', '_blank', 'width=1050,height=820,scrollbars=yes');
