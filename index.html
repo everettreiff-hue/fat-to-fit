@@ -1400,6 +1400,18 @@ if (window.navigator.standalone) {
       <button class="btn btn-sm btn-secondary" onclick="coachQuickPrompt('Analyze my nutrition data alongside my training. Am I eating enough protein for my workout volume? How does my calorie deficit look relative to my body composition progress? Give me specific recommendations.')">🥗 Nutrition Analysis</button>
     </div>
   </div>
+
+  <!-- Body Comp PDF Report -->
+  <div class="card" style="margin-bottom:12px;padding:14px;border:1.5px solid var(--accent2)">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-weight:700;font-size:15px;margin-bottom:3px">📄 Body Composition Report</div>
+        <div style="font-size:12px;color:var(--muted)">AI analyzes all your data — InBody, Hume, daily logs — and generates a full PDF report with best-estimate numbers and confidence ranges.</div>
+      </div>
+      <button class="btn btn-primary" id="gen-report-btn" onclick="generateBodyCompReport()" style="white-space:nowrap;flex-shrink:0">Generate PDF Report</button>
+    </div>
+    <div id="gen-report-status" style="margin-top:10px;font-size:13px;min-height:0"></div>
+  </div>
   <div class="card" style="margin-bottom:12px;padding:0;overflow:hidden">
     <div id="coach-messages" style="min-height:220px;max-height:55vh;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px">
       <div id="coach-welcome" style="text-align:center;color:var(--muted);font-size:13px;padding:24px 16px;line-height:1.6">🤖 <strong style="color:var(--text)">AI Coach</strong><br>I have full access to your body composition history and workout data. Ask me anything — I'll give you specific, data-driven advice.</div>
@@ -4211,6 +4223,240 @@ function deleteInBodyEntry(date) {
   renderInBody();
 }
 
+
+
+// ===== BODY COMP PDF REPORT =====
+async function generateBodyCompReport() {
+  const apiKey = localStorage.getItem('ht_coach_api_key');
+  if (!apiKey) {
+    document.getElementById('gen-report-status').innerHTML = '<span style="color:var(--danger)">⚠️ Add your API key in the setup above first.</span>';
+    return;
+  }
+
+  const btn = document.getElementById('gen-report-btn');
+  const status = document.getElementById('gen-report-status');
+  btn.disabled = true;
+  btn.textContent = 'Generating…';
+  status.innerHTML = '⏳ Pulling your data and analyzing with AI — this takes ~20 seconds…';
+
+  // ── Gather all data ──────────────────────────────────────────────────────
+  const entries = getData().sort((a, b) => a.date.localeCompare(b.date));
+  const inbody  = getInBody().sort((a, b) => a.date.localeCompare(b.date));
+  const latest  = entries.length ? entries[entries.length - 1] : {};
+  const latestIB = inbody.length ? inbody[inbody.length - 1] : null;
+  const firstIB  = inbody.length ? inbody[0] : null;
+  const reportDate = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+
+  // Build data summary string
+  function fmtEntry(e) {
+    const parts = [];
+    if (e.weight)          parts.push('Weight: ' + e.weight + ' lbs');
+    if (e.bodyFat)         parts.push('BF%: ' + e.bodyFat + '%');
+    if (e.visceralFat)     parts.push('VF: ' + e.visceralFat);
+    if (e.skeletalMuscle)  parts.push('SMM: ' + e.skeletalMuscle + ' lbs');
+    if (e.leanMass)        parts.push('LeanMass: ' + e.leanMass + ' lbs');
+    if (e.bodyFatMass)     parts.push('BFMass: ' + e.bodyFatMass + ' lbs');
+    if (e.bmi)             parts.push('BMI: ' + e.bmi);
+    if (e.visceralFatIndex) parts.push('VFI: ' + e.visceralFatIndex);
+    if (e.metabolicAge)    parts.push('MetabolicAge: ' + e.metabolicAge);
+    if (e.bmr)             parts.push('BMR: ' + e.bmr + ' kcal');
+    if (e.bodyWaterPct)    parts.push('BodyWater%: ' + e.bodyWaterPct + '%');
+    if (e.bodyCellMass)    parts.push('BCM: ' + e.bodyCellMass + ' lbs');
+    if (e.boneMineralContent) parts.push('BMC: ' + e.boneMineralContent + ' lbs');
+    if (e.icw)             parts.push('ICW: ' + e.icw + ' lbs');
+    if (e.ecw)             parts.push('ECW: ' + e.ecw + ' lbs');
+    if (e.segRaLean != null) parts.push('SegLean(RA/LA/TR/RL/LL): ' + [e.segRaLean, e.segLaLean, e.segTrLean, e.segRlLean, e.segLlLean].join('/'));
+    if (e.segRaFat  != null) parts.push('SegFat%(RA/LA/TR/RL/LL): ' + [e.segRaFat,  e.segLaFat,  e.segTrFat,  e.segRlFat,  e.segLlFat ].join('/'));
+    return '[' + e.date + '] ' + parts.join(', ');
+  }
+
+  function fmtIB(s) {
+    const parts = ['[InBody ' + s.date + ' ' + (s.time||'') + ']'];
+    if (s.weight)       parts.push('Weight: ' + s.weight + ' lbs');
+    if (s.pbf)          parts.push('BF%: ' + s.pbf + '%');
+    if (s.bodyFatMass)  parts.push('BFMass: ' + s.bodyFatMass + ' lbs');
+    if (s.leanBodyMass) parts.push('LBM: ' + s.leanBodyMass + ' lbs');
+    if (s.smm)          parts.push('SMM: ' + s.smm + ' lbs');
+    if (s.visceralFat)  parts.push('VisceralFat Level: ' + s.visceralFat);
+    if (s.bmi)          parts.push('BMI: ' + s.bmi);
+    if (s.bmr)          parts.push('BMR: ' + s.bmr + ' kcal');
+    if (s.smi)          parts.push('SMI: ' + s.smi + ' kg/m2');
+    if (s.ecwTbw)       parts.push('ECW/TBW: ' + s.ecwTbw);
+    if (s.icw)          parts.push('ICW: ' + s.icw + ' lbs');
+    if (s.ecw)          parts.push('ECW: ' + s.ecw + ' lbs');
+    if (s.tbw)          parts.push('TBW: ' + s.tbw + ' lbs');
+    if (s.dryLeanMass)  parts.push('DryLeanMass: ' + s.dryLeanMass + ' lbs');
+    if (s.segLean)      parts.push('SegLean(RA/LA/TR/RL/LL): ' + [s.segLean.ra,s.segLean.la,s.segLean.tr,s.segLean.rl,s.segLean.ll].join('/'));
+    if (s.segFat)       parts.push('SegFatMass(RA/LA/TR/RL/LL): ' + [s.segFat.ra,s.segFat.la,s.segFat.tr,s.segFat.rl,s.segFat.ll].join('/'));
+    if (s.segLeanPct)   parts.push('SegLean%(RA/LA/TR/RL/LL): ' + [s.segLeanPct.ra,s.segLeanPct.la,s.segLeanPct.tr,s.segLeanPct.rl,s.segLeanPct.ll].join('/'));
+    return parts.join(', ');
+  }
+
+  // Recent log entries (last 30 with data)
+  const recentEntries = entries.filter(e => e.bodyFat || e.weight).slice(-30).map(fmtEntry).join('\n');
+  const inbodyStr = inbody.map(fmtIB).join('\n');
+
+  const prompt = 'You are an expert body composition analyst. I am providing you with all of my health tracking data. Generate a comprehensive body composition report.\n\n' +
+    '## INBODY SCAN DATA (highest accuracy — weight these most heavily):\n' + (inbodyStr || 'No InBody scans available.') + '\n\n' +
+    '## RECENT DAILY LOG ENTRIES (consumer-grade BIA — directional trends only, less accurate than InBody/Hume):\n' + recentEntries + '\n\n' +
+    '## INSTRUCTIONS:\n' +
+    'Generate a detailed body composition report with the following sections. Use the InBody scans as ground truth and the daily logs for trend direction. Note that: (1) InBody was taken fasted at the gym — most accurate; (2) Hume Body Pod daily readings are the most recent data but use different algorithms; (3) consumer scale logs are least accurate but show trends.\n\n' +
+    'Format your response as a structured report using these exact section headers:\n\n' +
+    '## EXECUTIVE SUMMARY\n' +
+    'A 3–4 sentence overall assessment of current physique status and trajectory.\n\n' +
+    '## BODY FAT PERCENTAGE\n' +
+    'Best estimate: X.X% | Confidence range: X.X–X.X%\n' +
+    'Data reliability: [High/Medium/Low] — explain which sources you used and why.\n' +
+    'Healthy range for profile: X–X%\n' +
+    'Status: [Below target / On track / Above target]\n' +
+    'Trend: [Improving / Stable / Worsening] — rate of change\n\n' +
+    '## LEAN BODY MASS\n' +
+    'Best estimate: XXX.X lbs | Confidence range: XXX–XXX lbs\n' +
+    'Data reliability: [High/Medium/Low]\n' +
+    'Expected range for height/weight/sex: XXX–XXX lbs\n' +
+    'Status and trend\n\n' +
+    '## SKELETAL MUSCLE MASS\n' +
+    'Best estimate: XX.X lbs | Confidence range: XX–XX lbs\n' +
+    'Data reliability: [High/Medium/Low]\n' +
+    'SMI (Skeletal Muscle Index): X.X kg/m² | Normal >7.26 for males\n' +
+    'Expected range: XX–XX lbs\n' +
+    'Status and trend\n\n' +
+    '## VISCERAL FAT\n' +
+    'Best estimate: Level X | Confidence range: X–X\n' +
+    'Data reliability: [High/Medium/Low]\n' +
+    'Healthy range: 1–9 | Excess: 10–14 | High risk: 15+\n' +
+    'Status and trend\n\n' +
+    '## BODY MASS INDEX\n' +
+    'Best estimate: XX.X | Confidence range: XX.X–XX.X\n' +
+    'Note any limitations of BMI for muscular individuals\n\n' +
+    '## BASAL METABOLIC RATE\n' +
+    'Best estimate: XXXX kcal | Confidence range: XXXX–XXXX kcal\n' +
+    'Suggested maintenance calories (with activity factor)\n\n' +
+    '## BODY WATER & HYDRATION\n' +
+    'Best estimate for TBW, ICW, ECW if available\n' +
+    'ECW/TBW ratio and what it indicates\n\n' +
+    '## SEGMENTAL ANALYSIS\n' +
+    'If segmental data available: lean mass and fat % for each segment with assessment of balance\n\n' +
+    '## PROGRESS SINCE BASELINE\n' +
+    'Compare earliest to latest reliable data. Quantify changes in fat lost, muscle gained, weight change.\n\n' +
+    '## CONFIDENCE ASSESSMENT\n' +
+    'A table or list rating confidence level (High/Medium/Low) for each major metric and why.\n\n' +
+    '## RECOMMENDATIONS\n' +
+    '3–5 specific, data-driven recommendations based on the findings.\n\n' +
+    'Be specific with numbers. Do not be vague. Use the actual data values. Report date: ' + reportDate;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens: 4096,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await res.json();
+    btn.disabled = false;
+    btn.textContent = 'Generate PDF Report';
+
+    if (!res.ok) {
+      status.innerHTML = '<span style="color:var(--danger)">⚠️ ' + (data.error?.message || 'API error') + '</span>';
+      return;
+    }
+
+    const reportText = data.content[0].text;
+    status.innerHTML = '✓ Report ready — click <strong>Save as PDF</strong> to export.';
+
+    // ── Render and print ────────────────────────────────────────────────────
+    openReportWindow(reportText, reportDate);
+
+  } catch(e) {
+    btn.disabled = false;
+    btn.textContent = 'Generate PDF Report';
+    status.innerHTML = '<span style="color:var(--danger)">⚠️ ' + (e.message || e) + '</span>';
+  }
+}
+
+function openReportWindow(markdown, reportDate) {
+  // Convert markdown to HTML
+  function mdToHtml(md) {
+    return md
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/^## (.+)$/gm, '</div><div class="section"><h2>$1</h2>')
+      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/^- (.+)$/gm, '<li>$1</li>')
+      .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
+      .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
+      .replace(/\n{2,}/g, '</p><p>')
+      .replace(/\n/g, '<br>');
+  }
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Body Composition Report — ${reportDate}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Georgia', serif; color: #1a1a2e; background: #fff; font-size: 14px; line-height: 1.7; }
+  .cover { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%); color: #fff; padding: 60px 48px 48px; min-height: 180px; }
+  .cover h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 8px; }
+  .cover .sub { font-size: 14px; opacity: 0.75; margin-bottom: 4px; }
+  .cover .date { font-size: 13px; opacity: 0.6; margin-top: 20px; }
+  .body { padding: 0 48px 48px; }
+  .section { margin-top: 32px; padding-top: 20px; border-top: 2px solid #e2e8f0; }
+  .section:first-child { border-top: none; }
+  h2 { font-size: 16px; font-weight: 700; color: #1e3a5f; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; padding-bottom: 6px; border-bottom: 1px solid #cbd5e1; }
+  h3 { font-size: 14px; font-weight: 600; color: #334155; margin: 14px 0 6px; }
+  p { margin: 8px 0; color: #334155; }
+  ul { margin: 8px 0 8px 20px; color: #334155; }
+  li { margin: 4px 0; }
+  strong { color: #0f172a; }
+  .metric-row { display: flex; align-items: baseline; gap: 8px; margin: 6px 0; }
+  .metric-val { font-size: 22px; font-weight: 700; color: #1e3a5f; }
+  .metric-range { font-size: 12px; color: #64748b; }
+  .print-btn { position: fixed; bottom: 24px; right: 24px; background: #1e3a5f; color: #fff; border: none; border-radius: 10px; padding: 12px 22px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 20px rgba(0,0,0,.25); z-index: 999; }
+  .print-btn:hover { background: #2563eb; }
+  @media print {
+    .print-btn { display: none !important; }
+    .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { font-size: 12px; }
+    .section { page-break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="sub">HEALTH TRACKER — PERSONAL REPORT</div>
+  <h1>Body Composition Analysis</h1>
+  <div class="date">Generated ${reportDate}</div>
+</div>
+<div class="body">
+<div class="section">
+${mdToHtml(markdown)}
+</div>
+</div>
+<button class="print-btn" onclick="window.print()">🖨️ Save as PDF</button>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank', 'width=900,height=750,scrollbars=yes');
+  if (w) {
+    w.document.write(html);
+    w.document.close();
+  } else {
+    // Fallback: show in current page
+    document.getElementById('gen-report-status').innerHTML += ' <small style="color:var(--muted)">(Pop-up blocked — allow pop-ups and try again, or use the chat export below)</small>';
+  }
+}
 
 // ===== SEGMENTAL ANALYSIS =====
 var _segView = 'lean';
