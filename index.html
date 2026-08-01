@@ -4227,235 +4227,263 @@ function deleteInBodyEntry(date) {
 
 // ===== BODY COMP PDF REPORT =====
 async function generateBodyCompReport() {
-  const apiKey = localStorage.getItem('ht_coach_api_key');
+  var apiKey = localStorage.getItem('ht_coach_api_key');
   if (!apiKey) {
-    document.getElementById('gen-report-status').innerHTML = '<span style="color:var(--danger)">⚠️ Add your API key in the setup above first.</span>';
+    document.getElementById('gen-report-status').innerHTML = '<span style="color:var(--danger)">Set your API key above first.</span>';
     return;
   }
+  var btn = document.getElementById('gen-report-btn');
+  var status = document.getElementById('gen-report-status');
+  btn.disabled = true; btn.textContent = 'Generating…';
+  status.innerHTML = '⏳ Opening report with charts… AI narrative loading (~20s)…';
 
-  const btn = document.getElementById('gen-report-btn');
-  const status = document.getElementById('gen-report-status');
-  btn.disabled = true;
-  btn.textContent = 'Generating…';
-  status.innerHTML = '⏳ Pulling your data and analyzing with AI — this takes ~20 seconds…';
+  var entries = getData().sort(function(a,b){return a.date.localeCompare(b.date);});
+  var inbody  = getInBody().sort(function(a,b){return a.date.localeCompare(b.date);});
+  var reportDate = new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
 
-  // ── Gather all data ──────────────────────────────────────────────────────
-  const entries = getData().sort((a, b) => a.date.localeCompare(b.date));
-  const inbody  = getInBody().sort((a, b) => a.date.localeCompare(b.date));
-  const latest  = entries.length ? entries[entries.length - 1] : {};
-  const latestIB = inbody.length ? inbody[inbody.length - 1] : null;
-  const firstIB  = inbody.length ? inbody[0] : null;
-  const reportDate = new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' });
+  var w = openReportWindow(reportDate, entries, inbody);
+  status.innerHTML = '⏳ Report open — AI narrative loading (~20s)…';
 
-  // Build data summary string
-  function fmtEntry(e) {
-    const parts = [];
-    if (e.weight)          parts.push('Weight: ' + e.weight + ' lbs');
-    if (e.bodyFat)         parts.push('BF%: ' + e.bodyFat + '%');
-    if (e.visceralFat)     parts.push('VF: ' + e.visceralFat);
-    if (e.skeletalMuscle)  parts.push('SMM: ' + e.skeletalMuscle + ' lbs');
-    if (e.leanMass)        parts.push('LeanMass: ' + e.leanMass + ' lbs');
-    if (e.bodyFatMass)     parts.push('BFMass: ' + e.bodyFatMass + ' lbs');
-    if (e.bmi)             parts.push('BMI: ' + e.bmi);
-    if (e.visceralFatIndex) parts.push('VFI: ' + e.visceralFatIndex);
-    if (e.metabolicAge)    parts.push('MetabolicAge: ' + e.metabolicAge);
-    if (e.bmr)             parts.push('BMR: ' + e.bmr + ' kcal');
-    if (e.bodyWaterPct)    parts.push('BodyWater%: ' + e.bodyWaterPct + '%');
-    if (e.bodyCellMass)    parts.push('BCM: ' + e.bodyCellMass + ' lbs');
-    if (e.boneMineralContent) parts.push('BMC: ' + e.boneMineralContent + ' lbs');
-    if (e.icw)             parts.push('ICW: ' + e.icw + ' lbs');
-    if (e.ecw)             parts.push('ECW: ' + e.ecw + ' lbs');
-    if (e.segRaLean != null) parts.push('SegLean(RA/LA/TR/RL/LL): ' + [e.segRaLean, e.segLaLean, e.segTrLean, e.segRlLean, e.segLlLean].join('/'));
-    if (e.segRaFat  != null) parts.push('SegFat%(RA/LA/TR/RL/LL): ' + [e.segRaFat,  e.segLaFat,  e.segTrFat,  e.segRlFat,  e.segLlFat ].join('/'));
-    return '[' + e.date + '] ' + parts.join(', ');
+  // Build prompt
+  function fmtE(e) {
+    var p=[];
+    if(e.weight) p.push('Wt:'+e.weight);
+    if(e.bodyFat) p.push('BF%:'+e.bodyFat);
+    if(e.visceralFat) p.push('VF:'+e.visceralFat);
+    if(e.skeletalMuscle) p.push('SMM:'+e.skeletalMuscle);
+    if(e.leanMass) p.push('LBM:'+e.leanMass);
+    if(e.bodyFatMass) p.push('BFMass:'+e.bodyFatMass);
+    if(e.bmi) p.push('BMI:'+e.bmi);
+    if(e.visceralFatIndex) p.push('VFI:'+e.visceralFatIndex);
+    if(e.metabolicAge) p.push('MetAge:'+e.metabolicAge);
+    if(e.bmr) p.push('BMR:'+e.bmr);
+    if(e.bodyCellMass) p.push('BCM:'+e.bodyCellMass);
+    if(e.segRaLean!=null) p.push('SegLean(RA/LA/TR/RL/LL):'+[e.segRaLean,e.segLaLean,e.segTrLean,e.segRlLean,e.segLlLean].join('/'));
+    if(e.segRaFat!=null)  p.push('SegFat%:'+[e.segRaFat,e.segLaFat,e.segTrFat,e.segRlFat,e.segLlFat].join('/'));
+    return '['+e.date+'] '+p.join(', ');
   }
-
   function fmtIB(s) {
-    const parts = ['[InBody ' + s.date + ' ' + (s.time||'') + ']'];
-    if (s.weight)       parts.push('Weight: ' + s.weight + ' lbs');
-    if (s.pbf)          parts.push('BF%: ' + s.pbf + '%');
-    if (s.bodyFatMass)  parts.push('BFMass: ' + s.bodyFatMass + ' lbs');
-    if (s.leanBodyMass) parts.push('LBM: ' + s.leanBodyMass + ' lbs');
-    if (s.smm)          parts.push('SMM: ' + s.smm + ' lbs');
-    if (s.visceralFat)  parts.push('VisceralFat Level: ' + s.visceralFat);
-    if (s.bmi)          parts.push('BMI: ' + s.bmi);
-    if (s.bmr)          parts.push('BMR: ' + s.bmr + ' kcal');
-    if (s.smi)          parts.push('SMI: ' + s.smi + ' kg/m2');
-    if (s.ecwTbw)       parts.push('ECW/TBW: ' + s.ecwTbw);
-    if (s.icw)          parts.push('ICW: ' + s.icw + ' lbs');
-    if (s.ecw)          parts.push('ECW: ' + s.ecw + ' lbs');
-    if (s.tbw)          parts.push('TBW: ' + s.tbw + ' lbs');
-    if (s.dryLeanMass)  parts.push('DryLeanMass: ' + s.dryLeanMass + ' lbs');
-    if (s.segLean)      parts.push('SegLean(RA/LA/TR/RL/LL): ' + [s.segLean.ra,s.segLean.la,s.segLean.tr,s.segLean.rl,s.segLean.ll].join('/'));
-    if (s.segFat)       parts.push('SegFatMass(RA/LA/TR/RL/LL): ' + [s.segFat.ra,s.segFat.la,s.segFat.tr,s.segFat.rl,s.segFat.ll].join('/'));
-    if (s.segLeanPct)   parts.push('SegLean%(RA/LA/TR/RL/LL): ' + [s.segLeanPct.ra,s.segLeanPct.la,s.segLeanPct.tr,s.segLeanPct.rl,s.segLeanPct.ll].join('/'));
-    return parts.join(', ');
+    var p=['[InBody '+s.date+' '+(s.time||'')+']'];
+    if(s.weight) p.push('Wt:'+s.weight); if(s.pbf) p.push('BF%:'+s.pbf);
+    if(s.bodyFatMass) p.push('BFMass:'+s.bodyFatMass); if(s.leanBodyMass) p.push('LBM:'+s.leanBodyMass);
+    if(s.smm) p.push('SMM:'+s.smm); if(s.visceralFat) p.push('VFLvl:'+s.visceralFat);
+    if(s.bmi) p.push('BMI:'+s.bmi); if(s.bmr) p.push('BMR:'+s.bmr);
+    if(s.smi) p.push('SMI:'+s.smi); if(s.ecwTbw) p.push('ECW/TBW:'+s.ecwTbw);
+    if(s.icw) p.push('ICW:'+s.icw); if(s.ecw) p.push('ECW:'+s.ecw); if(s.tbw) p.push('TBW:'+s.tbw);
+    if(s.segLean) p.push('SegLean(RA/LA/TR/RL/LL):'+[s.segLean.ra,s.segLean.la,s.segLean.tr,s.segLean.rl,s.segLean.ll].join('/'));
+    if(s.segFat)  p.push('SegFatMass:'+[s.segFat.ra,s.segFat.la,s.segFat.tr,s.segFat.rl,s.segFat.ll].join('/'));
+    return p.join(', ');
   }
 
-  // Recent log entries (last 30 with data)
-  const recentEntries = entries.filter(e => e.bodyFat || e.weight).slice(-30).map(fmtEntry).join('\n');
-  const inbodyStr = inbody.map(fmtIB).join('\n');
+  var recentEntries = entries.filter(function(e){return e.bodyFat||e.weight;}).slice(-30).map(fmtE).join('\n');
+  var inbodyStr = inbody.map(fmtIB).join('\n');
 
-  const prompt = 'You are an expert body composition analyst. I am providing you with all of my health tracking data. Generate a comprehensive body composition report.\n\n' +
-    '## INBODY SCAN DATA (highest accuracy — weight these most heavily):\n' + (inbodyStr || 'No InBody scans available.') + '\n\n' +
-    '## RECENT DAILY LOG ENTRIES (consumer-grade BIA — directional trends only, less accurate than InBody/Hume):\n' + recentEntries + '\n\n' +
-    '## INSTRUCTIONS:\n' +
-    'Generate a detailed body composition report with the following sections. Use the InBody scans as ground truth and the daily logs for trend direction. Note that: (1) InBody was taken fasted at the gym — most accurate; (2) Hume Body Pod daily readings are the most recent data but use different algorithms; (3) consumer scale logs are least accurate but show trends.\n\n' +
-    'Format your response as a structured report using these exact section headers:\n\n' +
-    '## EXECUTIVE SUMMARY\n' +
-    'A 3–4 sentence overall assessment of current physique status and trajectory.\n\n' +
-    '## BODY FAT PERCENTAGE\n' +
-    'Best estimate: X.X% | Confidence range: X.X–X.X%\n' +
-    'Data reliability: [High/Medium/Low] — explain which sources you used and why.\n' +
-    'Healthy range for profile: X–X%\n' +
-    'Status: [Below target / On track / Above target]\n' +
-    'Trend: [Improving / Stable / Worsening] — rate of change\n\n' +
-    '## LEAN BODY MASS\n' +
-    'Best estimate: XXX.X lbs | Confidence range: XXX–XXX lbs\n' +
-    'Data reliability: [High/Medium/Low]\n' +
-    'Expected range for height/weight/sex: XXX–XXX lbs\n' +
-    'Status and trend\n\n' +
-    '## SKELETAL MUSCLE MASS\n' +
-    'Best estimate: XX.X lbs | Confidence range: XX–XX lbs\n' +
-    'Data reliability: [High/Medium/Low]\n' +
-    'SMI (Skeletal Muscle Index): X.X kg/m² | Normal >7.26 for males\n' +
-    'Expected range: XX–XX lbs\n' +
-    'Status and trend\n\n' +
-    '## VISCERAL FAT\n' +
-    'Best estimate: Level X | Confidence range: X–X\n' +
-    'Data reliability: [High/Medium/Low]\n' +
-    'Healthy range: 1–9 | Excess: 10–14 | High risk: 15+\n' +
-    'Status and trend\n\n' +
-    '## BODY MASS INDEX\n' +
-    'Best estimate: XX.X | Confidence range: XX.X–XX.X\n' +
-    'Note any limitations of BMI for muscular individuals\n\n' +
-    '## BASAL METABOLIC RATE\n' +
-    'Best estimate: XXXX kcal | Confidence range: XXXX–XXXX kcal\n' +
-    'Suggested maintenance calories (with activity factor)\n\n' +
-    '## BODY WATER & HYDRATION\n' +
-    'Best estimate for TBW, ICW, ECW if available\n' +
-    'ECW/TBW ratio and what it indicates\n\n' +
-    '## SEGMENTAL ANALYSIS\n' +
-    'If segmental data available: lean mass and fat % for each segment with assessment of balance\n\n' +
-    '## PROGRESS SINCE BASELINE\n' +
-    'Compare earliest to latest reliable data. Quantify changes in fat lost, muscle gained, weight change.\n\n' +
-    '## CONFIDENCE ASSESSMENT\n' +
-    'A table or list rating confidence level (High/Medium/Low) for each major metric and why.\n\n' +
-    '## RECOMMENDATIONS\n' +
-    '3–5 specific, data-driven recommendations based on the findings.\n\n' +
-    'Be specific with numbers. Do not be vague. Use the actual data values. Report date: ' + reportDate;
+  var prompt = 'You are an expert body composition analyst. Generate a comprehensive body composition report for a 33-year-old male, 6ft 0in.\n\n' +
+    'INBODY SCAN DATA (highest accuracy — weight most heavily):\n' + (inbodyStr||'None') + '\n\n' +
+    'RECENT DAILY LOG ENTRIES (consumer BIA — trends only, less accurate):\n' + recentEntries + '\n\n' +
+    'Note: InBody July 29 = gold standard. Hume Body Pod Aug 1 = second source. Daily logs = directional trends only.\n\n' +
+    'Generate a detailed report. Use these EXACT section headers:\n' +
+    '## EXECUTIVE SUMMARY\n## BODY FAT PERCENTAGE\n## LEAN BODY MASS\n## SKELETAL MUSCLE MASS\n## VISCERAL FAT\n## BODY MASS INDEX\n## BASAL METABOLIC RATE\n## BODY WATER & HYDRATION\n## SEGMENTAL ANALYSIS\n## PROGRESS SINCE BASELINE\n## CONFIDENCE ASSESSMENT\n## RECOMMENDATIONS\n\n' +
+    'For each metric section format as:\nBest estimate: X | Confidence range: X–X\nData reliability: High/Medium/Low — reason\nHealthy range for profile: X–X\nStatus & Trend: specific numbers and direction\n\n' +
+    'Be specific. Use actual data values. Report date: ' + reportDate;
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-6',
-        max_tokens: 4096,
-        messages: [{ role: 'user', content: prompt }]
-      })
+    var res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:4096,messages:[{role:'user',content:prompt}]})
     });
-
-    const data = await res.json();
-    btn.disabled = false;
-    btn.textContent = 'Generate PDF Report';
-
-    if (!res.ok) {
-      status.innerHTML = '<span style="color:var(--danger)">⚠️ ' + (data.error?.message || 'API error') + '</span>';
-      return;
-    }
-
-    const reportText = data.content[0].text;
-    status.innerHTML = '✓ Report ready — click <strong>Save as PDF</strong> to export.';
-
-    // ── Render and print ────────────────────────────────────────────────────
-    openReportWindow(reportText, reportDate);
-
+    var data = await res.json();
+    btn.disabled = false; btn.textContent = 'Generate PDF Report';
+    if (!res.ok) { status.innerHTML = '<span style="color:var(--danger)">Error: '+(data.error&&data.error.message||'API error')+'</span>'; return; }
+    var reportText = data.content[0].text;
+    status.innerHTML = '\u2713 Report complete. Click <strong>Save as PDF</strong> inside the report window.';
+    if (w && !w.closed) { try { w.injectNarrative(reportText); } catch(e) {} }
   } catch(e) {
-    btn.disabled = false;
-    btn.textContent = 'Generate PDF Report';
-    status.innerHTML = '<span style="color:var(--danger)">⚠️ ' + (e.message || e) + '</span>';
+    btn.disabled = false; btn.textContent = 'Generate PDF Report';
+    status.innerHTML = '<span style="color:var(--danger)">Error: '+(e.message||e)+'</span>';
   }
 }
 
-function openReportWindow(markdown, reportDate) {
-  // Convert markdown to HTML
-  function mdToHtml(md) {
-    return md
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-      .replace(/^## (.+)$/gm, '</div><div class="section"><h2>$1</h2>')
-      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      .replace(/^- (.+)$/gm, '<li>$1</li>')
-      .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
-      .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
-      .replace(/\n{2,}/g, '</p><p>')
-      .replace(/\n/g, '<br>');
+function openReportWindow(reportDate, entries, inbody) {
+  var sorted  = entries.filter(function(e){return e.weight;}).sort(function(a,b){return a.date.localeCompare(b.date);});
+  var ibSorted = inbody.slice().sort(function(a,b){return a.date.localeCompare(b.date);});
+  var first   = sorted[0] || {};
+  var latest  = sorted[sorted.length-1] || {};
+  var latestIB = ibSorted.length ? ibSorted[ibSorted.length-1] : null;
+  var firstIB  = ibSorted.length ? ibSorted[0] : null;
+
+  // Best estimates
+  var bestWt   = latestIB ? latestIB.weight : latest.weight;
+  var bestBF   = latestIB ? latestIB.pbf    : latest.bodyFat;
+  var bestLBM  = latestIB ? latestIB.leanBodyMass : null;
+  var bestSMM  = latestIB ? latestIB.smm    : latest.skeletalMuscle;
+  var bestVF   = latestIB ? latestIB.visceralFat : latest.visceralFat;
+  var bestBMI  = latestIB ? latestIB.bmi    : latest.bmi;
+  var bestBMR  = latestIB ? latestIB.bmr    : null;
+
+  // Confidence ranges (InBody ±1.5%, consumer scale ±4%)
+  var bfLo = bestBF ? +(bestBF - 1.5).toFixed(1) : null;
+  var bfHi = bestBF ? +(bestBF + 1.5).toFixed(1) : null;
+  var vfLo = bestVF ? Math.max(1, bestVF - 1) : null;
+  var vfHi = bestVF ? bestVF + 2 : null;
+  var lbmLo = bestLBM ? +(bestLBM - 5).toFixed(0) : null;
+  var lbmHi = bestLBM ? +(bestLBM + 5).toFixed(0) : null;
+  var smmLo = bestSMM ? +(bestSMM - 3).toFixed(1) : null;
+  var smmHi = bestSMM ? +(bestSMM + 3).toFixed(1) : null;
+
+  // Deltas
+  function delta(now, then, decimals) {
+    if (now == null || then == null) return null;
+    return (+(now - then)).toFixed(decimals != null ? decimals : 1);
+  }
+  var wtDelta  = delta(bestWt, first.weight, 1);
+  var bfDelta  = delta(bestBF, firstIB ? firstIB.pbf : first.bodyFat, 1);
+  var lbmDelta = delta(bestLBM, firstIB ? firstIB.leanBodyMass : null, 1);
+  var smmDelta = delta(bestSMM, firstIB ? firstIB.smm : null, 1);
+  var vfDelta  = delta(bestVF, firstIB ? firstIB.visceralFat : null, 0);
+
+  // Chart data arrays
+  var wtData   = sorted.map(function(e){return {x:e.date,y:e.weight};});
+  var bfData   = sorted.filter(function(e){return e.bodyFat!=null;}).map(function(e){return {x:e.date,y:e.bodyFat};});
+  var smmData  = sorted.filter(function(e){return e.skeletalMuscle!=null;}).map(function(e){return {x:e.date,y:e.skeletalMuscle};});
+  var lbmData  = sorted.filter(function(e){return e.leanMass!=null;}).map(function(e){return {x:e.date,y:e.leanMass};});
+
+  // InBody points
+  var ibWt   = ibSorted.map(function(s){return {x:s.date,y:s.weight};});
+  var ibBf   = ibSorted.map(function(s){return {x:s.date,y:s.pbf};});
+  var ibSMM  = ibSorted.map(function(s){return {x:s.date,y:s.smm};});
+  var ibLBM  = ibSorted.map(function(s){return {x:s.date,y:s.leanBodyMass};});
+
+  // Hume points (entries with leanMass + bmi = Hume entries)
+  var humeEntries = sorted.filter(function(e){return e.leanMass!=null && e.bmi!=null;});
+  var humeWt   = humeEntries.map(function(e){return {x:e.date,y:e.weight};});
+  var humeBf   = humeEntries.map(function(e){return {x:e.date,y:e.bodyFat};});
+  var humeSMM  = humeEntries.map(function(e){return {x:e.date,y:e.skeletalMuscle};});
+  var humeLBM  = humeEntries.map(function(e){return {x:e.date,y:e.leanMass};});
+
+  var chartJSON = JSON.stringify({wtData:wtData,bfData:bfData,smmData:smmData,lbmData:lbmData,ibWt:ibWt,ibBf:ibBf,ibSMM:ibSMM,ibLBM:ibLBM,humeWt:humeWt,humeBf:humeBf,humeSMM:humeSMM,humeLBM:humeLBM});
+
+  // Gauge builder (returns HTML string)
+  function gauge(label, value, lo, hi, zones, unit) {
+    if (value == null) return '';
+    var totalMin = zones[0].from, totalMax = zones[zones.length-1].to;
+    var range = totalMax - totalMin, W = 100;
+    var rectHtml = zones.map(function(z) {
+      var x = ((z.from-totalMin)/range*100).toFixed(2);
+      var w = ((z.to-z.from)/range*100).toFixed(2);
+      return '<div style="position:absolute;left:'+x+'%;width:'+w+'%;height:100%;background:'+z.color+';display:flex;align-items:center;justify-content:center"><span style="font-size:9px;color:rgba(255,255,255,0.9);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:90%;padding:0 2px">'+z.label+'</span></div>';
+    }).join('');
+    var confHtml = (lo != null && hi != null) ? (function(){
+      var cx = ((lo-totalMin)/range*100).toFixed(2);
+      var cw = Math.max(1,((hi-lo)/range*100)).toFixed(2);
+      return '<div style="position:absolute;left:'+cx+'%;width:'+cw+'%;height:100%;background:rgba(255,255,255,0.3);border:2px solid rgba(255,255,255,0.8);border-radius:3px;pointer-events:none"></div>';
+    })() : '';
+    var vx = Math.max(0.5, Math.min(99.5, ((value-totalMin)/range*100)));
+    var markerHtml = '<div style="position:absolute;left:'+vx.toFixed(2)+'%;transform:translateX(-50%);top:-10px;text-align:center">' +
+      '<div style="font-size:10px;font-weight:800;color:#0f172a;white-space:nowrap">'+value+unit+'</div>' +
+      '<div style="width:2px;height:calc(100% + 20px);background:#0f172a;margin:0 auto;position:relative;top:0"></div>' +
+      '</div>';
+    return '<div style="margin-bottom:22px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px">' +
+        '<span style="font-size:13px;font-weight:700;color:#1e293b">'+label+'</span>' +
+        (lo!=null&&hi!=null?'<span style="font-size:11px;color:#64748b">Confidence range: '+lo+'\u2013'+hi+unit+'</span>':'') +
+      '</div>' +
+      '<div style="position:relative;height:28px;border-radius:6px;overflow:visible">' +
+        '<div style="position:absolute;inset:0;border-radius:6px;overflow:hidden;display:flex">'+rectHtml+'</div>' +
+        confHtml + markerHtml +
+      '</div>' +
+      '<div style="display:flex;justify-content:space-between;margin-top:14px">' +
+        zones.map(function(z){return '<span style="font-size:10px;color:'+z.color+';font-weight:600">'+z.label+'</span>';}).join('') +
+      '</div>' +
+    '</div>';
   }
 
-  const html = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Body Composition Report — ${reportDate}</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Georgia', serif; color: #1a1a2e; background: #fff; font-size: 14px; line-height: 1.7; }
-  .cover { background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%); color: #fff; padding: 60px 48px 48px; min-height: 180px; }
-  .cover h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 8px; }
-  .cover .sub { font-size: 14px; opacity: 0.75; margin-bottom: 4px; }
-  .cover .date { font-size: 13px; opacity: 0.6; margin-top: 20px; }
-  .body { padding: 0 48px 48px; }
-  .section { margin-top: 32px; padding-top: 20px; border-top: 2px solid #e2e8f0; }
-  .section:first-child { border-top: none; }
-  h2 { font-size: 16px; font-weight: 700; color: #1e3a5f; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; padding-bottom: 6px; border-bottom: 1px solid #cbd5e1; }
-  h3 { font-size: 14px; font-weight: 600; color: #334155; margin: 14px 0 6px; }
-  p { margin: 8px 0; color: #334155; }
-  ul { margin: 8px 0 8px 20px; color: #334155; }
-  li { margin: 4px 0; }
-  strong { color: #0f172a; }
-  .metric-row { display: flex; align-items: baseline; gap: 8px; margin: 6px 0; }
-  .metric-val { font-size: 22px; font-weight: 700; color: #1e3a5f; }
-  .metric-range { font-size: 12px; color: #64748b; }
-  .print-btn { position: fixed; bottom: 24px; right: 24px; background: #1e3a5f; color: #fff; border: none; border-radius: 10px; padding: 12px 22px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 20px rgba(0,0,0,.25); z-index: 999; }
-  .print-btn:hover { background: #2563eb; }
-  @media print {
-    .print-btn { display: none !important; }
-    .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    body { font-size: 12px; }
-    .section { page-break-inside: avoid; }
-  }
-</style>
-</head>
-<body>
-<div class="cover">
-  <div class="sub">HEALTH TRACKER — PERSONAL REPORT</div>
-  <h1>Body Composition Analysis</h1>
-  <div class="date">Generated ${reportDate}</div>
-</div>
-<div class="body">
-<div class="section">
-${mdToHtml(markdown)}
-</div>
-</div>
-<button class="print-btn" onclick="window.print()">🖨️ Save as PDF</button>
-</body>
-</html>`;
+  var bfGauge = gauge('Body Fat %', bestBF ? +bestBF.toFixed(1) : null, bfLo, bfHi, [
+    {label:'Essential',from:2,to:6,color:'#7c3aed'},
+    {label:'Athletic',from:6,to:14,color:'#2563eb'},
+    {label:'Fitness',from:14,to:18,color:'#16a34a'},
+    {label:'Average',from:18,to:25,color:'#d97706'},
+    {label:'Above Avg',from:25,to:32,color:'#ea580c'},
+    {label:'Obese',from:32,to:40,color:'#dc2626'}
+  ], '%');
 
-  const w = window.open('', '_blank', 'width=900,height=750,scrollbars=yes');
-  if (w) {
-    w.document.write(html);
-    w.document.close();
-  } else {
-    // Fallback: show in current page
-    document.getElementById('gen-report-status').innerHTML += ' <small style="color:var(--muted)">(Pop-up blocked — allow pop-ups and try again, or use the chat export below)</small>';
+  var vfGauge = gauge('Visceral Fat Index', bestVF, vfLo, vfHi, [
+    {label:'Healthy',from:1,to:10,color:'#16a34a'},
+    {label:'Excess',from:10,to:15,color:'#d97706'},
+    {label:'High Risk',from:15,to:20,color:'#dc2626'}
+  ], '');
+
+  var bmiGauge = bestBMI ? gauge('BMI', +bestBMI.toFixed(1), +bestBMI.toFixed(1)-0.5, +bestBMI.toFixed(1)+0.5, [
+    {label:'Underweight',from:10,to:18.5,color:'#7c3aed'},
+    {label:'Normal',from:18.5,to:25,color:'#16a34a'},
+    {label:'Overweight',from:25,to:30,color:'#d97706'},
+    {label:'Obese',from:30,to:40,color:'#dc2626'}
+  ], '') : '';
+
+  function statCard(label, val, unit, delta, positiveGood) {
+    var dHtml = '';
+    if (delta != null) {
+      var d = parseFloat(delta);
+      var good = positiveGood ? d <= 0 : d >= 0;
+      if (positiveGood) good = d >= 0;
+      var arrow = d > 0 ? '\u25b2' : '\u25bc';
+      var col = (positiveGood ? d >= 0 : d <= 0) ? '#16a34a' : '#dc2626';
+      dHtml = '<div style="font-size:11px;color:'+col+';margin-top:3px">'+arrow+' '+Math.abs(d).toFixed(1)+' '+unit+' since start</div>';
+    }
+    return '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.04)">' +
+      '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:5px">'+label+'</div>' +
+      '<div style="font-size:24px;font-weight:800;color:#0f172a;line-height:1">'+(val!=null?val:'\u2014')+'<span style="font-size:13px;font-weight:400;color:#94a3b8"> '+unit+'</span></div>' +
+      dHtml + '</div>';
   }
+
+  var statsHtml =
+    statCard('Weight', bestWt ? bestWt.toFixed(1) : null, 'lbs', wtDelta, false) +
+    statCard('Body Fat', bestBF ? bestBF.toFixed(1) : null, '%', bfDelta, false) +
+    statCard('Lean Mass', bestLBM ? bestLBM.toFixed(1) : null, 'lbs', lbmDelta, true) +
+    statCard('Skeletal Muscle', bestSMM ? bestSMM.toFixed(1) : null, 'lbs', smmDelta, true) +
+    statCard('Visceral Fat', bestVF, 'level', vfDelta, false) +
+    statCard('BMI', bestBMI ? bestBMI.toFixed(1) : null, '', null, false) +
+    statCard('BMR', bestBMR, 'kcal', null, false);
+
+  // Build HTML for report window
+  var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Body Composition Report</title>' +
+    '<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"><\/script>' +
+    '<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-adapter-date-fns/3.0.0/chartjs-adapter-date-fns.bundle.min.js"><\/script>' +
+    '<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#f8fafc;color:#1e293b;font-size:13px;line-height:1.6}.cover{background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 60%,#0e4f6b 100%);color:#fff;padding:48px 48px 36px}.cover h1{font-size:32px;font-weight:800;letter-spacing:-1px;margin-bottom:6px}.cover .sub{font-size:11px;letter-spacing:.15em;text-transform:uppercase;opacity:.6}.cover .date{font-size:12px;opacity:.5;margin-top:18px}.wrap{padding:28px 40px 60px;max-width:1050px;margin:0 auto}.sec{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:24px 28px;margin-bottom:18px;box-shadow:0 1px 4px rgba(0,0,0,.04)}.sec-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#64748b;margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid #f1f5f9}.charts-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px}.chart-card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:18px 20px;box-shadow:0 1px 4px rgba(0,0,0,.04)}.chart-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#334155;margin-bottom:14px}.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}.legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:#64748b}.ldot{width:8px;height:8px;border-radius:50%;flex-shrink:0}.ai-sec{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:24px 28px;margin-bottom:18px;box-shadow:0 1px 4px rgba(0,0,0,.04)}.ai-h2{font-size:14px;font-weight:700;color:#1e3a5f;margin:20px 0 6px;padding-bottom:4px;border-bottom:1px solid #e2e8f0}.ai-p{color:#334155;margin:6px 0}.ai-li{margin:4px 0;color:#334155}.print-btn{position:fixed;bottom:24px;right:24px;background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;border:none;border-radius:12px;padding:13px 26px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(37,99,235,.4);z-index:999}@media print{.print-btn{display:none!important}.cover{-webkit-print-color-adjust:exact;print-color-adjust:exact}.sec,.chart-card,.ai-sec{box-shadow:none;page-break-inside:avoid}.charts-grid{grid-template-columns:1fr 1fr}}<\/style></head><body>' +
+    '<div class="cover"><div class="sub">Personal Health Report</div><h1>Body Composition Analysis</h1><div style="font-size:13px;opacity:.7;margin-top:8px">InBody &middot; Hume Body Pod &middot; Daily Tracking</div><div class="date">Generated ' + reportDate + '</div></div>' +
+    '<div class="wrap">' +
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:24px 0 18px">' + statsHtml + '</div>' +
+    '<div class="sec"><div class="sec-title">Current Status &mdash; Where You Stand</div>' + bfGauge + vfGauge + bmiGauge +
+    '<div style="font-size:11px;color:#94a3b8;margin-top:4px">Vertical line = current value &nbsp;&bull;&nbsp; White band = confidence range &nbsp;&bull;&nbsp; Source: InBody July 29 (gold standard)</div></div>' +
+    '<div class="sec-title" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#64748b;margin-bottom:12px">Progress Over Time</div>' +
+    '<div class="charts-grid">' +
+      '<div class="chart-card"><div class="chart-title">Weight (lbs)</div><canvas id="c-wt" height="160"></canvas><div class="legend"><div class="legend-item"><div class="ldot" style="background:#94a3b8"></div>Daily log</div><div class="legend-item"><div class="ldot" style="background:#f59e0b;outline:2px solid #92400e;outline-offset:1px"></div>InBody scan</div><div class="legend-item"><div class="ldot" style="background:#38bdf8"></div>Hume</div></div></div>' +
+      '<div class="chart-card"><div class="chart-title">Body Fat %</div><canvas id="c-bf" height="160"></canvas><div class="legend"><div class="legend-item"><div class="ldot" style="background:#94a3b8"></div>Daily log</div><div class="legend-item"><div class="ldot" style="background:#f59e0b;outline:2px solid #92400e;outline-offset:1px"></div>InBody</div><div class="legend-item"><div class="ldot" style="background:#38bdf8"></div>Hume</div></div></div>' +
+      '<div class="chart-card"><div class="chart-title">Lean Body Mass (lbs)</div><canvas id="c-lbm" height="160"></canvas><div class="legend"><div class="legend-item"><div class="ldot" style="background:#a78bfa"></div>Hume daily</div><div class="legend-item"><div class="ldot" style="background:#f59e0b;outline:2px solid #92400e;outline-offset:1px"></div>InBody</div></div></div>' +
+      '<div class="chart-card"><div class="chart-title">Skeletal Muscle Mass (lbs)</div><canvas id="c-smm" height="160"></canvas><div class="legend"><div class="legend-item"><div class="ldot" style="background:#94a3b8"></div>Daily log</div><div class="legend-item"><div class="ldot" style="background:#f59e0b;outline:2px solid #92400e;outline-offset:1px"></div>InBody</div><div class="legend-item"><div class="ldot" style="background:#38bdf8"></div>Hume</div></div></div>' +
+    '</div>' +
+    '<div class="ai-sec" id="ai-section"><div class="sec-title">AI Analysis</div><div id="ai-loading" style="color:#94a3b8;font-style:italic;text-align:center;padding:20px 0">&#9203; Generating detailed analysis&hellip; (~20 seconds)</div><div id="ai-content" style="display:none"></div></div>' +
+    '</div>' +
+    '<button class="print-btn" onclick="window.print()">&#x1F5A8; Save as PDF</button>' +
+    '<script>var _d=' + chartJSON + ';' +
+    'function mk(id,sets){var c=document.getElementById(id);if(!c)return;new Chart(c,{type:"line",data:{datasets:sets},options:{responsive:true,plugins:{legend:{display:false},tooltip:{mode:"index",intersect:false}},scales:{x:{type:"time",time:{unit:"week",displayFormats:{week:"MMM d"}},ticks:{color:"#94a3b8",font:{size:9},maxRotation:35},grid:{color:"#f1f5f9"}},y:{ticks:{color:"#94a3b8",font:{size:10}},grid:{color:"#f1f5f9"}}},animation:{duration:500}}});}' +
+    'function line(data,col,r){return {data:data.map(function(d){return {x:d.x,y:d.y};}),borderColor:col,backgroundColor:col+"44",fill:false,tension:0.3,pointRadius:r,pointHoverRadius:5,borderWidth:r>3?0:1.5,showLine:r<=3,spanGaps:true,order:r>3?1:3};}' +
+    'function pts(data,col,r,shape){return {data:data.map(function(d){return {x:d.x,y:d.y};}),borderColor:col,backgroundColor:col,fill:false,tension:0,pointRadius:r,pointStyle:shape||"circle",pointHoverRadius:r+2,borderWidth:0,showLine:false,order:1};}' +
+    'function init(){' +
+      'mk("c-wt",[line(_d.wtData,"#94a3b8",2),pts(_d.ibWt,"#f59e0b",8,"diamond"),pts(_d.humeWt,"#38bdf8",5)]);' +
+      'mk("c-bf",[line(_d.bfData,"#94a3b8",2),pts(_d.ibBf,"#f59e0b",8,"diamond"),pts(_d.humeBf,"#38bdf8",5)]);' +
+      'mk("c-lbm",[line(_d.lbmData,"#a78bfa",3),pts(_d.ibLBM,"#f59e0b",8,"diamond")]);' +
+      'mk("c-smm",[line(_d.smmData,"#94a3b8",2),pts(_d.ibSMM,"#f59e0b",8,"diamond"),pts(_d.humeSMM,"#38bdf8",5)]);' +
+    '}' +
+    'if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",init);}else{setTimeout(init,200);}' +
+    'function mdToHtml(t){return t.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/^## (.+)$/gm,"<div class=\"ai-h2\">$1</div>").replace(/^### (.+)$/gm,"<div style=\"font-size:13px;font-weight:600;color:#334155;margin:10px 0 4px\">$1</div>").replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/\*(.+?)\*/g,"<em>$1</em>").replace(/^- (.+)$/gm,"<div class=\"ai-li\">&bull; $1</div>").replace(/\n\n/g,"</p><p class=\"ai-p\">").replace(/\n/g,"<br>");}' +
+    'window.injectNarrative=function(text){document.getElementById("ai-loading").style.display="none";var el=document.getElementById("ai-content");el.style.display="block";el.innerHTML="<p class=\"ai-p\">"+mdToHtml(text)+"</p>";};<\/script>' +
+    '</body></html>';
+
+  var w = window.open('', '_blank', 'width=1050,height=820,scrollbars=yes');
+  if (w) { w.document.write(html); w.document.close(); }
+  return w;
 }
 
 // ===== SEGMENTAL ANALYSIS =====
