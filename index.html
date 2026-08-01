@@ -4159,37 +4159,7 @@ function handleHumePhotoImport(files) {
       source: { type: 'base64', media_type: img.mediaType, data: img.base64 }
     }));
 
-    const prompt = 'These are ' + images.length + ' screenshot' + (images.length > 1 ? 's' : '') + ' of a Hume Body Pod body composition scan result, showing different sections of the same scan. Read ALL screens and combine every visible metric into a single JSON object.
-
-Extract every number you can see and return ONLY a valid JSON object using these field names:
-- date (YYYY-MM-DD if visible)
-- weight (lbs)
-- pbf (body fat % as a number, e.g. 24.3)
-- bodyFatMass (lbs)
-- leanBodyMass (lbs)
-- smm (skeletal muscle mass, lbs)
-- muscleMass (lbs, if separate from smm)
-- bmi
-- visceralFat (level 1-20)
-- metabolicAge
-- bmr (kcal)
-- smi (kg/m²)
-- ecwTbw (ratio like 0.363)
-- icw (intracellular water, lbs)
-- ecw (extracellular water, lbs)
-- tbw (total body water, lbs)
-- proteinMass (lbs)
-- boneMass (lbs)
-- muscleFatRatio
-- hydrationLevel
-- healthScore
-- bodyCompGrade
-- metabolicAgeValue
-- segFatRA, segFatLA, segFatTR, segFatRL, segFatLL (segmental fat %, right arm / left arm / trunk / right leg / left leg)
-- segLeanRA, segLeanLA, segLeanTR, segLeanRL, segLeanLL (segmental lean/muscle lbs)
-- notes (any other metrics not listed above, as a short string)
-
-Only include fields clearly visible across any of the screenshots. Return ONLY the JSON, no explanation, no markdown fences.';
+    const prompt = 'These are ' + images.length + ' screenshot' + (images.length > 1 ? 's' : '') + ' of a Hume Body Pod body composition scan result, showing different sections of the same scan. Read ALL screens and combine every visible metric into a single JSON object.\n\nExtract every number you can see and return ONLY a valid JSON object using these field names:\n- date (YYYY-MM-DD if visible)\n- weight (lbs)\n- pbf (body fat % as a number, e.g. 24.3)\n- bodyFatMass (lbs)\n- leanBodyMass (lbs)\n- leanMassPct (lean mass %)\n- smm (skeletal muscle mass, lbs)\n- bmi\n- visceralFatIndex (level 1-20)\n- metabolicAge (yrs)\n- heartRate (BPM)\n- bmr (kcal)\n- bodyCellMass (lbs)\n- skeletalMass (lbs)\n- boneMineralContent (lbs)\n- subcutFatMass (lbs)\n- subcutFatPct (%)\n- bodyWaterPct (%)\n- icw (intracellular water, lbs)\n- ecw (extracellular water, lbs)\n- mineralMass (lbs)\n- segRaLean, segLaLean, segTrLean, segRlLean, segLlLean (segmental lean mass lbs: right arm, left arm, trunk, right leg, left leg)\n- segRaFat, segLaFat, segTrFat, segRlFat, segLlFat (segmental fat %: right arm, left arm, trunk, right leg, left leg)\n- notes (any other metrics not listed above, as a short string)\n\nOnly include fields clearly visible across any of the screenshots. Return ONLY the JSON, no explanation, no markdown fences.';
 
     try {
       const resp = await fetch('https://api.anthropic.com/v1/messages', {
