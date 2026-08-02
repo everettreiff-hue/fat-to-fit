@@ -5863,10 +5863,12 @@ async function initFirebaseSync() {
         // If data is already identical (two devices bouncing the same state),
         // skip reload+push to avoid an infinite sync loop.
         const prevCounts = [getData().length, getLiftWorkouts().length, getNutritionData().length, getWorkoutTemplates().length];
+        const prevTemplateJson = JSON.stringify(getWorkoutTemplates());
         if (localTs === 0) mergeAllAppData(remote);
         else applyAllAppData(remote);
         const newCounts = [getData().length, getLiftWorkouts().length, getNutritionData().length, getWorkoutTemplates().length];
-        const dataChanged = prevCounts.some((c, i) => c !== newCounts[i]);
+        // Also check template content — edits change content but not count
+        const dataChanged = prevCounts.some((c, i) => c !== newCounts[i]) || prevTemplateJson !== JSON.stringify(getWorkoutTemplates());
 
         localStorage.setItem('ht_last_modified', String(remoteTs));
 
