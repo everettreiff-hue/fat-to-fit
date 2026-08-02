@@ -6004,6 +6004,38 @@ function markLocalChange() {
 // visible error on some engines) gets caught and shown on screen. Safe to
 // revert (just change the script type back and delete this block) once
 // mobile rendering is confirmed stable. =====
+
+// ===== AUTO-UPDATE CHECK =====
+// Fetch the live site in the background; if the version token differs from what
+// we loaded (can happen when iOS PWA serves a stale cached copy), show a banner.
+(function() {
+  var CURRENT_VERSION = '20260802c';
+  var stored = localStorage.getItem('ht_code_version');
+  if (stored !== CURRENT_VERSION) {
+    // First run of this version — record it and move on (no banner needed)
+    localStorage.setItem('ht_code_version', CURRENT_VERSION);
+  }
+  // After app loads, silently check for a newer version in the background
+  window.addEventListener('load', function() {
+    setTimeout(function() {
+      fetch(location.href + (location.search ? '&' : '?') + '_v=' + Date.now(), { cache: 'no-store' })
+        .then(function(r) { return r.text(); })
+        .then(function(html) {
+          var m = html.match(/var CURRENT_VERSION = '([^']+)'/);
+          if (m && m[1] !== CURRENT_VERSION) {
+            // Newer code is available — show update banner
+            var bar = document.createElement('div');
+            bar.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#2563eb;color:#fff;font-size:13px;font-weight:600;text-align:center;padding:10px 16px;z-index:999999;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;';
+            bar.innerHTML = '🔄 App update available &nbsp;<span style="background:rgba(255,255,255,.25);border-radius:6px;padding:3px 10px;font-size:12px;">Tap to reload</span>';
+            bar.onclick = function() { location.reload(true); };
+            document.body.appendChild(bar);
+          }
+        })
+        .catch(function() {}); // Offline — ignore
+    }, 3000);
+  });
+})();
+
 (function() {
   try {
     var srcEl = document.getElementById('ht-app-source');
