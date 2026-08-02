@@ -5873,10 +5873,22 @@ async function initFirebaseSync() {
         localStorage.setItem('ht_last_modified', String(remoteTs));
 
         if (dataChanged) {
-          // Real new data — flag a push after reload, then reload to re-render UI
-          localStorage.setItem('ht_needs_push', '1');
-          setSyncStatus('☁️ synced ✓');
-          setTimeout(() => location.reload(), 300);
+          // Real new data — reload to re-render UI, but rate-limit to once per 20s
+          // to prevent an infinite reload loop when two devices bounce sync updates
+          const lastReload = Number(localStorage.getItem('ht_last_sync_reload') || 0);
+          const cooldownOk = Date.now() - lastReload > 20000;
+          if (cooldownOk) {
+            localStorage.setItem('ht_last_sync_reload', String(Date.now()));
+            localStorage.setItem('ht_needs_push', '1');
+            setSyncStatus('☁️ synced ✓');
+            setTimeout(() => location.reload(), 300);
+          } else {
+            // Cooldown active — data is already in localStorage, just update timestamps
+            // and let a natural re-render happen without a full reload
+            fbLastWriteTs = remoteTs;
+            localStorage.setItem('ht_fb_last_write', String(remoteTs));
+            setSyncStatus('☁️ synced ✓');
+          }
         } else {
           // No actual change — accept remote ts, no reload needed
           fbLastWriteTs = remoteTs;
