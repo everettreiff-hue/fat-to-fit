@@ -5944,8 +5944,9 @@ function applyAllAppData(remote) {
     const remoteByName = {};
     remote.workoutTemplates.forEach(t => { remoteByName[t.name] = t; });
     // Keep local-only templates; replace anything that also exists in remote with the remote version
+    // Sort by name for stable JSON output — prevents spurious diffs triggering reload loops
     const localOnly = localT.filter(t => !remoteByName[t.name]);
-    const merged = [...remote.workoutTemplates, ...localOnly];
+    const merged = [...remote.workoutTemplates, ...localOnly].sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
     localStorage.setItem('ht_workout_templates', JSON.stringify(merged));
   } else if (!Array.isArray(remote.workoutTemplates) && getWorkoutTemplates().length > 0) {
     // Local has templates but remote doesn't — schedule a push so remote gets them
@@ -5957,13 +5958,15 @@ function mergeByDate(local, remote) {
   const map = {};
   remote.forEach(e => { if (e.date) map[e.date] = e; });
   local.forEach(e => { if (e.date) map[e.date] = e; }); // local overwrites
-  return Object.values(map);
+  // Sort by date so output is stable regardless of insertion order — prevents
+  // spurious JSON diffs that trigger an infinite reload loop across devices
+  return Object.values(map).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
 }
 function mergeWorkouts(local, remote) {
   const map = {};
   remote.forEach(e => { if (e.date && e.type) map[e.date + '|' + e.type] = e; });
   local.forEach(e => { if (e.date && e.type) map[e.date + '|' + e.type] = e; });
-  return Object.values(map);
+  return Object.values(map).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
 }
 function mergeAllAppData(remote) {
   if (Array.isArray(remote.entries))
@@ -5983,8 +5986,11 @@ function mergeAllAppData(remote) {
     localStorage.setItem('ht_nutrition', JSON.stringify(mergeByDate(getNutritionData(), remote.nutrition)));
   if (Array.isArray(remote.workoutTemplates) && remote.workoutTemplates.length > 0) {
     const localT = getWorkoutTemplates();
-    const localNames = new Set(localT.map(t => t.name));
-    const merged = [...localT, ...remote.workoutTemplates.filter(t => !localNames.has(t.name))];
+    const remoteByName = {};
+    remote.workoutTemplates.forEach(t => { remoteByName[t.name] = t; });
+    const localOnly = localT.filter(t => !remoteByName[t.name]);
+    // Remote wins on edits; sort by name for stable JSON output
+    const merged = [...remote.workoutTemplates, ...localOnly].sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
     localStorage.setItem('ht_workout_templates', JSON.stringify(merged));
   } else if (!Array.isArray(remote.workoutTemplates) && getWorkoutTemplates().length > 0) {
     setTimeout(() => pushToFirestore(), 2000);
