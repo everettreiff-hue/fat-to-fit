@@ -4326,7 +4326,6 @@ async function generateBodyCompReport() {
     openReportWindow(reportDate, entries, inbody, aiEst, reportText);
     btn.disabled=false; btn.textContent='Generate PDF Report';
     status.innerHTML='\u2713 Report ready \u2014 click <strong>Save as PDF</strong> in the report window.';
-    sendReportEmail(reportDate, aiEst, entries, reportText);
   } catch(err) {
     btn.disabled=false; btn.textContent='Generate PDF Report';
     status.innerHTML='<span style="color:var(--danger)">Error: '+(err.message||err)+'</span>';
@@ -4356,30 +4355,6 @@ function parseAIEstimates(text) {
     vf:val(vfB),   vfLo:vfR ?vfR[0] :null, vfHi:vfR ?vfR[1] :null,
     bmi:val(bmiB), bmr:val(bmrB)
   };
-}
-
-function sendReportEmail(reportDate, aiEst, entries, aiText) {
-  var sorted=entries.filter(function(e){return e.weight;}).sort(function(a,b){return a.date.localeCompare(b.date);});
-  var latestWt=null;
-  for(var i=sorted.length-1;i>=0;i--){if(sorted[i].weight!=null){latestWt=sorted[i].weight;break;}}
-  function f(v,u){return v!=null?v+(u||''):'\u2014';}
-  var bodyLines=[
-    'Body Composition Report \u2014 '+reportDate,'',
-    'BEST ESTIMATES (AI-weighted: InBody 60% / Hume 30% / Daily 10%)',
-    '---',
-    'Weight:               '+(latestWt?latestWt.toFixed(1)+' lbs (daily scale)':'\u2014'),
-    'Body Fat %:           '+f(aiEst.bf,'%')+(aiEst.bfLo?' (confidence '+aiEst.bfLo+'\u2013'+aiEst.bfHi+'%)':''),
-    'Lean Body Mass:       '+f(aiEst.lbm,' lbs')+(aiEst.lbmLo?' (confidence '+aiEst.lbmLo+'\u2013'+aiEst.lbmHi+' lbs)':''),
-    'Skeletal Muscle Mass: '+f(aiEst.smm,' lbs')+(aiEst.smmLo?' (confidence '+aiEst.smmLo+'\u2013'+aiEst.smmHi+' lbs)':''),
-    'Visceral Fat Level:   '+f(aiEst.vf)+(aiEst.vfLo?' (confidence '+aiEst.vfLo+'\u2013'+aiEst.vfHi+')':''),
-    'BMI:                  '+f(aiEst.bmi),
-    'BMR:                  '+f(aiEst.bmr,' kcal/day'),'',
-    '---','',
-    aiText.slice(0,1500)+(aiText.length>1500?'\n\n[Open app for full analysis]':''),'',
-    'https://everettreiff-hue.github.io/fat-to-fit/'
-  ];
-  var subject='Body Composition Report \u2014 '+reportDate;
-  try{window.open('mailto:everett.reiff@gmail.com?subject='+encodeURIComponent(subject)+'&body='+encodeURIComponent(bodyLines.join('\n')));}catch(ignored){}
 }
 
 function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
@@ -4424,7 +4399,9 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
             trF:latestIB.segFat?latestIB.segFat.tr:null,rlF:latestIB.segFat?latestIB.segFat.rl:null,
             llF:latestIB.segFat?latestIB.segFat.ll:null,src:'InBody '+latestIB.date};
   } else {
-    for(var si=sorted.length-1;si>=0;si--){var se=sorted[si];if(se.segRaLean!=null){segSrc={ra:se.segRaLean,la:se.segLaLean,tr:se.segTrLean,rl:se.segRlLean,ll:se.segLlLean,raF:se.segRaFat,laF:se.segLaFat,trF:se.segTrFat,rlF:se.segRlFat,llF:se.segLlFat,src:'Log '+se.date};break;}}
+    // search ALL entries (not just weight-filtered) so segmental data isn't missed
+    var allEntries=entries.slice().sort(function(a,b){return a.date.localeCompare(b.date);});
+    for(var si=allEntries.length-1;si>=0;si--){var se=allEntries[si];if(se.segRaLean!=null){segSrc={ra:se.segRaLean,la:se.segLaLean,tr:se.segTrLean,rl:se.segRlLean,ll:se.segLlLean,raF:se.segRaFat,laF:se.segLaFat,trF:se.segTrFat,rlF:se.segRlFat,llF:se.segLlFat,src:'Log '+se.date};break;}}
   }
 
   function gauge(label,value,lo,hi,zones,unit){
@@ -4492,7 +4469,6 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
 
   var reportHTML=[
     '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Body Composition Report</title>',
-    '<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"><\/script>',
     '<style>'+css+'<\/style></head><body>',
     '<div class="cover"><div class="sub">Personal Health Report</div><h1>Body Composition Analysis</h1>',
     '<div style="font-size:13px;opacity:.7;margin-top:8px">InBody &middot; Hume Body Pod &middot; Daily Tracking</div>',
@@ -4542,7 +4518,7 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
     'var tw=document.createElement("div");tw.style.flex="1";tw.appendChild(tbl);tw.appendChild(note);',
     'var w=document.createElement("div");w.style.cssText="display:flex;gap:24px;align-items:flex-start";w.appendChild(svg);w.appendChild(tw);',
     'var sc=document.getElementById("seg-content");sc.innerHTML="";sc.appendChild(w);}',
-    'if(document.readyState==="loading"){document.addEventListener("DOMContentLoaded",function(){initCharts();initSeg();});}else{setTimeout(function(){initCharts();initSeg();},100);}',
+    'var _cjs=document.createElement("script");_cjs.src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js";_cjs.onload=function(){initCharts();initSeg();};document.head.appendChild(_cjs);',
     '})();<\/script>',
     '</body></html>'
   ].join('');
