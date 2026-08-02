@@ -5936,10 +5936,14 @@ function applyAllAppData(remote) {
   if (Array.isArray(remote.nutrition))
     localStorage.setItem('ht_nutrition', JSON.stringify(mergeByDate(getNutritionData(), remote.nutrition)));
   if (Array.isArray(remote.workoutTemplates) && remote.workoutTemplates.length > 0) {
-    // Merge by name — local entries win, remote fills in any missing templates
+    // Merge by name — remote wins on edits (so changes made on one device propagate),
+    // but local-only templates (not present in remote) are preserved.
     const localT = getWorkoutTemplates();
-    const localNames = new Set(localT.map(t => t.name));
-    const merged = [...localT, ...remote.workoutTemplates.filter(t => !localNames.has(t.name))];
+    const remoteByName = {};
+    remote.workoutTemplates.forEach(t => { remoteByName[t.name] = t; });
+    // Keep local-only templates; replace anything that also exists in remote with the remote version
+    const localOnly = localT.filter(t => !remoteByName[t.name]);
+    const merged = [...remote.workoutTemplates, ...localOnly];
     localStorage.setItem('ht_workout_templates', JSON.stringify(merged));
   } else if (!Array.isArray(remote.workoutTemplates) && getWorkoutTemplates().length > 0) {
     // Local has templates but remote doesn't — schedule a push so remote gets them
