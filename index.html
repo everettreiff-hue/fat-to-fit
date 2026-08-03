@@ -4312,7 +4312,7 @@ async function generateBodyCompReport() {
     var res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body: JSON.stringify({model:'claude-sonnet-4-6',max_tokens:4096,messages:[{role:'user',content:promptLines.join('\n')}]})
+      body: JSON.stringify({model:'claude-sonnet-4-6',max_tokens:8192,messages:[{role:'user',content:promptLines.join('\n')}]})
     });
     var data = await res.json();
     if (!res.ok) {
@@ -4334,9 +4334,8 @@ async function generateBodyCompReport() {
 
 function parseAIEstimates(text) {
   function sec(header) {
-    // Find the section matching this header that actually contains "Best estimate:"
-    // Iterates all matches so executive-summary false positives are skipped
-    var re = new RegExp('(?:##\\s+)?' + header, 'gi');
+    // Require header at start of line to prevent mid-sentence matches in executive summary
+    var re = new RegExp('(?:^|\\n)(?:##\\s+)?' + header, 'gi');
     var m;
     while ((m = re.exec(text)) !== null) {
       var block = text.slice(m.index, m.index + 800);
@@ -6037,7 +6036,7 @@ function markLocalChange() {
 // Fetch the live site in the background; if the version token differs from what
 // we loaded (can happen when iOS PWA serves a stale cached copy), show a banner.
 (function() {
-  var CURRENT_VERSION = '20260802c';
+  var CURRENT_VERSION = '20260802d';
   var stored = localStorage.getItem('ht_code_version');
   if (stored !== CURRENT_VERSION) {
     // First run of this version — record it and move on (no banner needed)
