@@ -4334,9 +4334,15 @@ async function generateBodyCompReport() {
 
 function parseAIEstimates(text) {
   function sec(header) {
-    // match with or without ## prefix so the parser works regardless of AI formatting
-    var idx = text.search(new RegExp('(?:##\\s+)?'+header,'i'));
-    return idx>=0 ? text.slice(idx,idx+600) : '';
+    // Find the section matching this header that actually contains "Best estimate:"
+    // Iterates all matches so executive-summary false positives are skipped
+    var re = new RegExp('(?:##\\s+)?' + header, 'gi');
+    var m;
+    while ((m = re.exec(text)) !== null) {
+      var block = text.slice(m.index, m.index + 800);
+      if (/best estimate:/i.test(block)) return block;
+    }
+    return '';
   }
   function val(block) {
     var m = block.match(/Best estimate:\s*([\d,.]+)/i);
@@ -4346,8 +4352,9 @@ function parseAIEstimates(text) {
     var m = block.match(/Confidence range:\s*([\d.]+)[^\d]+([\d.]+)/i);
     return m ? [parseFloat(m[1]),parseFloat(m[2])] : null;
   }
-  var bfB=sec('BODY FAT'), lbmB=sec('LEAN BODY'), smmB=sec('SKELETAL MUSCLE');
-  var vfB=sec('VISCERAL FAT'), bmiB=sec('BODY MASS'), bmrB=sec('BASAL METABOLIC');
+  // Use more specific headers to avoid cross-section false matches
+  var bfB=sec('BODY FAT'), lbmB=sec('LEAN BODY MASS'), smmB=sec('SKELETAL MUSCLE MASS');
+  var vfB=sec('VISCERAL FAT'), bmiB=sec('BODY MASS INDEX'), bmrB=sec('BASAL METABOLIC');
   var bfR=rng(bfB),vfR=rng(vfB),lbmR=rng(lbmB),smmR=rng(smmB);
   return {
     bf:val(bfB),   bfLo:bfR ?bfR[0] :null, bfHi:bfR ?bfR[1] :null,
@@ -4523,6 +4530,9 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
     '}else{var noNote=document.createElement("div");noNote.style.cssText="margin-top:10px;font-size:11px;color:#94a3b8;text-align:center";noNote.textContent="No segmental data logged. To add: InBody tab \u2192 expand Segmental Lean/Fat section when saving a scan.";var ww=document.createElement("div");ww.style.cssText="display:flex;flex-direction:column;align-items:center";ww.appendChild(svg);ww.appendChild(noNote);sc.appendChild(ww);}',
     '}',
     'var _cjs=document.createElement("script");_cjs.src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js";document.body.appendChild(_cjs);var _cp=0,_ci=setInterval(function(){if(typeof Chart!=="undefined"||_cp++>50){clearInterval(_ci);if(typeof Chart!=="undefined"){initCharts();initSeg();}}},100);',
+    // Canvas doesn\'t print to PDF — swap each canvas for an img snapshot before printing
+    'window.addEventListener("beforeprint",function(){document.querySelectorAll("canvas").forEach(function(c){var img=document.createElement("img");img.src=c.toDataURL("image/png",1.0);img.style.cssText="width:100%;height:auto;display:block";c._pi=img;c.parentNode.insertBefore(img,c.nextSibling);c.style.display="none";});});',
+    'window.addEventListener("afterprint",function(){document.querySelectorAll("canvas").forEach(function(c){if(c._pi){c._pi.parentNode.removeChild(c._pi);delete c._pi;c.style.display="";}});});',
     '})();<\/script>',
     '</body></html>'
   ].join('');
