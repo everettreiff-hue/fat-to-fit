@@ -20,17 +20,18 @@
     --bg: #0f1117;
     --surface: #1a1d27;
     --surface2: #22263a;
-    --border: #2e3350;
+    --card-bg: #1a1d27;
+    --border: #3b4562;
     --accent: #4f8ef7;
     --accent2: #34d399;
     --warn: #f59e0b;
     --danger: #f87171;
-    --text: #e2e8f0;
-    --muted: #8892a4;
+    --text: #f1f5f9;
+    --muted: #aeb8ca;
     --radius: 12px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0f1117; color: #e2e8f0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+  body { background: #0f1117; color: #f1f5f9; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 16px; line-height: 1.5; min-height: 100vh; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
 
   /* NAV */
   nav { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 4px; padding: 0 20px; position: sticky; top: 0; z-index: 100; }
@@ -353,6 +354,122 @@
     #session-active-list { max-width: 640px; margin: 0 auto; }
     #session-hub, #session-builder { max-width: 640px; margin: 0 auto; }
   }
+
+  /* ===== READABILITY & ACCESSIBILITY PASS ===== */
+  p { line-height: 1.6; }
+  button, input, select, textarea { font-family: inherit; }
+  input, select, textarea { max-width: 100%; }
+  ::placeholder { color: #8f9bb0; opacity: 1; }
+  ::selection { background: rgba(79,142,247,.35); color: #fff; }
+
+  nav { border-color: var(--border); }
+  nav.top-nav { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+  nav.top-nav::-webkit-scrollbar { display: none; }
+  nav .brand { font-size: 17px; }
+  nav button { font-size: 14px; font-weight: 600; line-height: 1.3; }
+
+  main { padding: 30px 22px 40px; }
+  .grid { gap: 18px; }
+  .grid-4 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+  .grid-5 { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+  .grid-6 { grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); }
+
+  .card { padding: 22px; border-color: var(--border); }
+  .card h3 { font-size: 14px; line-height: 1.35; letter-spacing: .035em; }
+  .card-section-title { font-size: 13px; line-height: 1.4; letter-spacing: .055em; }
+  .section-title { font-size: 24px; line-height: 1.25; margin-bottom: 22px; }
+  .section-group { margin-top: 34px; margin-bottom: 12px; }
+  .section-group-label { font-size: 12px; line-height: 1.4; letter-spacing: .085em; }
+
+  .stat { padding: 19px 20px 18px; min-height: 150px; }
+  .stat .label { font-size: 12px; line-height: 1.35; letter-spacing: .055em; margin-bottom: 9px; }
+  .stat .value { font-size: 32px; line-height: 1.05; }
+  .stat .value .unit { font-size: 16px; }
+  .stat .sub, .stat .delta { font-size: 13px; line-height: 1.45; }
+  .progress-label { font-size: 12px; line-height: 1.35; margin-top: 5px; }
+
+  .projection { padding: 18px 22px; }
+  .projection .proj-label { font-size: 12px; line-height: 1.35; letter-spacing: .06em; }
+  .projection .proj-val { font-size: 17px; line-height: 1.35; }
+  .proj-badge { font-size: 13px; }
+
+  .comp-row { padding: 11px 0; }
+  .comp-row .comp-label { font-size: 14px; line-height: 1.45; }
+  .comp-row .comp-val { font-size: 15px; }
+  .comp-row .comp-delta { font-size: 12px; }
+  .trend-header span { font-size: 11px; line-height: 1.35; }
+  .trend-row { padding: 10px 0; }
+  .trend-metric, .trend-goal { font-size: 13px; line-height: 1.4; }
+  .trend-val { font-size: 14px; }
+
+  .form-grid, .field { min-width: 0; }
+  .field { gap: 7px; }
+  .field label { color: var(--muted); font-size: 13px; font-weight: 600; line-height: 1.4; text-transform: none; letter-spacing: .015em; }
+  .field input, .field select, .field textarea { width: 100%; min-width: 0; }
+  .field input, .field select, .field textarea, .lift-input { font-size: 15px; line-height: 1.4; padding: 11px 13px; border-color: var(--border); }
+  .field textarea { min-height: 92px; }
+  .btn { min-height: 42px; font-size: 15px; line-height: 1.25; padding: 10px 18px; }
+  .btn-sm { min-height: 34px; font-size: 13px; padding: 7px 12px; }
+  .crng { gap: 4px; }
+  .crng button { min-height: 34px; font-size: 12px; line-height: 1.3; padding: 6px 10px; }
+  .optional-toggle { min-height: 44px; font-size: 14px; line-height: 1.45; padding: 11px 16px; }
+  .import-zone p, .photo-card .photo-meta, .photo-placeholder { font-size: 13px; line-height: 1.5; }
+  .alert { font-size: 14px; line-height: 1.6; padding: 12px 15px; }
+  .badge { font-size: 12px; line-height: 1.4; padding: 3px 9px; }
+
+  table { font-size: 14px; line-height: 1.5; }
+  th { background: rgba(255,255,255,.025); color: var(--muted); font-size: 12px; line-height: 1.4; padding: 10px 13px; }
+  td { padding: 12px 13px; }
+  tbody tr:nth-child(even) td { background: rgba(255,255,255,.018); }
+  tr:hover td { background: rgba(79,142,247,.07); }
+
+  /* Lift small inline labels and helper text to a legible minimum. */
+  body [style*="font-size:10px"], body [style*="font-size: 10px"],
+  body [style*="font-size:11px"], body [style*="font-size: 11px"] { font-size: 12px !important; }
+  body [style*="font-size:12px"], body [style*="font-size: 12px"] { font-size: 13px !important; }
+
+  button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+    outline: 3px solid rgba(79,142,247,.38);
+    outline-offset: 2px;
+  }
+
+  @media(max-width:700px) {
+    .app-mode-switch { padding: 8px 5px; }
+    .mode-tabs { gap: 4px; }
+    .mode-tab { min-height: 38px; padding: 7px 9px; font-size: 12px; line-height: 1.2; }
+    nav.bottom-nav { padding-top: 7px; }
+    nav.bottom-nav button { min-height: 52px; font-size: 11px; line-height: 1.2; padding: 6px 3px; }
+    nav.bottom-nav button .nav-icon { font-size: 21px; }
+    main { padding: 20px 13px; padding-bottom: calc(88px + env(safe-area-inset-bottom)); }
+    .grid { gap: 14px; }
+    .card { padding: 17px; }
+    .section-title { font-size: 22px; margin-bottom: 18px; }
+    .section-group { margin-top: 27px; margin-bottom: 10px; }
+    .section-group-label { font-size: 12px; }
+    .stat { min-height: 0; padding: 17px 18px; }
+    .stat .label { font-size: 12px; }
+    .stat .value { font-size: 26px; }
+    .stat .sub, .stat .delta { font-size: 13px; }
+    .projection { padding: 15px 16px; gap: 14px; }
+    .projection .proj-label { font-size: 11px; }
+    .projection .proj-val { font-size: 16px; }
+    .chart-header { align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+    .chart-header > div:last-child { width: 100%; justify-content: space-between; flex-wrap: wrap; }
+    .chart-wrap { height: 250px; }
+    table { font-size: 14px; }
+  }
+
+  @media(max-width:400px) {
+    .stat .value { font-size: 26px; }
+  }
+
+  @media(max-width:520px) {
+    .form-grid { grid-template-columns: minmax(0, 1fr); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+  }
 </style>
 </head>
 <body>
@@ -452,10 +569,6 @@ if (window.navigator.standalone) {
     <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:#34d399"></div>Skeletal Muscle (lbs) — Trend</div><div style="display:flex;align-items:center;gap:8px"><div class="crng"><button class="crng-active" onclick="setChartRange('chart-sm','data',this)">Data</button><button onclick="setChartRange('chart-sm','+4w',this)">+4 Wks</button><button onclick="setChartRange('chart-sm','goal',this)">Goal</button></div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-sm')">Reset Zoom</button></div></div>
     <div class="chart-wrap"><canvas id="chart-sm"></canvas></div>
   </div>
-  <div class="card" style="margin-bottom:24px">
-    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:#a855f7"></div>Muscle Mass % — Trend</div><div style="display:flex;align-items:center;gap:8px"><div class="crng"><button class="crng-active" onclick="setChartRange('chart-mm','data',this)">Data</button><button onclick="setChartRange('chart-mm','+4w',this)">+4 Wks</button><button onclick="setChartRange('chart-mm','goal',this)">Goal</button></div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-mm')">Reset Zoom</button></div></div>
-    <div class="chart-wrap"><canvas id="chart-mm"></canvas></div>
-  </div>
 
   <!-- SECTION: Composition & Activity -->
   <div class="section-group"><span class="section-group-label">Composition &amp; Activity</span><div class="section-group-line"></div></div>
@@ -509,10 +622,6 @@ if (window.navigator.standalone) {
       <div class="field">
         <label>Subcutaneous Fat %</label>
         <input type="number" id="log-sf" step="0.1" placeholder="27.1">
-      </div>
-      <div class="field">
-        <label>Muscle Mass %</label>
-        <input type="number" id="log-mm" step="0.1" placeholder="—">
       </div>
       <div class="field">
         <label>Skeletal Muscle (lbs)</label>
@@ -948,10 +1057,6 @@ if (window.navigator.standalone) {
     <div style="position:relative;height:480px"><canvas id="big-chart-bf"></canvas></div>
   </div>
   <div class="card" style="margin-bottom:20px">
-    <div class="chart-header"><h3>Muscle Mass %</h3><button class="btn btn-sm btn-secondary" onclick="resetChart('big-chart-mm')">Reset Zoom</button></div>
-    <div style="position:relative;height:480px"><canvas id="big-chart-mm"></canvas></div>
-  </div>
-  <div class="card" style="margin-bottom:20px">
     <div class="chart-header"><h3>Subcutaneous Fat %</h3><button class="btn btn-sm btn-secondary" onclick="resetChart('big-chart-sf')">Reset Zoom</button></div>
     <div style="position:relative;height:480px"><canvas id="big-chart-sf"></canvas></div>
   </div>
@@ -987,7 +1092,7 @@ if (window.navigator.standalone) {
   <div class="grid grid-3" style="margin-bottom:16px">
     <div class="card">
       <h3>CSV Import</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Import from Whoop / Apple Health CSV export. Columns: date, weight, body_fat, visceral_fat, subcutaneous_fat, muscle_mass, workout, recovery, notes.</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Import from Whoop / Apple Health CSV export. Columns: date, weight, body_fat, visceral_fat, subcutaneous_fat, skeletal_muscle, workout, recovery, notes.</p>
       <div class="import-zone" id="import-zone" onclick="document.getElementById('csv-file').click()"
            ondragover="event.preventDefault();this.classList.add('drag')"
            ondragleave="this.classList.remove('drag')"
@@ -1023,7 +1128,7 @@ if (window.navigator.standalone) {
         <tr><td>body_fat</td><td>Percent (e.g. 30.4)</td><td>30.4</td><td>No</td></tr>
         <tr><td>visceral_fat</td><td>Percent</td><td>12.0</td><td>No</td></tr>
         <tr><td>subcutaneous_fat</td><td>Percent</td><td>27.1</td><td>No</td></tr>
-        <tr><td>muscle_mass</td><td>Percent</td><td>—</td><td>No</td></tr>
+        <tr><td>skeletal_muscle</td><td>Number (lbs)</td><td>—</td><td>No</td></tr>
         <tr><td>workout</td><td>full/upper/lower/cardio/rest</td><td>full</td><td>No</td></tr>
         <tr><td>recovery</td><td>0–100</td><td>72</td><td>No</td></tr>
         <tr><td>notes</td><td>Text</td><td>Felt strong today</td><td>No</td></tr>
@@ -1483,7 +1588,6 @@ function setChartRange(chartId, range, btn) {
   if (chartId === 'chart-weight') renderProgressChart('chart-weight', entries, 'weight', BASELINE.weight, GOAL.weight, 'lbs', '#4f8ef7', range);
   else if (chartId === 'chart-bf') renderProgressChart('chart-bf', entries, 'bodyFat', BASELINE.bodyFat, GOAL.bodyFat, '%', '#f59e0b', range);
   else if (chartId === 'chart-sm') renderSkeletalMuscleChart(entries, range);
-  else if (chartId === 'chart-mm') renderMuscleMassChart(entries, range);
   else if (chartId === 'chart-sf') renderSubcutaneousFatChart(entries, range);
 }
 
@@ -1493,8 +1597,7 @@ const BASELINE = {
   weight: 215.4,
   bodyFat: 30.4,
   visceralFat: 12.0,
-  subcutaneousFat: 27.1,
-  muscleMass: null
+  subcutaneousFat: 27.1
 };
 const GOAL = {
   weight: 172.5, // midpoint 170-175
@@ -1654,11 +1757,11 @@ function renderNutritionPage() {
     },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: '#8892a4', font: { size: 11 } } }, tooltip: { mode: 'index', intersect: false } },
+      plugins: { legend: { labels: { color: '#aeb8ca', font: { size: 12 } } }, tooltip: { mode: 'index', intersect: false } },
       scales: {
-        x: { ticks: { color: '#8892a4', font: { size: 10 }, maxRotation: 45 }, grid: { color: '#2e3350' } },
-        y: { position: 'left', ticks: { color: '#8892a4', font: { size: 10 } }, grid: { color: '#2e3350' }, title: { display: true, text: 'Calories', color: '#8892a4', font: { size: 10 } } },
-        y2: { position: 'right', ticks: { color: '#34d399', font: { size: 10 } }, grid: { drawOnChartArea: false }, title: { display: true, text: 'Protein (g)', color: '#34d399', font: { size: 10 } } }
+        x: { ticks: { color: '#aeb8ca', font: { size: 12 }, maxRotation: 45 }, grid: { color: '#2e3350' } },
+        y: { position: 'left', ticks: { color: '#aeb8ca', font: { size: 12 } }, grid: { color: '#2e3350' }, title: { display: true, text: 'Calories', color: '#aeb8ca', font: { size: 12 } } },
+        y2: { position: 'right', ticks: { color: '#34d399', font: { size: 12 } }, grid: { drawOnChartArea: false }, title: { display: true, text: 'Protein (g)', color: '#34d399', font: { size: 12 } } }
       }
     }
   });
@@ -1894,8 +1997,8 @@ function renderLiftTypeChart(type) {
         plugins: { legend: { display: false }, datalabels: { display: false },
           tooltip: { callbacks: { label: function(ctx){ return ctx.parsed.y.toLocaleString() + ' lbs'; } } } },
         scales: {
-          x: { ticks: { color: textCol, font: { size: 10 }, maxRotation: 45 }, grid: { color: gridCol } },
-          y: { ticks: { color: textCol, font: { size: 10 } }, grid: { color: gridCol } }
+          x: { ticks: { color: textCol, font: { size: 12 }, maxRotation: 45 }, grid: { color: gridCol } },
+          y: { ticks: { color: textCol, font: { size: 12 } }, grid: { color: gridCol } }
         }
       }
     });
@@ -3077,26 +3180,21 @@ function renderDashboard() {
   // Headline stats
   const currW = latest?.weight ?? BASELINE.weight;
   const currBF = latest?.bodyFat ?? BASELINE.bodyFat;
-  const currMM = latest?.muscleMass ?? null;
   const currSM = latest?.skeletalMuscle ?? null;
-  // Find first logged muscle mass / skeletal muscle for baseline delta
-  const firstMM = entries.find(e => e.muscleMass != null)?.muscleMass ?? null;
+  // Find first logged skeletal muscle value for baseline delta
   const firstSM = entries.find(e => e.skeletalMuscle != null)?.skeletalMuscle ?? null;
   const lostW = (BASELINE.weight - currW).toFixed(1);
   const lostBF = (BASELINE.bodyFat - currBF).toFixed(1);
-  const gainMM = currMM != null && firstMM != null ? (currMM - firstMM).toFixed(1) : null;
   const gainSM = currSM != null && firstSM != null ? (currSM - firstSM).toFixed(1) : null;
   const remW = (currW - GOAL.weight).toFixed(1);
   const remBF = (currBF - GOAL.bodyFat).toFixed(1);
   const pctW = Math.min(100, Math.max(0, ((BASELINE.weight - currW)/(BASELINE.weight - GOAL.weight))*100));
   const pctBF = Math.min(100, Math.max(0, ((BASELINE.bodyFat - currBF)/(BASELINE.bodyFat - GOAL.bodyFat))*100));
 
-  const mmDelta = gainMM != null ? (gainMM > 0 ? `↑ +${gainMM}% gained` : gainMM < 0 ? `↓ ${gainMM}% lost` : 'No change') : 'Log muscle mass to track';
-  const mmCls = gainMM != null ? (gainMM > 0 ? 'good' : gainMM < 0 ? 'bad' : 'neutral') : 'neutral';
   const smDelta = gainSM != null ? (gainSM > 0 ? `↑ +${gainSM} lbs gained` : gainSM < 0 ? `↓ ${Math.abs(gainSM)} lbs lost` : 'No change') : 'Log to track';
   const smCls = gainSM != null ? (gainSM > 0 ? 'good' : gainSM < 0 ? 'bad' : 'neutral') : 'neutral';
 
-  // Subcutaneous fat (same pattern as muscle mass)
+  // Subcutaneous fat
   const currSF = latest?.subcutaneousFat ?? null;
   const firstSF = entries.find(e => e.subcutaneousFat != null)?.subcutaneousFat ?? null;
   const lostSF = currSF != null && firstSF != null ? (firstSF - currSF).toFixed(1) : null;
@@ -3106,7 +3204,6 @@ function renderDashboard() {
   const stats = [
     { icon:'⚖️',  label:'Current Weight',  num: fmt(currW,1),  unit:'lbs', sub:`Start: ${BASELINE.weight} lbs<br>Goal: ${GOAL.weight} lbs`,  delta: lostW > 0 ? `↓ ${lostW} lbs lost` : 'At baseline',      cls: lostW > 0 ? 'good':'neutral', progress:pctW,  accent:'accent-blue'   },
     { icon:'🔥',  label:'Body Fat',         num: fmt(currBF,1), unit:'%',   sub:`Start: ${BASELINE.bodyFat}%<br>Goal: ${GOAL.bodyFat}%`,    delta: lostBF > 0 ? `↓ ${lostBF}% lost` : 'At baseline',      cls: lostBF>0 ? 'good':'neutral',  progress:pctBF, accent:'accent-orange'  },
-    { icon:'💪',  label:'Muscle Mass',      num: currMM!=null ? fmt(currMM,1):'—', unit:currMM!=null?'%':'', sub: firstMM!=null ? `Started: ${fmt(firstMM,1)}%`:'Log to track', delta:mmDelta, cls:mmCls, progress:null, accent:'accent-purple'  },
     { icon:'🦴',  label:'Skeletal Muscle',  num: currSM!=null ? fmt(currSM,1):'—', unit:currSM!=null?'lbs':'', sub: firstSM!=null ? `Started: ${fmt(firstSM,1)} lbs`:'Log to track', delta:smDelta, cls:smCls, progress:null, accent:'accent-green'  },
     { icon:'📏',  label:'Subcut. Fat',      num: currSF!=null ? fmt(currSF,1):'—', unit:currSF!=null?'%':'', sub: firstSF!=null ? `Started: ${fmt(firstSF,1)}%`:'Log to track', delta:sfDelta, cls:sfCls, progress:null, accent:'accent-green'  },
     { icon:'📉',  label:'Remaining',        num: remW > 0 ? remW:' ✓', unit:remW>0?'lbs':'', sub:`${remBF>0?remBF+'% BF left':'Body fat goal ✓'}`, delta:`${daysLeft} days left`, cls:'neutral', progress:null, accent:'accent-muted' },
@@ -3137,33 +3234,27 @@ function renderDashboard() {
   // Skeletal muscle trend
   renderSkeletalMuscleChart(entries, _chartRangeState['chart-sm']||'data');
 
-  // Muscle mass trend
-  renderMuscleMassChart(entries, _chartRangeState['chart-mm']||'data');
-
   // Subcutaneous fat trend
   renderSubcutaneousFatChart(entries, _chartRangeState['chart-sf']||'data');
 
   // Body comp latest
   const compEl = document.getElementById('comp-latest');
   if (latest) {
-    const firstMMEntry = entries.find(e => e.muscleMass != null);
-    const mmBaseline = firstMMEntry?.muscleMass ?? null;
     const firstSMEntry = entries.find(e => e.skeletalMuscle != null);
     const smBaseline = firstSMEntry?.skeletalMuscle ?? null;
     const items = [
       { label:'Visceral Fat', val: latest.visceralFat, unit:'%', baseline: BASELINE.visceralFat },
       { label:'Subcut. Fat', val: latest.subcutaneousFat, unit:'%', baseline: BASELINE.subcutaneousFat },
-      { label:'Muscle Mass', val: latest.muscleMass, unit:'%', baseline: mmBaseline },
       { label:'Skeletal Muscle', val: latest.skeletalMuscle, unit:' lbs', baseline: smBaseline },
     ];
     compEl.innerHTML = items.map(item => {
       const diff = item.val != null && item.baseline != null ? (parseFloat(item.val) - item.baseline).toFixed(1) : null;
-      const cls = diff != null ? (item.label==='Muscle Mass'||item.label==='Skeletal Muscle' ? (diff>0?'good':'bad') : (diff<0?'good':'bad')) : 'neutral';
+      const cls = diff != null ? (item.label==='Skeletal Muscle' ? (diff>0?'good':'bad') : (diff<0?'good':'bad')) : 'neutral';
       return `<div class="comp-row">
         <span class="comp-label">${item.label}</span>
         <span class="comp-val">${fmt(item.val)}${item.unit}${diff!=null?`<span class="comp-delta ${cls}">${diff>0?'+'+diff:diff}${item.unit.includes('lbs')?'lbs':'%'}</span>`:''}</span>
       </div>`;
-    }).join('') + `<div style="font-size:10px;color:var(--muted);margin-top:10px;letter-spacing:.03em">vs. May 28 baseline · muscle mass &amp; skeletal muscle vs. first entry</div>`;
+    }).join('') + `<div style="font-size:10px;color:var(--muted);margin-top:10px;letter-spacing:.03em">vs. May 28 baseline · skeletal muscle vs. first entry</div>`;
   } else {
     compEl.innerHTML = '<p style="color:var(--muted);font-size:13px">No entries yet.</p>';
   }
@@ -3184,7 +3275,7 @@ function renderDashboard() {
         backgroundColor: ['rgba(79,142,247,.8)','rgba(168,85,247,.8)','rgba(251,146,60,.8)','rgba(52,211,153,.8)','rgba(148,163,184,.4)'],
         borderColor: 'transparent', borderWidth: 0 }]
     },
-    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right',labels:{color:'#8892a4',font:{size:11},boxWidth:10}}} }
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'right',labels:{color:'#aeb8ca',font:{size:12},boxWidth:10}}} }
   });
 
   // Recovery line (last 14 days)
@@ -3199,7 +3290,7 @@ function renderDashboard() {
         borderRadius: 4, borderSkipped: false }]
     },
     options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
-      scales:{ y:{min:0,max:100,ticks:{color:'#8892a4',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10}},grid:{display:false}} }}
+      scales:{ y:{min:0,max:100,ticks:{color:'#aeb8ca',font:{size:12}},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#aeb8ca',font:{size:12}},grid:{display:false}} }}
   });
 
   // Recent table
@@ -3249,7 +3340,6 @@ function renderCurrentTrend(entries) {
   const metrics = [
     { ...calcTrend('weight',          'lbs', 'Weight',          true),  goalDaily: goalDailyW,  showGoal: true },
     { ...calcTrend('bodyFat',         '%',   'Body Fat',        true),  goalDaily: goalDailyBF, showGoal: true },
-    { ...calcTrend('muscleMass',      '%',   'Muscle Mass',     false), goalDaily: null,        showGoal: false },
     { ...calcTrend('skeletalMuscle',  'lbs', 'Skeletal Muscle', false), goalDaily: null,        showGoal: false },
     { ...calcTrend('subcutaneousFat', '%',   'Subcut. Fat',     true),  goalDaily: null,        showGoal: false },
   ];
@@ -3357,10 +3447,10 @@ function renderProgressChart(canvasId, entries, field, baselineVal, goalVal, uni
     options:{
       responsive:true, maintainAspectRatio:false,
       interaction:{mode:'index',intersect:false},
-      plugins:{legend:{labels:{color:'#8892a4',font:{size:11},boxWidth:12}}, zoom:ZOOM_OPTS},
+      plugins:{legend:{labels:{color:'#aeb8ca',font:{size:12},boxWidth:12}}, zoom:ZOOM_OPTS},
       scales:{
-        y:{ticks:{color:'#8892a4',font:{size:10},callback:v=>v!=null?v.toFixed(1)+unit:null},grid:{color:'rgba(255,255,255,.05)'}},
-        x:{ticks:{color:'#8892a4',font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:10},grid:{display:false}}
+        y:{ticks:{color:'#aeb8ca',font:{size:12},callback:v=>v!=null?v.toFixed(1)+unit:null},grid:{color:'rgba(255,255,255,.05)'}},
+        x:{ticks:{color:'#aeb8ca',font:{size:12},maxRotation:45,autoSkip:true,maxTicksLimit:10},grid:{display:false}}
       }
     }
   });
@@ -3370,7 +3460,7 @@ function renderProgressChart(canvasId, entries, field, baselineVal, goalVal, uni
 function _buildTrendChart(id, field, entries, windowEnd, color, colorFaded, projColor, unitSuffix, bgColor) {
   const filtered = entries.filter(e => e[field] != null).sort((a,b)=>a.date.localeCompare(b.date));
   if (!filtered.length) {
-    makeChart(id, { type:'line', data:{ labels:['No data yet'], datasets:[{ data:[null], borderColor:color, borderWidth:2 }]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{ticks:{color:'#8892a4',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10}},grid:{display:false}} } }});
+    makeChart(id, { type:'line', data:{ labels:['No data yet'], datasets:[{ data:[null], borderColor:color, borderWidth:2 }]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{ticks:{color:'#aeb8ca',font:{size:12}},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#aeb8ca',font:{size:12}},grid:{display:false}} } }});
     return;
   }
   const labels = filtered.map(e => fmtDate(e.date).split(',')[0]);
@@ -3382,8 +3472,8 @@ function _buildTrendChart(id, field, entries, windowEnd, color, colorFaded, proj
 
   const commonOpts = (legend) => ({
     responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
-    plugins:{ legend: legend ? {labels:{color:'#8892a4',font:{size:11},boxWidth:12}} : {display:false}, zoom:ZOOM_OPTS },
-    scales:{ y:{ticks:{color:'#8892a4',font:{size:10},callback:v=>v!=null?v.toFixed(1)+unitSuffix:null},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:12},grid:{display:false}} }
+    plugins:{ legend: legend ? {labels:{color:'#aeb8ca',font:{size:12},boxWidth:12}} : {display:false}, zoom:ZOOM_OPTS },
+    scales:{ y:{ticks:{color:'#aeb8ca',font:{size:12},callback:v=>v!=null?v.toFixed(1)+unitSuffix:null},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#aeb8ca',font:{size:12},maxRotation:45,autoSkip:true,maxTicksLimit:12},grid:{display:false}} }
   });
 
   // 'data' mode: no projection beyond last entry
@@ -3447,9 +3537,6 @@ function _buildTrendChart(id, field, entries, windowEnd, color, colorFaded, proj
 function renderSkeletalMuscleChart(entries, windowEnd) {
   _buildTrendChart('chart-sm','skeletalMuscle',entries,windowEnd||'data','#34d399','rgba(52,211,153,.5)','rgba(168,85,247,.7)',' lbs','rgba(52,211,153,.15)');
 }
-function renderMuscleMassChart(entries, windowEnd) {
-  _buildTrendChart('chart-mm','muscleMass',entries,windowEnd||'data','#a855f7','rgba(168,85,247,.5)','rgba(52,211,153,.7)','%','rgba(168,85,247,.15)');
-}
 function renderSubcutaneousFatChart(entries, windowEnd) {
   _buildTrendChart('chart-sf','subcutaneousFat',entries,windowEnd||'data','#34d399','rgba(52,211,153,.5)','rgba(79,142,247,.7)','%','rgba(52,211,153,.15)');
 }
@@ -3506,7 +3593,7 @@ function makeBigProgressChart(canvasId, entries, field, baselineVal, goalVal, un
         { label:'Goal Pace', data:goalLine, borderColor:'rgba(248,113,113,.6)', borderDash:[6,4], borderWidth:2, pointRadius:0, fill:false, tension:0,
           datalabels:{ display:false } },
         { label:'Actual', data:actualData, borderColor:color, backgroundColor:color+'22', borderWidth:2.5, pointRadius:0, pointHoverRadius:8, fill:true, tension:.3, spanGaps:true,
-          datalabels:{ display: ctx=>ctx.dataset.data[ctx.dataIndex]!=null, align:'top', anchor:'top', color:color, font:{size:11,weight:'600'}, formatter:v=>v!=null?v.toFixed(1)+unit:null, padding:4 } },
+          datalabels:{ display: ctx=>ctx.dataset.data[ctx.dataIndex]!=null, align:'top', anchor:'top', color:color, font:{size:12,weight:'600'}, formatter:v=>v!=null?v.toFixed(1)+unit:null, padding:4 } },
         { label:'7-Day Avg', data:rollingData, borderColor:color+'88', borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:.3, spanGaps:true,
           datalabels:{ display:false } },
         { label:'Projected', data:projData, borderColor:'rgba(52,211,153,.7)', borderDash:[4,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0, spanGaps:true,
@@ -3517,62 +3604,13 @@ function makeBigProgressChart(canvasId, entries, field, baselineVal, goalVal, un
       responsive:true, maintainAspectRatio:false,
       interaction:{ mode:'index', intersect:false },
       plugins:{
-        legend:{ labels:{ color:'#8892a4', font:{size:12}, boxWidth:14 } },
+        legend:{ labels:{ color:'#aeb8ca', font:{size:12}, boxWidth:14 } },
         datalabels:{ }, // per-dataset overrides above
         zoom: ZOOM_OPTS
       },
       scales:{
-        y:{ ticks:{ color:'#8892a4', font:{size:11}, callback:v=>v!=null?v.toFixed(1)+unit:null }, grid:{ color:'rgba(255,255,255,.05)' } },
-        x:{ ticks:{ color:'#8892a4', font:{size:11}, maxRotation:45, autoSkip:true, maxTicksLimit:16 }, grid:{ display:false } }
-      }
-    }
-  });
-}
-
-function makeBigMuscleMassChart(entries) {
-  const mmEntries = entries.filter(e=>e.muscleMass!=null).sort((a,b)=>a.date.localeCompare(b.date));
-  if (!mmEntries.length) {
-    makeChart('big-chart-mm', { type:'line', data:{ labels:['No data yet'], datasets:[{data:[null]}]},
-      options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false}, datalabels:{display:false} } } });
-    return;
-  }
-  const labels = mmEntries.map(e=>fmtDate(e.date).split(',')[0]);
-  const actualData = mmEntries.map(e=>parseFloat(e.muscleMass));
-  const rolling = rollingAvg(mmEntries,'muscleMass',7);
-  const pts = mmEntries.map(e=>({x:daysBetween(BASELINE.date,e.date),y:parseFloat(e.muscleMass)}));
-  let extLabels=[], extProj=[];
-  if (pts.length >= 2) {
-    const reg = linearRegression(pts.map(p=>p.x),pts.map(p=>p.y));
-    if (reg) {
-      const lastDay=pts[pts.length-1].x;
-      for (let d=0;d<=90;d+=3) {
-        const dt=new Date(START_DATE);dt.setDate(dt.getDate()+lastDay+d);
-        extLabels.push(dt.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
-        extProj.push(reg.slope*(lastDay+d)+reg.intercept);
-      }
-    }
-  }
-  const pad = extLabels.length;
-  makeChart('big-chart-mm', {
-    type:'line',
-    data:{
-      labels:[...labels,...extLabels],
-      datasets:[
-        { label:'Actual', data:[...actualData,...Array(pad).fill(null)], borderColor:'#a855f7', backgroundColor:'rgba(168,85,247,.15)', borderWidth:2.5, pointRadius:5, pointHoverRadius:8, fill:true, tension:.3, spanGaps:true,
-          datalabels:{ display: ctx=>ctx.dataset.data[ctx.dataIndex]!=null, align:'top', anchor:'top', color:'#c4b5fd', font:{size:11,weight:'600'}, formatter:v=>v!=null?v.toFixed(1)+'%':null, padding:4 } },
-        { label:'7-Day Avg', data:[...rolling,...Array(pad).fill(null)], borderColor:'rgba(168,85,247,.5)', borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:.3, spanGaps:true,
-          datalabels:{display:false} },
-        { label:'Projected', data:[...Array(actualData.length).fill(null),...extProj], borderColor:'rgba(52,211,153,.7)', borderDash:[4,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0, spanGaps:true,
-          datalabels:{display:false} },
-      ]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      interaction:{mode:'index',intersect:false},
-      plugins:{ legend:{labels:{color:'#8892a4',font:{size:12},boxWidth:14}}, datalabels:{}, zoom:ZOOM_OPTS },
-      scales:{
-        y:{ ticks:{color:'#8892a4',font:{size:11},callback:v=>v!=null?v.toFixed(1)+'%':null}, grid:{color:'rgba(255,255,255,.05)'} },
-        x:{ ticks:{color:'#8892a4',font:{size:11},maxRotation:45,autoSkip:true,maxTicksLimit:16}, grid:{display:false} }
+        y:{ ticks:{ color:'#aeb8ca', font:{size:12}, callback:v=>v!=null?v.toFixed(1)+unit:null }, grid:{ color:'rgba(255,255,255,.05)' } },
+        x:{ ticks:{ color:'#aeb8ca', font:{size:12}, maxRotation:45, autoSkip:true, maxTicksLimit:16 }, grid:{ display:false } }
       }
     }
   });
@@ -3608,7 +3646,7 @@ function makeBigSubcutaneousFatChart(entries) {
       labels:[...labels,...extLabels],
       datasets:[
         { label:'Actual', data:[...actualData,...Array(pad).fill(null)], borderColor:'#34d399', backgroundColor:'rgba(52,211,153,.15)', borderWidth:2.5, pointRadius:5, pointHoverRadius:8, fill:true, tension:.3, spanGaps:true,
-          datalabels:{ display: ctx=>ctx.dataset.data[ctx.dataIndex]!=null, align:'top', anchor:'top', color:'#6ee7b7', font:{size:11,weight:'600'}, formatter:v=>v!=null?v.toFixed(1)+'%':null, padding:4 } },
+          datalabels:{ display: ctx=>ctx.dataset.data[ctx.dataIndex]!=null, align:'top', anchor:'top', color:'#6ee7b7', font:{size:12,weight:'600'}, formatter:v=>v!=null?v.toFixed(1)+'%':null, padding:4 } },
         { label:'7-Day Avg', data:[...rolling,...Array(pad).fill(null)], borderColor:'rgba(52,211,153,.5)', borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:.3, spanGaps:true,
           datalabels:{display:false} },
         { label:'Projected', data:[...Array(actualData.length).fill(null),...extProj], borderColor:'rgba(79,142,247,.7)', borderDash:[4,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0, spanGaps:true,
@@ -3618,10 +3656,10 @@ function makeBigSubcutaneousFatChart(entries) {
     options:{
       responsive:true, maintainAspectRatio:false,
       interaction:{mode:'index',intersect:false},
-      plugins:{ legend:{labels:{color:'#8892a4',font:{size:12},boxWidth:14}}, datalabels:{}, zoom:ZOOM_OPTS },
+      plugins:{ legend:{labels:{color:'#aeb8ca',font:{size:12},boxWidth:14}}, datalabels:{}, zoom:ZOOM_OPTS },
       scales:{
-        y:{ ticks:{color:'#8892a4',font:{size:11},callback:v=>v!=null?v.toFixed(1)+'%':null}, grid:{color:'rgba(255,255,255,.05)'} },
-        x:{ ticks:{color:'#8892a4',font:{size:11},maxRotation:45,autoSkip:true,maxTicksLimit:16}, grid:{display:false} }
+        y:{ ticks:{color:'#aeb8ca',font:{size:12},callback:v=>v!=null?v.toFixed(1)+'%':null}, grid:{color:'rgba(255,255,255,.05)'} },
+        x:{ ticks:{color:'#aeb8ca',font:{size:12},maxRotation:45,autoSkip:true,maxTicksLimit:16}, grid:{display:false} }
       }
     }
   });
@@ -3631,7 +3669,6 @@ function renderBigCharts() {
   const entries = getData().sort((a,b)=>a.date.localeCompare(b.date));
   makeBigProgressChart('big-chart-weight', entries, 'weight', BASELINE.weight, GOAL.weight, 'lbs', '#4f8ef7');
   makeBigProgressChart('big-chart-bf', entries, 'bodyFat', BASELINE.bodyFat, GOAL.bodyFat, '%', '#f59e0b');
-  makeBigMuscleMassChart(entries);
   makeBigSubcutaneousFatChart(entries);
 }
 
@@ -3700,8 +3737,8 @@ function prefillToday() {
   const entries = getData().sort((a,b)=>a.date.localeCompare(b.date));
   const last = entries[entries.length-1];
   if (!last) return;
-  const fields = ['weight','bf','vf','sf','mm','sm','workout','recovery'];
-  const keys = ['weight','bodyFat','visceralFat','subcutaneousFat','muscleMass','skeletalMuscle','workout','recovery'];
+  const fields = ['weight','bf','vf','sf','sm','workout','recovery'];
+  const keys = ['weight','bodyFat','visceralFat','subcutaneousFat','skeletalMuscle','workout','recovery'];
   fields.forEach((f,i)=>{ const el=document.getElementById('log-'+f); if(el&&last[keys[i]]!=null) el.value=last[keys[i]]; });
   if (last.waist) document.getElementById('log-waist').value=last.waist;
   if (last.chest) document.getElementById('log-chest').value=last.chest;
@@ -3722,7 +3759,6 @@ function saveEntry() {
     bodyFat: n('log-bf'),
     visceralFat: n('log-vf'),
     subcutaneousFat: n('log-sf'),
-    muscleMass: n('log-mm'),
     skeletalMuscle: n('log-sm'),
     workout: get('log-workout') || null,
     recovery: n('log-recovery'),
@@ -3792,14 +3828,13 @@ function renderHistory() {
   const el = document.getElementById('history-table');
   if (!entries.length) { el.innerHTML='<p style="color:var(--muted);font-size:13px;padding:8px 0">No entries logged yet.</p>'; return; }
   el.innerHTML = `<table>
-    <thead><tr><th>Date</th><th>Weight</th><th>Body Fat</th><th>Visceral</th><th>Subcut.</th><th>Muscle</th><th>Skel. Muscle</th><th>Workout</th><th>Recovery</th><th>Waist</th><th>Notes</th><th></th></tr></thead>
+    <thead><tr><th>Date</th><th>Weight</th><th>Body Fat</th><th>Visceral</th><th>Subcut.</th><th>Skel. Muscle</th><th>Workout</th><th>Recovery</th><th>Waist</th><th>Notes</th><th></th></tr></thead>
     <tbody>${entries.map(e=>`<tr>
       <td>${fmtDate(e.date)}</td>
       <td>${fmt(e.weight)} lbs</td>
       <td>${fmt(e.bodyFat)}%</td>
       <td>${fmt(e.visceralFat)}%</td>
       <td>${fmt(e.subcutaneousFat)}%</td>
-      <td>${fmt(e.muscleMass)}%</td>
       <td>${fmt(e.skeletalMuscle)} lbs</td>
       <td>${workoutBadge(e.workout)}</td>
       <td>${fmt(e.recovery,0)}</td>
@@ -3830,7 +3865,6 @@ function editEntry(date) {
   document.getElementById('edit-bf').value = e.bodyFat ?? '';
   document.getElementById('edit-vf').value = e.visceralFat ?? '';
   document.getElementById('edit-sf').value = e.subcutaneousFat ?? '';
-  document.getElementById('edit-mm').value = e.muscleMass ?? '';
   document.getElementById('edit-sm').value = e.skeletalMuscle ?? '';
   document.getElementById('edit-workout').value = e.workout ?? '';
   document.getElementById('edit-recovery').value = e.recovery ?? '';
@@ -3858,7 +3892,6 @@ function saveEditEntry() {
     bodyFat: n('edit-bf'),
     visceralFat: n('edit-vf'),
     subcutaneousFat: n('edit-sf'),
-    muscleMass: n('edit-mm'),
     skeletalMuscle: n('edit-sm'),
     workout: s('edit-workout'),
     recovery: n('edit-recovery'),
@@ -3931,7 +3964,7 @@ function renderMeasurements() {
   makeChart('chart-waist', {
     type:'line',
     data:{ labels, datasets:[{ label:'Waist', data:entries.map(e=>e.waist), borderColor:'#4f8ef7', backgroundColor:'rgba(79,142,247,.15)', borderWidth:2.5, pointRadius:3, fill:true, tension:.3 }]},
-    options:{ responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:'#8892a4',font:{size:10},callback:v=>v+'"'},grid:{color:'rgba(255,255,255,.05)'}},x:{ticks:{color:'#8892a4',font:{size:10}},grid:{display:false}}} }
+    options:{ responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{color:'#aeb8ca',font:{size:12},callback:v=>v+'"'},grid:{color:'rgba(255,255,255,.05)'}},x:{ticks:{color:'#aeb8ca',font:{size:12}},grid:{display:false}}} }
   });
   const mColors = ['#4f8ef7','#a855f7','#f59e0b','#34d399','#f87171'];
   const mFields = ['waist','chest','hips','arm','thigh'];
@@ -3941,7 +3974,7 @@ function renderMeasurements() {
     data:{ labels, datasets: mFields.map((f,i)=>({
       label:mLabels[i], data:entries.map(e=>e[f]??null), borderColor:mColors[i], borderWidth:1.5, pointRadius:2, fill:false, tension:.3, spanGaps:true
     }))},
-    options:{ responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8892a4',font:{size:10},boxWidth:10}}},scales:{y:{ticks:{color:'#8892a4',font:{size:10},callback:v=>v+'"'},grid:{color:'rgba(255,255,255,.05)'}},x:{ticks:{color:'#8892a4',font:{size:10}},grid:{display:false}}} }
+    options:{ responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#aeb8ca',font:{size:12},boxWidth:10}}},scales:{y:{ticks:{color:'#aeb8ca',font:{size:12},callback:v=>v+'"'},grid:{color:'rgba(255,255,255,.05)'}},x:{ticks:{color:'#aeb8ca',font:{size:12}},grid:{display:false}}} }
   });
 
   // Table
@@ -4029,8 +4062,8 @@ function renderInBodyCharts(scans) {
       { label:'Body Fat Mass', data:scans.map(s=>s.bodyFatMass), borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,.1)', borderWidth:2.5, pointRadius:4, fill:false, tension:.3, spanGaps:true },
     ]},
     options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
-      plugins:{ legend:{labels:{color:'#8892a4',font:{size:11},boxWidth:12}}, zoom:ZOOM_OPTS },
-      scales:{ y:{ticks:{color:'#8892a4',font:{size:10},callback:v=>v+' lbs'},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10}},grid:{display:false}} }
+      plugins:{ legend:{labels:{color:'#aeb8ca',font:{size:12},boxWidth:12}}, zoom:ZOOM_OPTS },
+      scales:{ y:{ticks:{color:'#aeb8ca',font:{size:12},callback:v=>v+' lbs'},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#aeb8ca',font:{size:12}},grid:{display:false}} }
     }
   });
 
@@ -4041,8 +4074,8 @@ function renderInBodyCharts(scans) {
       { label:'Body Fat %', data:scans.map(s=>s.pbf), borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,.15)', borderWidth:2.5, pointRadius:5, pointHoverRadius:7, fill:true, tension:.3, spanGaps:true },
     ]},
     options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
-      plugins:{ legend:{labels:{color:'#8892a4',font:{size:11},boxWidth:12}}, zoom:ZOOM_OPTS },
-      scales:{ y:{ticks:{color:'#8892a4',font:{size:10},callback:v=>v+'%'},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10}},grid:{display:false}} }
+      plugins:{ legend:{labels:{color:'#aeb8ca',font:{size:12},boxWidth:12}}, zoom:ZOOM_OPTS },
+      scales:{ y:{ticks:{color:'#aeb8ca',font:{size:12},callback:v=>v+'%'},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#aeb8ca',font:{size:12}},grid:{display:false}} }
     }
   });
 
@@ -4052,7 +4085,7 @@ function renderInBodyCharts(scans) {
       { label:'Skeletal Muscle Mass', data:scans.map(s=>s.smm), borderColor:'#a855f7', backgroundColor:'rgba(168,85,247,.15)', borderWidth:2.5, pointRadius:5, fill:true, tension:.3, spanGaps:true },
     ]},
     options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}, zoom:ZOOM_OPTS},
-      scales:{ y:{ticks:{color:'#8892a4',font:{size:10},callback:v=>v+' lbs'},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10}},grid:{display:false}} }
+      scales:{ y:{ticks:{color:'#aeb8ca',font:{size:12},callback:v=>v+' lbs'},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#aeb8ca',font:{size:12}},grid:{display:false}} }
     }
   });
 
@@ -4062,8 +4095,8 @@ function renderInBodyCharts(scans) {
       { type:'line', label:'Healthy Max', data:scans.map(()=>VISCERAL_HEALTHY_MAX), borderColor:'rgba(248,113,113,.6)', borderDash:[6,4], borderWidth:2, pointRadius:0, fill:false, tension:0 },
       { type:'bar', label:'Visceral Fat Level', data:scans.map(s=>s.visceralFat), backgroundColor: scans.map(s=>(s.visceralFat<=10?'rgba(52,211,153,.7)':'rgba(248,113,113,.7)')), borderRadius:4, borderSkipped:false },
     ]},
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#8892a4',font:{size:11},boxWidth:12}}},
-      scales:{ y:{ticks:{color:'#8892a4',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10}},grid:{display:false}} }
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#aeb8ca',font:{size:12},boxWidth:12}}},
+      scales:{ y:{ticks:{color:'#aeb8ca',font:{size:12}},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#aeb8ca',font:{size:12}},grid:{display:false}} }
     }
   });
 
@@ -4074,8 +4107,8 @@ function renderInBodyCharts(scans) {
       { label:'Healthy Max', data:scans.map(()=>ECW_TBW_HEALTHY[1]), borderColor:'rgba(148,163,184,.5)', borderDash:[4,4], borderWidth:1.5, pointRadius:0, fill:'-1', backgroundColor:'rgba(148,163,184,.08)', tension:0 },
       { label:'ECW/TBW', data:scans.map(s=>s.ecwTbw), borderColor:'#4f8ef7', backgroundColor:'rgba(79,142,247,.15)', borderWidth:2.5, pointRadius:5, fill:false, tension:.3, spanGaps:true },
     ]},
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#8892a4',font:{size:11},boxWidth:12}}},
-      scales:{ y:{ticks:{color:'#8892a4',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10}},grid:{display:false}} }
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#aeb8ca',font:{size:12},boxWidth:12}}},
+      scales:{ y:{ticks:{color:'#aeb8ca',font:{size:12}},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#aeb8ca',font:{size:12}},grid:{display:false}} }
     }
   });
 }
@@ -4093,8 +4126,8 @@ function renderInBodySegCharts(latest) {
         { type:'line', label:'100% of Ideal', data: segs.map(()=>100), borderColor:'rgba(248,113,113,.6)', borderDash:[6,4], borderWidth:2, pointRadius:0, fill:false },
         { type:'bar', label:'% of Ideal', data: segs.map(k=>latest.segLeanPct[k]), backgroundColor:'rgba(79,142,247,.7)', borderRadius:4, borderSkipped:false },
       ]},
-      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#8892a4',font:{size:11},boxWidth:12}}},
-        scales:{ y:{ticks:{color:'#8892a4',font:{size:10},callback:v=>v+'%'},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10}},grid:{display:false}} }
+      options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{color:'#aeb8ca',font:{size:12},boxWidth:12}}},
+        scales:{ y:{ticks:{color:'#aeb8ca',font:{size:12},callback:v=>v+'%'},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#aeb8ca',font:{size:12}},grid:{display:false}} }
       }
     });
   }
@@ -4108,7 +4141,7 @@ function renderInBodySegCharts(latest) {
         { label:'% of Standard Fat', data: segs.map(k=>latest.segFatPct[k]), backgroundColor:'rgba(245,158,11,.7)', borderRadius:4, borderSkipped:false },
       ]},
       options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
-        scales:{ y:{ticks:{color:'#8892a4',font:{size:10},callback:v=>v+'%'},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10}},grid:{display:false}} }
+        scales:{ y:{ticks:{color:'#aeb8ca',font:{size:12},callback:v=>v+'%'},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#aeb8ca',font:{size:12}},grid:{display:false}} }
       }
     });
   }
@@ -4472,7 +4505,7 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
     'var _d='+CHART_JSON+';',
     'var _s='+SEG_JSON+';',
     'function fmtDate(ms){var d=new Date(ms);return (d.getMonth()+1)+"/"+d.getDate();}',
-    'function mk(id,sets){var c=document.getElementById(id);if(!c)return;try{new Chart(c,{type:"scatter",data:{datasets:sets},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+" "+ctx.parsed.y;}}}},scales:{x:{type:"linear",ticks:{callback:fmtDate,color:"#94a3b8",font:{size:9},maxRotation:35},grid:{color:"#f1f5f9"}},y:{ticks:{color:"#94a3b8",font:{size:10}},grid:{color:"#f1f5f9"}}},animation:{duration:500}}});}catch(ex){var ed=document.createElement("div");ed.style.color="red";ed.textContent="Chart error: "+ex.message;c.parentNode.appendChild(ed);}}',
+    'function mk(id,sets){var c=document.getElementById(id);if(!c)return;try{new Chart(c,{type:"scatter",data:{datasets:sets},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+" "+ctx.parsed.y;}}}},scales:{x:{type:"linear",ticks:{callback:fmtDate,color:"#94a3b8",font:{size:9},maxRotation:35},grid:{color:"#f1f5f9"}},y:{ticks:{color:"#94a3b8",font:{size:12}},grid:{color:"#f1f5f9"}}},animation:{duration:500}}});}catch(ex){var ed=document.createElement("div");ed.style.color="red";ed.textContent="Chart error: "+ex.message;c.parentNode.appendChild(ed);}}',
     'function line(data,col,lbl){return {type:"line",label:lbl,data:data,borderColor:col,backgroundColor:col+"44",fill:false,tension:0.3,pointRadius:2,borderWidth:1.5,showLine:true,spanGaps:true,order:3};}',
     'function pts(data,col,r,lbl){return {type:"scatter",label:lbl,data:data,borderColor:col,backgroundColor:col,pointRadius:r,borderWidth:0,order:1};}',
     'function initCharts(){mk("c-wt",[line(_d.wtData,"#94a3b8","Daily"),pts(_d.ibWt,"#f59e0b",8,"InBody"),pts(_d.humeWt,"#38bdf8",5,"Hume")]);mk("c-bf",[line(_d.bfData,"#94a3b8","Daily"),pts(_d.ibBf,"#f59e0b",8,"InBody"),pts(_d.humeBf,"#38bdf8",5,"Hume")]);mk("c-lbm",[line(_d.lbmData,"#a78bfa","Hume"),pts(_d.ibLBM,"#f59e0b",8,"InBody")]);mk("c-smm",[line(_d.smmData,"#94a3b8","Daily"),pts(_d.ibSMM,"#f59e0b",8,"InBody"),pts(_d.humeSMM,"#38bdf8",5,"Hume")]);}',
@@ -4802,7 +4835,7 @@ function cancelHumePhotoImport() {
 // ===== HUME AUTO-SYNC LISTENER (iOS Shortcut → Firestore → App) =====
 function startHumeSyncListener() {
   try {
-    const db = getDb();
+    const db = getFirestore();
     if (!db) return;
     db.collection('health').doc('hume_sync').onSnapshot(snap => {
       if (!snap.exists) return;
@@ -5107,7 +5140,7 @@ function importCSV(text) {
     const date = vals[col('date')];
     const n = key => { const v=vals[col(key)]; return v&&v!==''?parseFloat(v):null; };
     const s = key => { const v=vals[col(key)]; return v&&v!==''?v:null; };
-    const entry = { date, weight:n('weight'), bodyFat:n('body_fat'), visceralFat:n('visceral_fat'), subcutaneousFat:n('subcutaneous_fat'), muscleMass:n('muscle_mass'), skeletalMuscle:n('skeletal_muscle'), workout:s('workout'), recovery:n('recovery'), notes:s('notes'), waist:n('waist'), chest:n('chest'), hips:n('hips'), arm:n('arm'), thigh:n('thigh') };
+    const entry = { date, weight:n('weight'), bodyFat:n('body_fat'), visceralFat:n('visceral_fat'), subcutaneousFat:n('subcutaneous_fat'), skeletalMuscle:n('skeletal_muscle'), workout:s('workout'), recovery:n('recovery'), notes:s('notes'), waist:n('waist'), chest:n('chest'), hips:n('hips'), arm:n('arm'), thigh:n('thigh') };
     const idx = entries.findIndex(e=>e.date===date);
     if (idx>=0) { Object.assign(entries[idx],entry); updated++; } else { entries.push(entry); added++; }
   }
@@ -5118,12 +5151,15 @@ function importCSV(text) {
 }
 async function saveJSON() {
   const payload = {
-    version: 1,
+    version: 2,
     savedAt: new Date().toISOString(),
     entries: getData(),
     photos: getPhotos(),
     inbody: getInBody(),
-    liftWorkouts: getLiftWorkouts()
+    liftWorkouts: getLiftWorkouts(),
+    nutrition: getNutritionData(),
+    workoutTemplates: getWorkoutTemplates(),
+    coachHistory: getCoachHistory()
   };
   const json = JSON.stringify(payload, null, 2);
   const now = new Date();
@@ -5177,7 +5213,15 @@ function loadJSON(text) {
     savePhotos(payload.photos || []);
     if (payload.inbody) saveInBody(payload.inbody);
     if (payload.liftWorkouts) saveLiftWorkouts(payload.liftWorkouts);
-    showMsg('json-msg', `✓ Restored ${payload.entries.length} entries${payload.photos?.length ? ' and ' + payload.photos.length + ' photos' : ''}.`, 'good');
+    if (payload.nutrition) saveNutritionData(payload.nutrition);
+    if (payload.workoutTemplates) saveWorkoutTemplates(payload.workoutTemplates);
+    if (payload.coachHistory) {
+      _coachHistory = payload.coachHistory;
+      localStorage.setItem('ht_coach_history', JSON.stringify(payload.coachHistory));
+      _coachInitialized = false;
+    }
+    scheduleFirebaseSync();
+    showMsg('json-msg', `✓ Restored ${payload.entries.length} body entries, ${(payload.liftWorkouts || []).length} workouts, ${(payload.inbody || []).length} scans, and ${(payload.nutrition || []).length} nutrition days.`, 'good');
   } catch(e) {
     showMsg('json-msg', 'Failed to parse backup file. Make sure it\'s a valid JSON backup.', 'bad');
   }
@@ -5222,8 +5266,8 @@ async function saveApp() {
 }
 function exportCSV() {
   const entries = getData().sort((a,b)=>a.date.localeCompare(b.date));
-  const headers = 'date,weight,body_fat,visceral_fat,subcutaneous_fat,muscle_mass,skeletal_muscle,workout,recovery,notes,waist,chest,hips,arm,thigh';
-  const rows = entries.map(e=>[e.date,e.weight??'',e.bodyFat??'',e.visceralFat??'',e.subcutaneousFat??'',e.muscleMass??'',e.skeletalMuscle??'',e.workout??'',e.recovery??'',e.notes??'',e.waist??'',e.chest??'',e.hips??'',e.arm??'',e.thigh??''].join(','));
+  const headers = 'date,weight,body_fat,visceral_fat,subcutaneous_fat,skeletal_muscle,workout,recovery,notes,waist,chest,hips,arm,thigh';
+  const rows = entries.map(e=>[e.date,e.weight??'',e.bodyFat??'',e.visceralFat??'',e.subcutaneousFat??'',e.skeletalMuscle??'',e.workout??'',e.recovery??'',e.notes??'',e.waist??'',e.chest??'',e.hips??'',e.arm??'',e.thigh??''].join(','));
   const blob = new Blob([[headers,...rows].join('\n')],{type:'text/csv'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='health-tracker-export.csv'; a.click();
 }
@@ -5579,7 +5623,6 @@ USER GOALS:
     sys += `\n\nCURRENT STATS (${latest.date}):`;
     if (latest.weight != null) sys += `\n- Weight: ${latest.weight} lbs`;
     if (latest.bodyFat != null) sys += `\n- Body Fat: ${latest.bodyFat}%`;
-    if (latest.muscleMass != null) sys += `\n- Muscle Mass: ${latest.muscleMass}%`;
     if (latest.skeletalMuscle != null) sys += `\n- Skeletal Muscle: ${latest.skeletalMuscle} lbs`;
     if (latest.subcutaneousFat != null) sys += `\n- Subcutaneous Fat: ${latest.subcutaneousFat}%`;
     if (latest.visceralFat != null) sys += `\n- Visceral Fat: ${latest.visceralFat}`;
@@ -5590,7 +5633,6 @@ USER GOALS:
     sys += `\n\nOVERALL PROGRESS (${first.date} → ${latest.date}):`;
     if (first.weight != null && latest.weight != null) sys += `\n- Weight: ${first.weight} → ${latest.weight} lbs (${(latest.weight - first.weight > 0 ? '+' : '')}${(latest.weight - first.weight).toFixed(1)})`;
     if (first.bodyFat != null && latest.bodyFat != null) sys += `\n- Body Fat: ${first.bodyFat} → ${latest.bodyFat}% (${(latest.bodyFat - first.bodyFat > 0 ? '+' : '')}${(latest.bodyFat - first.bodyFat).toFixed(1)})`;
-    if (first.muscleMass != null && latest.muscleMass != null) sys += `\n- Muscle Mass: ${first.muscleMass} → ${latest.muscleMass}% (${(latest.muscleMass - first.muscleMass > 0 ? '+' : '')}${(latest.muscleMass - first.muscleMass).toFixed(1)})`;
   }
 
   // Full body composition history
@@ -5602,7 +5644,6 @@ USER GOALS:
       if (e.bodyFat != null) parts.push(`BF:${e.bodyFat}%`);
       if (e.visceralFat != null) parts.push(`VF:${e.visceralFat}`);
       if (e.subcutaneousFat != null) parts.push(`SF:${e.subcutaneousFat}%`);
-      if (e.muscleMass != null) parts.push(`MM:${e.muscleMass}%`);
       if (e.skeletalMuscle != null) parts.push(`SM:${e.skeletalMuscle}lbs`);
       sys += `\n${parts.join(' | ')}`;
     });
@@ -5981,16 +6022,16 @@ function applyAllAppData(remote) {
 
 function mergeByDate(local, remote) {
   const map = {};
-  remote.forEach(e => { if (e.date) map[e.date] = e; });
-  local.forEach(e => { if (e.date) map[e.date] = e; }); // local overwrites
+  local.forEach(e => { if (e.date) map[e.date] = e; });
+  remote.forEach(e => { if (e.date) map[e.date] = e; }); // newer remote record overwrites matching local record
   // Sort by date so output is stable regardless of insertion order — prevents
   // spurious JSON diffs that trigger an infinite reload loop across devices
   return Object.values(map).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
 }
 function mergeWorkouts(local, remote) {
   const map = {};
-  remote.forEach(e => { if (e.date && e.type) map[e.date + '|' + e.type] = e; });
   local.forEach(e => { if (e.date && e.type) map[e.date + '|' + e.type] = e; });
+  remote.forEach(e => { if (e.date && e.type) map[e.date + '|' + e.type] = e; }); // newer remote workout wins
   return Object.values(map).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
 }
 function mergeAllAppData(remote) {
@@ -6040,7 +6081,7 @@ function markLocalChange() {
 // Fetch the live site in the background; if the version token differs from what
 // we loaded (can happen when iOS PWA serves a stale cached copy), show a banner.
 (function() {
-  var CURRENT_VERSION = '20260804a';
+  var CURRENT_VERSION = '20260804b';
   var stored = localStorage.getItem('ht_code_version');
   if (stored !== CURRENT_VERSION) {
     // First run of this version — record it and move on (no banner needed)
@@ -6097,7 +6138,6 @@ function markLocalChange() {
       <div class="field"><label>Body Fat %</label><input type="number" id="edit-bf" step="0.1" placeholder="—"></div>
       <div class="field"><label>Visceral Fat %</label><input type="number" id="edit-vf" step="0.1" placeholder="—"></div>
       <div class="field"><label>Subcut. Fat %</label><input type="number" id="edit-sf" step="0.1" placeholder="—"></div>
-      <div class="field"><label>Muscle Mass %</label><input type="number" id="edit-mm" step="0.1" placeholder="—"></div>
       <div class="field"><label>Skeletal Muscle (lbs)</label><input type="number" id="edit-sm" step="0.1" placeholder="—"></div>
       <div class="field"><label>Recovery (1–10)</label><input type="number" id="edit-recovery" step="1" min="1" max="10" placeholder="—"></div>
       <div class="field"><label>Waist (in)</label><input type="number" id="edit-waist" step="0.1" placeholder="—"></div>
