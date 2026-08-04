@@ -5916,11 +5916,11 @@ async function initFirebaseSync() {
         // Remote is newer — check whether the merge actually changes any counts.
         // If data is already identical (two devices bouncing the same state),
         // skip reload+push to avoid an infinite sync loop.
-        const prevCounts = [getData().length, getLiftWorkouts().length, getNutritionData().length, getWorkoutTemplates().length];
+        const prevCounts = [getData().length, getInBody().length, getLiftWorkouts().length, getNutritionData().length, getWorkoutTemplates().length];
         const prevTemplateJson = JSON.stringify(getWorkoutTemplates());
         if (localTs === 0) mergeAllAppData(remote);
         else applyAllAppData(remote);
-        const newCounts = [getData().length, getLiftWorkouts().length, getNutritionData().length, getWorkoutTemplates().length];
+        const newCounts = [getData().length, getInBody().length, getLiftWorkouts().length, getNutritionData().length, getWorkoutTemplates().length];
         // Also check template content — edits change content but not count
         const dataChanged = prevCounts.some((c, i) => c !== newCounts[i]) || prevTemplateJson !== JSON.stringify(getWorkoutTemplates());
 
@@ -5992,8 +5992,10 @@ function applyAllAppData(remote) {
     localStorage.setItem('ht_entries', JSON.stringify(mergeByDate(getData(), remote.entries)));
   if (Array.isArray(remote.photos))
     localStorage.setItem('ht_photos', JSON.stringify(mergeByDate(getPhotos(), remote.photos)));
+  // A newer remote InBody list is authoritative. Replacing it allows deletions
+  // to propagate instead of union-merging a deleted scan back into existence.
   if (Array.isArray(remote.inbody))
-    localStorage.setItem('ht_inbody', JSON.stringify(mergeByDate(getInBody(), remote.inbody)));
+    localStorage.setItem('ht_inbody', JSON.stringify(remote.inbody.slice().sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0)));
   if (Array.isArray(remote.liftWorkouts))
     localStorage.setItem('ht_lift_workouts', JSON.stringify(mergeWorkouts(getLiftWorkouts(), remote.liftWorkouts)));
   if (Array.isArray(remote.coachHistory) && remote.coachHistory.length > _coachHistory.length) {
@@ -6081,7 +6083,7 @@ function markLocalChange() {
 // Fetch the live site in the background; if the version token differs from what
 // we loaded (can happen when iOS PWA serves a stale cached copy), show a banner.
 (function() {
-  var CURRENT_VERSION = '20260804b';
+  var CURRENT_VERSION = '20260804c';
   var stored = localStorage.getItem('ht_code_version');
   if (stored !== CURRENT_VERSION) {
     // First run of this version — record it and move on (no banner needed)
