@@ -4502,6 +4502,7 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
     '.ai-p{color:#334155;margin:6px 0}',
     '.ai-li{margin:4px 0;color:#334155}',
     '.print-btn{position:fixed;bottom:24px;right:24px;background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;border:none;border-radius:12px;padding:13px 26px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:0 4px 20px rgba(37,99,235,.4);z-index:999}',
+    '.print-btn:disabled{cursor:wait;opacity:.65}',
     '@media print{.print-btn{display:none!important}.cover,.sec,.chart-card,.ai-sec{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-shadow:none;page-break-inside:avoid}body{padding-bottom:120px!important}.wrap{padding-bottom:120px!important}}'
   ].join('');
 
@@ -4528,12 +4529,13 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
     '</div>',
     '<div class="ai-sec"><div class="sec-title">Full AI Analysis</div>'+aiHtml+'</div>',
     '</div>',
-    '<button class="print-btn" onclick="window.print()">&#x1F5A8; Save as PDF</button>',
+    '<button class="print-btn" id="print-report-btn" onclick="printReport()" disabled>Preparing charts&hellip;</button>',
     '<script>(function(){',
     'var _d='+CHART_JSON+';',
     'var _s='+SEG_JSON+';',
+    'var _charts=[];var _chartsFrozen=false;',
     'function fmtDate(ms){var d=new Date(ms);return (d.getMonth()+1)+"/"+d.getDate();}',
-    'function mk(id,sets){var c=document.getElementById(id);if(!c)return;try{new Chart(c,{type:"scatter",data:{datasets:sets},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+" "+ctx.parsed.y;}}}},scales:{x:{type:"linear",ticks:{callback:fmtDate,color:"#94a3b8",font:{size:9},maxRotation:35},grid:{color:"#f1f5f9"}},y:{ticks:{color:"#94a3b8",font:{size:12}},grid:{color:"#f1f5f9"}}},animation:{duration:500}}});}catch(ex){var ed=document.createElement("div");ed.style.color="red";ed.textContent="Chart error: "+ex.message;c.parentNode.appendChild(ed);}}',
+    'function mk(id,sets){var c=document.getElementById(id);if(!c)return;try{_charts.push(new Chart(c,{type:"scatter",data:{datasets:sets},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+" "+ctx.parsed.y;}}}},scales:{x:{type:"linear",ticks:{callback:fmtDate,color:"#94a3b8",font:{size:9},maxRotation:35},grid:{color:"#f1f5f9"}},y:{ticks:{color:"#94a3b8",font:{size:12}},grid:{color:"#f1f5f9"}}},animation:false}}));}catch(ex){var ed=document.createElement("div");ed.style.color="red";ed.textContent="Chart error: "+ex.message;c.parentNode.appendChild(ed);}}',
     'function line(data,col,lbl){return {type:"line",label:lbl,data:data,borderColor:col,backgroundColor:col+"44",fill:false,tension:0.3,pointRadius:2,borderWidth:1.5,showLine:true,spanGaps:true,order:3};}',
     'function pts(data,col,r,lbl){return {type:"scatter",label:lbl,data:data,borderColor:col,backgroundColor:col,pointRadius:r,borderWidth:0,order:1};}',
     'function initCharts(){mk("c-wt",[line(_d.wtData,"#94a3b8","Daily"),pts(_d.ibWt,"#f59e0b",8,"InBody"),pts(_d.humeWt,"#38bdf8",5,"Hume")]);mk("c-bf",[line(_d.bfData,"#94a3b8","Daily"),pts(_d.ibBf,"#f59e0b",8,"InBody"),pts(_d.humeBf,"#38bdf8",5,"Hume")]);mk("c-lbm",[line(_d.lbmData,"#a78bfa","Hume"),pts(_d.ibLBM,"#f59e0b",8,"InBody")]);mk("c-smm",[line(_d.smmData,"#94a3b8","Daily"),pts(_d.ibSMM,"#f59e0b",8,"InBody"),pts(_d.humeSMM,"#38bdf8",5,"Hume")]);}',
@@ -4562,10 +4564,16 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
     'var w=document.createElement("div");w.style.cssText="display:flex;gap:24px;align-items:flex-start";w.appendChild(svg);w.appendChild(tw);sc.appendChild(w);',
     '}else{var noNote=document.createElement("div");noNote.style.cssText="margin-top:10px;font-size:11px;color:#94a3b8;text-align:center";noNote.textContent="No segmental data logged. To add: InBody tab \u2192 expand Segmental Lean/Fat section when saving a scan.";var ww=document.createElement("div");ww.style.cssText="display:flex;flex-direction:column;align-items:center";ww.appendChild(svg);ww.appendChild(noNote);sc.appendChild(ww);}',
     '}',
-    'var _cjs=document.createElement("script");_cjs.src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js";document.body.appendChild(_cjs);var _cp=0,_ci=setInterval(function(){if(typeof Chart!=="undefined"||_cp++>50){clearInterval(_ci);if(typeof Chart!=="undefined"){initCharts();initSeg();}}},100);',
-    // Canvas doesn\'t print to PDF — swap each canvas for an img snapshot before printing
-    'window.addEventListener("beforeprint",function(){document.querySelectorAll("canvas").forEach(function(c){var img=document.createElement("img");img.src=c.toDataURL("image/png",1.0);img.style.cssText="width:100%;height:auto;display:block";c._pi=img;c.parentNode.insertBefore(img,c.nextSibling);c.style.display="none";});});',
-    'window.addEventListener("afterprint",function(){document.querySelectorAll("canvas").forEach(function(c){if(c._pi){c._pi.parentNode.removeChild(c._pi);delete c._pi;c.style.display="";}});});',
+    'function setPrintState(ready,text){var b=document.getElementById("print-report-btn");if(!b)return;b.disabled=!ready;b.innerHTML=text;}',
+    // Freeze charts as PNGs before print mode begins. Responsive canvas elements
+    // can be cleared during Chrome's print-layout resize, producing blank PDFs.
+    'function freezeCharts(){if(_chartsFrozen)return true;var canvases=Array.prototype.slice.call(document.querySelectorAll("canvas"));if(!canvases.length)return false;var images=[];try{canvases.forEach(function(c){var img=document.createElement("img");img.src=c.toDataURL("image/png",1.0);img.alt=c.parentNode.querySelector(".chart-title")?c.parentNode.querySelector(".chart-title").textContent+" chart":"Progress chart";img.style.cssText="width:100%;height:auto;display:block";images.push([c,img]);});_charts.forEach(function(ch){try{ch.destroy();}catch(e){}});_charts=[];images.forEach(function(pair){pair[0].parentNode.replaceChild(pair[1],pair[0]);});_chartsFrozen=true;setPrintState(true,"&#x1F5A8; Save as PDF");return true;}catch(ex){setPrintState(false,"Chart export failed - reload report");return false;}}',
+    'function finishReport(){initCharts();initSeg();requestAnimationFrame(function(){requestAnimationFrame(function(){setTimeout(freezeCharts,80);});});}',
+    'function chartLoadFailed(){initSeg();setPrintState(false,"Charts unavailable - reload report");}',
+    'function bootReport(){try{if(window.opener&&window.opener.Chart)window.Chart=window.opener.Chart;}catch(e){}if(typeof Chart!=="undefined"){finishReport();return;}var js=document.createElement("script");js.src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js";js.onload=finishReport;js.onerror=chartLoadFailed;document.body.appendChild(js);}',
+    'window.printReport=function(){if(!_chartsFrozen){setPrintState(false,"Preparing charts&hellip;");return;}window.print();};',
+    'window.addEventListener("beforeprint",function(){if(!_chartsFrozen)freezeCharts();});',
+    'bootReport();',
     '})();<\/script>',
     '</body></html>'
   ].join('');
@@ -6147,7 +6155,7 @@ function markLocalChange() {
 // Fetch the live site in the background; if the version token differs from what
 // we loaded (can happen when iOS PWA serves a stale cached copy), show a banner.
 (function() {
-  var CURRENT_VERSION = '20260804d';
+  var CURRENT_VERSION = '20260804e';
   var stored = localStorage.getItem('ht_code_version');
   if (stored !== CURRENT_VERSION) {
     // First run of this version — record it and move on (no banner needed)
