@@ -561,6 +561,26 @@ if (window.navigator.standalone) {
     <!-- Hume Body Composition -->
     <button class="optional-toggle" style="margin-top:4px" onclick="toggleLogSection('log-opt-hume', this, 'Hume Body Composition')">＋ Add Hume Body Composition</button>
     <div class="optional-section" id="log-opt-hume">
+      <!-- Screenshot import -->
+      <div style="margin-top:12px;padding:12px;border:1.5px solid var(--border);border-radius:10px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="font-size:18px">📸</span>
+          <div>
+            <div style="font-weight:600;font-size:13px">Auto-fill from Hume Screenshot</div>
+            <div style="font-size:12px;color:var(--muted)">AI reads every metric off your results screen and fills the fields below automatically.</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <input type="file" id="hume-photo-input" accept="image/*" multiple style="display:none" onchange="handleHumePhotoImport(this.files)">
+          <button class="btn btn-primary" onclick="document.getElementById('hume-photo-input').click()" style="font-size:13px;padding:6px 14px">📸 Upload Screenshots</button>
+          <span style="font-size:12px;color:var(--muted)">Select all at once</span>
+          <span id="hume-photo-status" style="font-size:12px;color:var(--muted)"></span>
+        </div>
+        <div id="hume-photo-progress" style="margin-top:8px;font-size:13px;min-height:16px"></div>
+        <div id="hume-photo-preview" style="margin-top:4px"></div>
+      </div>
+
+      <!-- Manual fields -->
       <div class="form-grid" style="margin-top:12px">
         <div class="field"><label>BMI</label><input type="number" id="log-bmi" step="0.1" placeholder="26.9"></div>
         <div class="field"><label>Body Fat Mass (lbs)</label><input type="number" id="log-bfm" step="0.1" placeholder="39.7"></div>
@@ -571,6 +591,45 @@ if (window.navigator.standalone) {
         <div class="field"><label>Skeletal Mass (lbs)</label><input type="number" id="log-skeletal" step="0.1" placeholder="25.3"></div>
         <div class="field"><label>Bone Mineral Content (lbs)</label><input type="number" id="log-bmc" step="0.1" placeholder="8.6"></div>
         <div class="field"><label>Body Cell Mass (lbs)</label><input type="number" id="log-bcm" step="0.1" placeholder="103.4"></div>
+      </div>
+
+      <!-- iOS Shortcut guide -->
+      <button class="optional-toggle" style="margin-top:10px" onclick="toggleLogSection('hume-shortcut-guide', this, 'iOS Shortcut Auto-Sync Setup')">＋ iOS Shortcut Auto-Sync Setup</button>
+      <div class="optional-section" id="hume-shortcut-guide" style="margin-top:8px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px">
+          <div id="hume-sync-status">Waiting for first sync from Shortcut…</div>
+        </div>
+        <div style="font-size:13px;line-height:1.7">
+          <strong>One-time setup on your iPhone:</strong><br>
+          1. Open the <strong>Shortcuts</strong> app → tap <strong>+</strong> to create a new Shortcut<br>
+          2. Add action: <strong>Get Samples from Health</strong> → Type: <strong>Body Mass</strong> → Limit: 1, Sort by: most recent<br>
+          3. Add <strong>Get Samples from Health</strong> → Type: <strong>Body Fat Percentage</strong> → Limit: 1<br>
+          4. Add <strong>Get Samples from Health</strong> → Type: <strong>Lean Body Mass</strong> → Limit: 1<br>
+          5. Add action: <strong>Get Current Date</strong><br>
+          6. Add action: <strong>Text</strong> → paste this (replace each with the result variables from above):<br>
+          <code style="display:block;background:var(--card-bg);border:1px solid var(--border);border-radius:6px;padding:8px;margin:6px 0;font-size:11px;word-break:break-all">{"fields":{"date":{"stringValue":"DATE"},"weight":{"doubleValue":WEIGHT},"pbf":{"doubleValue":BODYFAT},"leanBodyMass":{"doubleValue":LEAN},"pendingImport":{"booleanValue":true},"syncedAt":{"stringValue":"DATE"}}}</code>
+          7. Add action: <strong>Get Contents of URL</strong>:<br>
+          &nbsp;&nbsp;URL: <code style="font-size:11px;word-break:break-all">https://firestore.googleapis.com/v1/projects/e-health-tracker/databases/(default)/documents/health/hume_sync?key=AIzaSyCxPlVaKYAHet2PAiz19VqByW8Ws2W5_1Q</code><br>
+          &nbsp;&nbsp;Method: <strong>PATCH</strong>, Request Body: <strong>JSON</strong> → the Text from step 6<br>
+          8. Name it <strong>"Log Hume Scan"</strong> and add it to your Home Screen<br><br>
+          After each Hume scan, tap that icon — your data appears in this app within seconds.
+        </div>
+      </div>
+
+      <!-- Apple Health bulk import -->
+      <button class="optional-toggle" style="margin-top:10px" onclick="toggleLogSection('log-ah-import', this, 'Bulk Import from Apple Health Export')">＋ Bulk Import from Apple Health Export</button>
+      <div class="optional-section" id="log-ah-import" style="margin-top:8px">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">
+          Import all historical Hume scan data at once. iPhone Health app → tap your profile photo → <strong>Export All Health Data</strong> → share the .zip here.
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <input type="file" id="apple-health-zip" accept=".zip" style="display:none" onchange="handleAppleHealthImport(this.files[0])">
+          <button class="btn btn-secondary" onclick="document.getElementById('apple-health-zip').click()" style="display:flex;align-items:center;gap:6px;font-size:13px">
+            <span>📁</span> Choose Export .zip
+          </button>
+        </div>
+        <div id="ah-import-progress" style="margin-top:10px;font-size:13px;min-height:18px"></div>
+        <div id="ah-import-preview" style="margin-top:4px"></div>
       </div>
     </div>
 
@@ -695,92 +754,6 @@ if (window.navigator.standalone) {
       <button class="btn btn-primary" onclick="saveInBodyEntry()">Save Scan</button>
     </div>
     <div id="ib-msg" style="margin-top:12px;font-size:13px"></div>
-  </div>
-
-  <div class="card" style="margin-bottom:24px">
-    <h3 style="display:flex;align-items:center;gap:8px"><span>⚡</span> Hume Body Pod — Import Options</h3>
-
-    <div style="display:grid;gap:16px;margin-top:12px">
-
-      <!-- Option 1: Screenshot → Claude Vision (ALL data) -->
-      <div style="border:1.5px solid var(--border);border-radius:12px;padding:14px">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-          <span style="font-size:20px">📸</span>
-          <div>
-            <div style="font-weight:600;font-size:14px">Scan from Hume Screenshot — All Metrics</div>
-            <div style="font-size:12px;color:var(--muted)">AI reads every number off your results screen — the complete scan, not just what Apple Health captures.</div>
-          </div>
-        </div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">
-          After your scan: in the Hume app, open your results → take a screenshot → upload it here.
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <input type="file" id="hume-photo-input" accept="image/*" multiple style="display:none" onchange="handleHumePhotoImport(this.files)">
-          <button class="btn btn-primary" onclick="document.getElementById('hume-photo-input').click()" style="display:flex;align-items:center;gap:6px">
-            <span>📸</span> Upload Hume Screenshots
-          </button>
-          <span style="font-size:12px;color:var(--muted)">Select all screenshots at once</span>
-          <span id="hume-photo-status" style="font-size:12px;color:var(--muted)"></span>
-        </div>
-        <div id="hume-photo-progress" style="margin-top:10px;font-size:13px;min-height:18px"></div>
-        <div id="hume-photo-preview" style="margin-top:6px"></div>
-      </div>
-
-      <!-- Option 2: Auto-Sync via iOS Shortcut -->
-      <div style="border:1.5px solid var(--border);border-radius:12px;padding:14px">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-          <span style="font-size:20px">🔄</span>
-          <div>
-            <div style="font-weight:600;font-size:14px">Auto-Sync via iOS Shortcut — Hands-Free</div>
-            <div style="font-size:12px;color:var(--muted)">Set up once. After each scan, run the Shortcut and your data appears here instantly on all devices.</div>
-          </div>
-        </div>
-        <div id="hume-sync-status" style="font-size:12px;color:var(--muted);margin-bottom:8px">
-          Waiting for first sync from Shortcut…
-        </div>
-        <button class="optional-toggle" onclick="toggleIbOptional('hume-shortcut-guide', this, 'iOS Shortcut Setup Guide')">＋ Show iOS Shortcut Setup Guide</button>
-        <div class="optional-section" id="hume-shortcut-guide" style="margin-top:10px">
-          <div style="font-size:13px;line-height:1.7">
-            <strong>One-time setup on your iPhone:</strong><br>
-            1. Open the <strong>Shortcuts</strong> app → tap <strong>+</strong> to create a new Shortcut<br>
-            2. Add action: <strong>Get Samples from Health</strong> → Type: <strong>Body Mass</strong> → Limit: 1, Sort by: most recent<br>
-            3. Add <strong>Get Samples from Health</strong> → Type: <strong>Body Fat Percentage</strong> → Limit: 1<br>
-            4. Add <strong>Get Samples from Health</strong> → Type: <strong>Lean Body Mass</strong> → Limit: 1<br>
-            5. Add action: <strong>Get Current Date</strong><br>
-            6. Add action: <strong>Text</strong> → paste this (replace each with the result variables from above):<br>
-            <code style="display:block;background:var(--card-bg);border:1px solid var(--border);border-radius:6px;padding:8px;margin:6px 0;font-size:11px;word-break:break-all">{"fields":{"date":{"stringValue":"DATE"},"weight":{"doubleValue":WEIGHT},"pbf":{"doubleValue":BODYFAT},"leanBodyMass":{"doubleValue":LEAN},"pendingImport":{"booleanValue":true},"syncedAt":{"stringValue":"DATE"}}}</code>
-            7. Add action: <strong>Get Contents of URL</strong>:<br>
-            &nbsp;&nbsp;URL: <code style="font-size:11px;word-break:break-all">https://firestore.googleapis.com/v1/projects/e-health-tracker/databases/(default)/documents/health/hume_sync?key=AIzaSyCxPlVaKYAHet2PAiz19VqByW8Ws2W5_1Q</code><br>
-            &nbsp;&nbsp;Method: <strong>PATCH</strong>, Request Body: <strong>JSON</strong> → the Text from step 6<br>
-            8. Name it <strong>"Log Hume Scan"</strong> and add it to your Home Screen<br><br>
-            After each Hume scan, tap that icon — your data appears in this app within seconds.
-          </div>
-        </div>
-      </div>
-
-      <!-- Option 3: Apple Health ZIP (existing) -->
-      <div style="border:1.5px solid var(--border);border-radius:12px;padding:14px">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-          <span style="font-size:20px">🍎</span>
-          <div>
-            <div style="font-weight:600;font-size:14px">Bulk Import — Apple Health Export (.zip)</div>
-            <div style="font-size:12px;color:var(--muted)">Import all historical Hume scan data at once from a full Apple Health export.</div>
-          </div>
-        </div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">
-          iPhone Health app → tap your profile photo → <strong>Export All Health Data</strong> → share the .zip here.
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-          <input type="file" id="apple-health-zip" accept=".zip" style="display:none" onchange="handleAppleHealthImport(this.files[0])">
-          <button class="btn btn-secondary" onclick="document.getElementById('apple-health-zip').click()" style="display:flex;align-items:center;gap:6px">
-            <span>📁</span> Choose Export .zip
-          </button>
-        </div>
-        <div id="ah-import-progress" style="margin-top:10px;font-size:13px;min-height:18px"></div>
-        <div id="ah-import-preview" style="margin-top:4px"></div>
-      </div>
-
-    </div>
   </div>
 
   <div class="section-group"><span class="section-group-label">Latest Snapshot</span><div class="section-group-line"></div></div>
@@ -4765,42 +4738,57 @@ function saveHumePhotoScan() {
   const scan = window._humePendingScan;
   if (!scan) return;
 
-  // Map extracted fields to InBody schema (some may have different names from Claude)
+  // Map Hume scan fields to daily log entry schema
+  const today = new Date().toISOString().slice(0, 10);
   const entry = {
-    date: scan.date,
-    weight: scan.weight ?? null,
-    pbf: scan.pbf ?? scan.bodyFatPercent ?? null,
-    bodyFatMass: scan.bodyFatMass ?? null,
-    leanBodyMass: scan.leanBodyMass ?? null,
-    smm: scan.smm ?? scan.skeletalMuscleMass ?? null,
-    bmi: scan.bmi ?? null,
-    visceralFat: scan.visceralFat ?? null,
-    bmr: scan.bmr ?? null,
-    smi: scan.smi ?? null,
-    ecwTbw: scan.ecwTbw ?? null,
-    icw: scan.icw ?? null,
-    ecw: scan.ecw ?? null,
-    tbw: scan.tbw ?? null,
-    dryLeanMass: scan.dryLeanMass ?? null,
-    notes: scan.notes || 'Imported via Hume screenshot (AI scan)',
+    date: scan.date || today,
+    weight:           scan.weight         ?? null,
+    bodyFat:          scan.pbf            ?? null,  // body fat % → bodyFat
+    skeletalMuscle:   scan.smm            ?? null,  // SMM → skeletalMuscle
+    bmi:              scan.bmi            ?? null,
+    bodyFatMass:      scan.bodyFatMass    ?? null,
+    leanMass:         scan.leanBodyMass   ?? null,  // leanBodyMass → leanMass
+    leanMassPct:      scan.leanMassPct    ?? null,
+    subcutFatMass:    scan.subcutFatMass  ?? null,
+    visceralFatIndex: scan.visceralFatIndex ?? null,
+    skeletalMass:     scan.skeletalMass   ?? null,
+    boneMineralContent: scan.boneMineralContent ?? null,
+    bodyCellMass:     scan.bodyCellMass   ?? null,
+    bodyWaterPct:     scan.bodyWaterPct   ?? null,
+    icw:              scan.icw            ?? null,
+    ecw:              scan.ecw            ?? null,
+    mineralMass:      scan.mineralMass    ?? null,
+    bmr:              scan.bmr            ?? null,
+    metabolicAge:     scan.metabolicAge   ?? null,
+    heartRate:        scan.heartRate      ?? null,
+    segRaLean: scan.segRaLean ?? null, segRaFat: scan.segRaFat ?? null,
+    segLaLean: scan.segLaLean ?? null, segLaFat: scan.segLaFat ?? null,
+    segTrLean: scan.segTrLean ?? null, segTrFat: scan.segTrFat ?? null,
+    segRlLean: scan.segRlLean ?? null, segRlFat: scan.segRlFat ?? null,
+    segLlLean: scan.segLlLean ?? null, segLlFat: scan.segLlFat ?? null,
+    notes: scan.notes || 'Imported via Hume screenshots (AI scan)',
   };
 
-  const scans = getInBody();
-  const idx = scans.findIndex(s => s.date === entry.date);
-  if (idx >= 0) { Object.assign(scans[idx], entry); } else { scans.push(entry); }
-  scans.sort((a, b) => a.date.localeCompare(b.date));
-  saveInBody(scans);
+  // Remove null fields so they don't overwrite existing real values when merging
+  Object.keys(entry).forEach(k => { if (entry[k] === null) delete entry[k]; });
+
+  const entries = getData();
+  const idx = entries.findIndex(e => e.date === entry.date);
+  if (idx >= 0) { Object.assign(entries[idx], entry); } else { entries.push(entry); }
+  entries.sort((a, b) => a.date.localeCompare(b.date));
+  saveData(entries);
   pushToFirestore();
 
   window._humePendingScan = null;
   document.getElementById('hume-photo-preview').innerHTML = '';
-  document.getElementById('hume-photo-progress').innerHTML = '<span style="color:var(--good)">✅ Scan saved!</span>';
+  document.getElementById('hume-photo-progress').innerHTML = '<span style="color:var(--good)">✅ Saved to daily log!</span>';
   document.getElementById('hume-photo-input').value = '';
   setTimeout(() => {
     const el = document.getElementById('hume-photo-progress');
     if (el) el.innerHTML = '';
   }, 3000);
-  renderInBody();
+  renderDashboard();
+  renderSegmental();
 }
 
 function cancelHumePhotoImport() {
@@ -4821,24 +4809,27 @@ function startHumeSyncListener() {
       const data = snap.data();
       if (!data.pendingImport) return;
 
-      // Auto-import the data
+      // Auto-import the data into daily log store
+      const r = v => v != null ? Math.round(v * 10) / 10 : null;
       const entry = {
         date: data.date || new Date().toISOString().slice(0, 10),
-        weight: data.weight != null ? Math.round(data.weight * 10) / 10 : null,
-        pbf: data.pbf != null ? Math.round(data.pbf * 10) / 10 : null,
-        leanBodyMass: data.leanBodyMass != null ? Math.round(data.leanBodyMass * 10) / 10 : null,
-        bmi: data.bmi != null ? Math.round(data.bmi * 10) / 10 : null,
+        weight:         r(data.weight),
+        bodyFat:        r(data.pbf),           // pbf → bodyFat
+        leanMass:       r(data.leanBodyMass),  // leanBodyMass → leanMass
+        bmi:            r(data.bmi),
         notes: 'Auto-synced from Hume (iOS Shortcut)',
       };
-      if (entry.weight != null && entry.pbf != null) {
-        entry.bodyFatMass = Math.round(entry.weight * (entry.pbf / 100) * 10) / 10;
+      if (entry.weight != null && entry.bodyFat != null) {
+        entry.bodyFatMass = Math.round(entry.weight * (entry.bodyFat / 100) * 10) / 10;
       }
+      // Remove nulls before merging
+      Object.keys(entry).forEach(k => { if (entry[k] === null) delete entry[k]; });
 
-      const scans = getInBody();
-      const idx = scans.findIndex(s => s.date === entry.date);
-      if (idx >= 0) { Object.assign(scans[idx], entry); } else { scans.push(entry); }
-      scans.sort((a, b) => a.date.localeCompare(b.date));
-      saveInBody(scans);
+      const entries = getData();
+      const idx = entries.findIndex(e => e.date === entry.date);
+      if (idx >= 0) { Object.assign(entries[idx], entry); } else { entries.push(entry); }
+      entries.sort((a, b) => a.date.localeCompare(b.date));
+      saveData(entries);
 
       // Clear the pending flag in Firestore
       db.collection('health').doc('hume_sync').update({ pendingImport: false });
@@ -4847,13 +4838,12 @@ function startHumeSyncListener() {
       // Update status display
       const statusEl = document.getElementById('hume-sync-status');
       if (statusEl) {
-        statusEl.innerHTML = `<span style="color:var(--good)">✅ Last synced: ${fmtDate(entry.date)} — weight ${entry.weight ?? '?'} lbs, body fat ${entry.pbf ?? '?'}%</span>`;
+        statusEl.innerHTML = `<span style="color:var(--good)">✅ Last synced: ${fmtDate(entry.date)} — weight ${entry.weight ?? '?'} lbs, body fat ${entry.bodyFat ?? '?'}%</span>`;
       }
 
-      // Re-render if on InBody tab
-      if (document.getElementById('page-inbody')?.classList.contains('active')) {
-        renderInBody();
-      }
+      // Re-render dashboard and segmental
+      renderDashboard();
+      renderSegmental();
     });
   } catch(e) {
     console.log('Hume sync listener error:', e);
@@ -5033,38 +5023,52 @@ function confirmAppleHealthImport() {
   const scans = window._ahPendingScans;
   if (!scans || !scans.length) return;
 
-  const existing = getInBody();
+  const existing = getData();
   let added = 0, merged = 0;
 
   scans.forEach(scan => {
-    // Strip internal tracking field before saving
-    const { _source, ...scanData } = scan;
-    const idx = existing.findIndex(s => s.date === scanData.date);
+    // Map Apple Health / Hume fields to daily log schema
+    const entry = {
+      date:     scan.date,
+      weight:   scan.weight    ?? null,
+      bodyFat:  scan.pbf       ?? null,  // pbf → bodyFat
+      leanMass: scan.leanBodyMass ?? null,
+      bmi:      scan.bmi       ?? null,
+      notes:    'Bulk import from Apple Health export',
+    };
+    if (entry.weight != null && entry.bodyFat != null) {
+      entry.bodyFatMass = Math.round(entry.weight * (entry.bodyFat / 100) * 10) / 10;
+    }
+    // Remove nulls before merging
+    Object.keys(entry).forEach(k => { if (entry[k] === null) delete entry[k]; });
+
+    const idx = existing.findIndex(e => e.date === entry.date);
     if (idx >= 0) {
       // Merge: only fill in fields that are currently null/missing
-      Object.keys(scanData).forEach(k => {
-        if (scanData[k] != null && (existing[idx][k] == null || existing[idx][k] === '')) {
-          existing[idx][k] = scanData[k];
+      Object.keys(entry).forEach(k => {
+        if (entry[k] != null && (existing[idx][k] == null || existing[idx][k] === '')) {
+          existing[idx][k] = entry[k];
         }
       });
       merged++;
     } else {
-      existing.push(scanData);
+      existing.push(entry);
       added++;
     }
   });
 
   existing.sort((a, b) => a.date.localeCompare(b.date));
-  saveInBody(existing);
+  saveData(existing);
   pushToFirestore();
 
   window._ahPendingScans = null;
   document.getElementById('ah-import-preview').innerHTML = '';
   document.getElementById('ah-import-progress').innerHTML =
-    `<span style="color:var(--good)">✅ Done! Added ${added} new scan${added !== 1 ? 's' : ''}, merged ${merged} existing.</span>`;
+    `<span style="color:var(--good)">✅ Done! Added ${added} new entr${added !== 1 ? 'ies' : 'y'}, merged ${merged} existing.</span>`;
   document.getElementById('apple-health-zip').value = '';
 
-  renderInBody();
+  renderDashboard();
+  renderSegmental();
 }
 
 function cancelAppleHealthImport() {
@@ -6036,7 +6040,7 @@ function markLocalChange() {
 // Fetch the live site in the background; if the version token differs from what
 // we loaded (can happen when iOS PWA serves a stale cached copy), show a banner.
 (function() {
-  var CURRENT_VERSION = '20260802d';
+  var CURRENT_VERSION = '20260804a';
   var stored = localStorage.getItem('ht_code_version');
   if (stored !== CURRENT_VERSION) {
     // First run of this version — record it and move on (no banner needed)
