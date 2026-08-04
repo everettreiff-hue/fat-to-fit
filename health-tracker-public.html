@@ -1569,6 +1569,7 @@ _diagStep("error handler ready");
 let fbSyncTimer = null;
 let fbBusy = false;
 let fbUnsubscribe = null;
+let fbDeletionUnsubscribe = null;
 let fbLastWriteTs = Number(localStorage.getItem('ht_fb_last_write') || 0);
 
 // ===== ZOOM HELPER =====
@@ -1622,12 +1623,37 @@ function getPhotos() {
   try { return JSON.parse(localStorage.getItem('ht_photos') || '[]'); } catch { return []; }
 }
 function savePhotos(p) { localStorage.setItem('ht_photos', JSON.stringify(p)); scheduleFirebaseSync(); }
+function getDeletedInBodyDates() {
+  try { return JSON.parse(localStorage.getItem('ht_deleted_inbody_dates') || '[]'); } catch { return []; }
+}
+function filterDeletedInBody(scans) {
+  const deleted = new Set(getDeletedInBodyDates());
+  return (scans || []).filter(scan => !deleted.has(scan.date));
+}
 function getInBody() {
-  try { return JSON.parse(localStorage.getItem('ht_inbody') || '[]'); } catch { return []; }
+  try { return filterDeletedInBody(JSON.parse(localStorage.getItem('ht_inbody') || '[]')); } catch { return []; }
 }
 function saveInBody(scans) {
-  localStorage.setItem('ht_inbody', JSON.stringify(scans));
+  localStorage.setItem('ht_inbody', JSON.stringify(filterDeletedInBody(scans)));
   scheduleFirebaseSync();
+}
+function markInBodyDeleted(date) {
+  const dates = Array.from(new Set([...getDeletedInBodyDates(), date])).sort();
+  localStorage.setItem('ht_deleted_inbody_dates', JSON.stringify(dates));
+  const db = getFirestore();
+  if (db) db.collection('health').doc('deletions').set({
+    inbodyDates: firebase.firestore.FieldValue.arrayUnion(date),
+    updatedAt: new Date().toISOString()
+  }, { merge: true }).catch(e => console.warn('Could not sync InBody deletion marker', e));
+}
+function clearInBodyDeletion(date) {
+  const dates = getDeletedInBodyDates().filter(item => item !== date);
+  localStorage.setItem('ht_deleted_inbody_dates', JSON.stringify(dates));
+  const db = getFirestore();
+  if (db) db.collection('health').doc('deletions').set({
+    inbodyDates: firebase.firestore.FieldValue.arrayRemove(date),
+    updatedAt: new Date().toISOString()
+  }, { merge: true }).catch(e => console.warn('Could not clear InBody deletion marker', e));
 }
 
 // ===== SEED INBODY DATA (from June 17, 2026 scan) =====
@@ -4213,6 +4239,7 @@ function saveInBodyEntry() {
   };
 
   const scans = getInBody();
+  clearInBodyDeletion(date);
   const idx = scans.findIndex(s=>s.date===date);
   if (idx>=0) { Object.assign(scans[idx], entry); } else { scans.push(entry); }
   scans.sort((a,b)=>a.date.localeCompare(b.date));
@@ -4224,6 +4251,7 @@ function saveInBodyEntry() {
 
 function deleteInBodyEntry(date) {
   if (!confirm('Delete InBody scan for ' + fmtDate(date) + '?')) return;
+  markInBodyDeleted(date);
   const scans = getInBody().filter(s=>s.date!==date);
   saveInBody(scans);
   renderInBody();
@@ -5159,7 +5187,8 @@ async function saveJSON() {
     liftWorkouts: getLiftWorkouts(),
     nutrition: getNutritionData(),
     workoutTemplates: getWorkoutTemplates(),
-    coachHistory: getCoachHistory()
+    coachHistory: getCoachHistory(),
+    deletedInbodyDates: getDeletedInBodyDates()
   };
   const json = JSON.stringify(payload, null, 2);
   const now = new Date();
@@ -5220,6 +5249,7 @@ function loadJSON(text) {
       localStorage.setItem('ht_coach_history', JSON.stringify(payload.coachHistory));
       _coachInitialized = false;
     }
+    if (payload.deletedInbodyDates) localStorage.setItem('ht_deleted_inbody_dates', JSON.stringify(payload.deletedInbodyDates));
     scheduleFirebaseSync();
     showMsg('json-msg', `✓ Restored ${payload.entries.length} body entries, ${(payload.liftWorkouts || []).length} workouts, ${(payload.inbody || []).length} scans, and ${(payload.nutrition || []).length} nutrition days.`, 'good');
   } catch(e) {
@@ -5881,10 +5911,44 @@ function scheduleFirebaseSync() {
   fbSyncTimer = setTimeout(() => { pushToFirestore(); }, 1500);
 }
 
+function applyInBodyDeletionMarkers(data) {
+  const remoteDates = data && Array.isArray(data.inbodyDates) ? data.inbodyDates : [];
+  const mergedDates = Array.from(new Set([...getDeletedInBodyDates(), ...remoteDates])).sort();
+  localStorage.setItem('ht_deleted_inbody_dates', JSON.stringify(mergedDates));
+  const stored = (() => {
+    try { return JSON.parse(localStorage.getItem('ht_inbody') || '[]'); } catch { return []; }
+  })();
+  const filtered = filterDeletedInBody(stored);
+  const removed = stored.length - filtered.length;
+  if (removed > 0) localStorage.setItem('ht_inbody', JSON.stringify(filtered));
+  return removed;
+}
+
+async function initInBodyDeletionSync(db) {
+  try {
+    const initial = await db.collection('health').doc('deletions').get();
+    if (initial.exists) applyInBodyDeletionMarkers(initial.data());
+  } catch(e) {
+    console.warn('Could not load InBody deletion markers', e);
+  }
+  fbDeletionUnsubscribe = db.collection('health').doc('deletions').onSnapshot(snap => {
+    if (!snap.exists) return;
+    const removed = applyInBodyDeletionMarkers(snap.data());
+    if (removed > 0) {
+      scheduleFirebaseSync();
+      if (typeof renderInBody === 'function') renderInBody();
+    }
+  }, err => console.warn('InBody deletion listener error', err));
+}
+
 async function initFirebaseSync() {
   const db = getFirestore();
   if (!db) { setSyncStatus('☁️ Firebase unavailable'); return; }
   setSyncStatus('☁️ connecting…');
+
+  // Deletion markers live in a separate document so stale clients cannot
+  // recreate a removed scan by overwriting the main health data document.
+  await initInBodyDeletionSync(db);
 
   // If a previous merge flagged that we need to push merged data, do it first
   // (and await it) so fbLastWriteTs is set before the listener fires.
@@ -5995,7 +6059,7 @@ function applyAllAppData(remote) {
   // A newer remote InBody list is authoritative. Replacing it allows deletions
   // to propagate instead of union-merging a deleted scan back into existence.
   if (Array.isArray(remote.inbody))
-    localStorage.setItem('ht_inbody', JSON.stringify(remote.inbody.slice().sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0)));
+    localStorage.setItem('ht_inbody', JSON.stringify(filterDeletedInBody(remote.inbody).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0)));
   if (Array.isArray(remote.liftWorkouts))
     localStorage.setItem('ht_lift_workouts', JSON.stringify(mergeWorkouts(getLiftWorkouts(), remote.liftWorkouts)));
   if (Array.isArray(remote.coachHistory) && remote.coachHistory.length > _coachHistory.length) {
@@ -6042,7 +6106,7 @@ function mergeAllAppData(remote) {
   if (Array.isArray(remote.photos))
     localStorage.setItem('ht_photos', JSON.stringify(mergeByDate(getPhotos(), remote.photos)));
   if (Array.isArray(remote.inbody))
-    localStorage.setItem('ht_inbody', JSON.stringify(mergeByDate(getInBody(), remote.inbody)));
+    localStorage.setItem('ht_inbody', JSON.stringify(filterDeletedInBody(mergeByDate(getInBody(), remote.inbody))));
   if (Array.isArray(remote.liftWorkouts))
     localStorage.setItem('ht_lift_workouts', JSON.stringify(mergeWorkouts(getLiftWorkouts(), remote.liftWorkouts)));
   if (Array.isArray(remote.coachHistory) && remote.coachHistory.length > _coachHistory.length) {
@@ -6083,7 +6147,7 @@ function markLocalChange() {
 // Fetch the live site in the background; if the version token differs from what
 // we loaded (can happen when iOS PWA serves a stale cached copy), show a banner.
 (function() {
-  var CURRENT_VERSION = '20260804c';
+  var CURRENT_VERSION = '20260804d';
   var stored = localStorage.getItem('ht_code_version');
   if (stored !== CURRENT_VERSION) {
     // First run of this version — record it and move on (no banner needed)
