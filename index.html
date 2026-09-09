@@ -375,6 +375,7 @@ if (window.navigator.standalone) {
   <button class="active" onclick="showPage('dashboard')">Dashboard</button>
   <button onclick="showPage('log')">Log Entry</button>
   <button onclick="showPage('inbody')">InBody</button>
+  <button onclick="showPage('dexa')">DEXA</button>
   <button onclick="showPage('charts')">Charts</button>
   <button onclick="showPage('history')">History</button>
   <button onclick="showPage('photos')">Photos</button>
@@ -389,7 +390,8 @@ if (window.navigator.standalone) {
   <button class="active" onclick="showPage('dashboard')"><span class="nav-icon">📊</span>Dashboard</button>
   <button onclick="showPage('log')"><span class="nav-icon">✏️</span>Log</button>
   <button onclick="showPage('inbody')"><span class="nav-icon">⚖️</span>InBody</button>
-  <button onclick="showPage('charts')"><span class="nav-icon">📈</span>Charts</button>
+  <button onclick="showPage('dexa')"><span class="nav-icon">🦴</span>DEXA</button>
+  <button onclick="showPage('charts')"><span class="nav-icon">📈</span><span class="nav-icon">📈</span>Charts</button>
   <button onclick="showPage('history')"><span class="nav-icon">🕘</span>History</button>
   <button onclick="showPage('photos')"><span class="nav-icon">📷</span>Photos</button>
   <button onclick="showPage('import')"><span class="nav-icon">💾</span>Save</button>
@@ -406,7 +408,7 @@ if (window.navigator.standalone) {
   <div class="projection" id="proj-banner" style="margin-bottom:24px">
     <div class="proj-item">
       <span class="proj-label">🎯 Goal date</span>
-      <span class="proj-val" id="proj-original">Oct 31, 2026</span>
+      <span class="proj-val" id="proj-original">Jan 31, 2027</span>
     </div>
     <div class="proj-divider"></div>
     <div class="proj-item">
@@ -684,6 +686,52 @@ if (window.navigator.standalone) {
 </div>
 
 <!-- ===== HISTORY ===== -->
+<div id="page-dexa" class="page">
+  <div class="section-title">DEXA Scan Results</div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title" style="margin-bottom:12px">📅 August 13, 2026 — DexaFit Atlanta</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:700;color:var(--warn)">22.9%</div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;margin-top:2px">Body Fat %</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:700;color:var(--accent)">194.2</div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;margin-top:2px">Weight (lbs)</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:700;color:#34d399">143.3</div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;margin-top:2px">Lean Mass (lbs)</div>
+      </div>
+      <div style="background:var(--surface2);border-radius:10px;padding:12px;text-align:center">
+        <div style="font-size:22px;font-weight:700;color:var(--accent2)">44.4</div>
+        <div style="font-size:11px;color:var(--muted);text-transform:uppercase;margin-top:2px">Fat Mass (lbs)</div>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title" style="margin-bottom:12px">Segmental Fat</div>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+      <div style="display:flex;justify-content:space-between"><span>Arms</span><span style="color:var(--warn);font-weight:600">18.9% · 4.6 lbs</span></div>
+      <div style="display:flex;justify-content:space-between"><span>Trunk</span><span style="color:var(--warn);font-weight:600">26.1% · 26.0 lbs</span></div>
+      <div style="display:flex;justify-content:space-between"><span>Legs</span><span style="color:var(--warn);font-weight:600">20.0% · 11.8 lbs</span></div>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-title" style="margin-bottom:12px">Key Metrics</div>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:13px">
+      <div style="display:flex;justify-content:space-between"><span>Visceral Fat</span><span style="font-weight:600">1.51 lbs <span style="color:var(--muted)">(target: 1.00)</span></span></div>
+      <div style="display:flex;justify-content:space-between"><span>A/G Ratio</span><span style="font-weight:600">1.21 <span style="color:var(--muted)">(target: 0.6–0.8)</span></span></div>
+      <div style="display:flex;justify-content:space-between"><span>ALMI</span><span style="font-weight:600">8.5 kg/m² <span style="color:var(--muted)">(target: 9.8)</span></span></div>
+      <div style="display:flex;justify-content:space-between"><span>FFMI</span><span style="font-weight:600">20.1 kg/m² <span style="color:var(--muted)">(target: 21.0)</span></span></div>
+      <div style="display:flex;justify-content:space-between"><span>Body Score</span><span style="font-weight:700;color:var(--accent)">B</span></div>
+    </div>
+  </div>
+  <div class="card">
+    <div style="font-size:12px;color:var(--muted);text-align:center">InBody reads ~4% lower than DEXA. At this scan, InBody showed 18.9% vs DEXA 22.9% — a consistent 4% offset to keep in mind when reading InBody results.</div>
+  </div>
+</div>
+
 <div id="page-history" class="page">
   <div class="section-title">Entry History</div>
   <div class="card" style="overflow:auto">
@@ -841,6 +889,7 @@ if (window.navigator.standalone) {
   <div class="brand">🏋️ Lifting</div>
   <button class="active" onclick="showLiftPage('liftlog')">Log</button>
   <button onclick="showLiftPage('lifthistory')">History</button>
+  <button onclick="showLiftPage('liftsessions')">Sessions</button>
   <button onclick="showLiftPage('liftprogress')">Progress</button>
   <button onclick="saveJSON()" style="margin-left:auto;color:var(--accent2);border-bottom-color:transparent">📦 Save JSON</button>
   <button class="drive-sync-status" onclick="driveConnectClick()" style="color:var(--muted);border-bottom-color:transparent;font-size:12px;white-space:nowrap" title="Connect or re-sync Google Drive">☁️ Drive: tap to connect</button>
@@ -850,6 +899,7 @@ if (window.navigator.standalone) {
 <nav class="bottom-nav" style="display:none">
   <button class="active" onclick="showLiftPage('liftlog')"><span class="nav-icon">✏️</span>Log</button>
   <button onclick="showLiftPage('lifthistory')"><span class="nav-icon">🕘</span>History</button>
+  <button onclick="showLiftPage('liftsessions')"><span class="nav-icon">📋</span>Sessions</button>
   <button onclick="showLiftPage('liftprogress')"><span class="nav-icon">📈</span>Progress</button>
   <button onclick="showLiftPage('liftcoach')"><span class="nav-icon">🤖</span>Coach</button>
 </nav>
@@ -886,6 +936,12 @@ if (window.navigator.standalone) {
 <div id="page-lifthistory" class="page">
   <div class="section-title">Workout History</div>
   <div id="lift-history-list"></div>
+</div>
+
+<!-- ===== SESSIONS ===== -->
+<div id="page-liftsessions" class="page">
+  <div class="section-title">Workout Sessions</div>
+  <div id="lift-sessions-list"></div>
 </div>
 
 <!-- ===== PROGRESS ===== -->
@@ -1083,12 +1139,12 @@ function showPage(name) {
   document.getElementById('page-' + name).classList.add('active');
   // Top nav
   const topBtns = scope.querySelectorAll('nav.top-nav button');
-  const topLabels = ['dashboard','log','inbody','charts','history','photos','measurements','import'];
+  const topLabels = ['dashboard','log','inbody','dexa','charts','history','photos','measurements','import'];
   const topIdx = topLabels.indexOf(name);
   if (topIdx >= 0) topBtns[topIdx].classList.add('active');
   // Bottom nav
   const botBtns = scope.querySelectorAll('nav.bottom-nav button');
-  const botLabels = ['dashboard','log','inbody','charts','history','photos','import'];
+  const botLabels = ['dashboard','log','inbody','dexa','charts','history','photos','import'];
   const botIdx = botLabels.indexOf(name);
   if (botIdx >= 0) botBtns[botIdx].classList.add('active');
   // Scroll to top on mobile
@@ -1099,6 +1155,7 @@ function showPage(name) {
   if (name === 'photos') renderPhotos();
   if (name === 'measurements') renderMeasurements();
   if (name === 'inbody') renderInBody();
+  // DEXA page is static HTML, no render needed
 }
 
 // ===== APP MODE SWITCH =====
@@ -1426,12 +1483,13 @@ function showLiftPage(name) {
   scope.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const pg = scope.querySelector('#page-'+name);
   if (pg) pg.classList.add('active');
-  const labels = ['liftlog','lifthistory','liftprogress','liftcoach'];
+  const labels = ['liftlog','lifthistory','liftsessions','liftprogress','liftcoach'];
   scope.querySelectorAll('nav.top-nav button').forEach((b,i) => b.classList.toggle('active', labels[i]===name));
   scope.querySelectorAll('nav.bottom-nav button').forEach((b,i) => b.classList.toggle('active', labels[i]===name));
   window.scrollTo(0,0);
   if (name === 'lifthistory') renderLiftHistory();
   if (name === 'liftlog') initLiftLogPage();
+  if (name === 'liftsessions') renderLiftSessions();
   if (name === 'liftprogress') renderLiftProgress();
   if (name === 'liftcoach') initCoachPage();
 }
@@ -1854,7 +1912,7 @@ function renderCurrentTrend(entries) {
           <span class="trend-goal">${goalWkly != null ? gSign+goalWkly.toFixed(1)+m.unit : '—'}</span>
         </div>`;
     }).join('')}
-    <div style="font-size:10px;color:var(--muted);margin-top:10px;letter-spacing:.03em">Actual: last 14 days · Needed: to reach Oct 31 goal</div>
+    <div style="font-size:10px;color:var(--muted);margin-top:10px;letter-spacing:.03em">Actual: last 14 days · Needed: to reach Jan 2027 goal</div>
   `;
 }
 
@@ -3177,6 +3235,31 @@ async function sendCoachMessage() {
     _coachHistory.pop();
   }
   messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+
+function renderLiftSessions() {
+  const workouts = getLiftWorkouts().slice().sort((a,b) => b.date.localeCompare(a.date));
+  const el = document.getElementById('lift-sessions-list');
+  if (!workouts.length) { el.innerHTML = '<p style="color:var(--muted);padding:16px">No sessions logged yet.</p>'; return; }
+  el.innerHTML = workouts.map(w => {
+    const exCount = (w.exercises||[]).length;
+    const setCount = (w.exercises||[]).reduce((t,e)=>(t+(e.sets||[]).length),0);
+    const totalVol = (w.exercises||[]).reduce((t,e)=>(t+(e.sets||[]).reduce((s,st)=>(s+(st.weight||0)*(st.reps||0)),0)),0);
+    const dateStr = new Date(w.date+'T00:00:00').toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+    return `<div class="card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-weight:700;font-size:15px">${dateStr}</div>
+        <div style="font-size:11px;color:var(--muted);background:var(--surface2);padding:2px 8px;border-radius:8px">${w.label||'Session'}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center">
+        <div><div style="font-size:18px;font-weight:700;color:var(--accent)">${exCount}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Exercises</div></div>
+        <div><div style="font-size:18px;font-weight:700;color:var(--accent2)">${setCount}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Sets</div></div>
+        <div><div style="font-size:18px;font-weight:700;color:#34d399">${totalVol>0?Math.round(totalVol).toLocaleString():'—'}</div><div style="font-size:10px;color:var(--muted);text-transform:uppercase">Vol (lbs)</div></div>
+      </div>
+      ${(w.exercises||[]).length ? `<div style="margin-top:10px;font-size:12px;color:var(--muted)">${(w.exercises||[]).map(e=>e.name).join(' · ')}</div>` : ''}
+    </div>`;
+  }).join('');
 }
 
 function renderLiftHistory() {
