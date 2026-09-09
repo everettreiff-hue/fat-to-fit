@@ -3,16 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="color-scheme" content="dark">
-<meta name="supported-color-schemes" content="dark">
 <title>💪 Health Tracker</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💪</text></svg>">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Health">
 <meta name="theme-color" content="#0f1117">
 <link rel="apple-touch-icon" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMjAgMTIwIj48cmVjdCB3aWR0aD0iMTIwIiBoZWlnaHQ9IjEyMCIgcng9IjI2IiBmaWxsPSIjMGYxMTE3Ii8+PHJlY3QgeD0iOCIgeT0iOCIgd2lkdGg9IjEwNCIgaGVpZ2h0PSIxMDQiIHJ4PSIyMCIgZmlsbD0iIzFhMWQyNyIvPjx0ZXh0IHg9IjYwIiB5PSI3NiIgZm9udC1zaXplPSI1NiIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzRmOGVmNyI+4pqhPC90ZXh0Pjwvc3ZnPg==">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js" defer></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js" defer></script>
+<link rel="manifest" id="pwa-manifest">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-zoom/2.0.1/chartjs-plugin-zoom.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root {
@@ -29,7 +31,7 @@
     --radius: 12px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #0f1117; color: #e2e8f0; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
 
   /* NAV */
   nav { background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 4px; padding: 0 20px; position: sticky; top: 0; z-index: 100; }
@@ -90,6 +92,13 @@
   .btn-danger { background: transparent; border: 1px solid var(--danger); color: var(--danger); }
   .btn-danger:hover { background: var(--danger); color: #fff; }
   .btn-sm { font-size: 12px; padding: 6px 12px; }
+  .crng { display:flex; gap:2px; }
+  @keyframes coach-pulse { 0%,100%{opacity:.3} 50%{opacity:1} }
+  .coach-thinking-dot { display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--muted);animation:coach-pulse 1.2s ease-in-out infinite; }
+  .coach-thinking-dot:nth-child(2){animation-delay:.2s} .coach-thinking-dot:nth-child(3){animation-delay:.4s}
+    .crng button { font-size:11px; padding:3px 9px; border-radius:6px; background:var(--surface2); border:1px solid var(--border); color:var(--muted); cursor:pointer; transition:all .15s; line-height:1.5; white-space:nowrap; }
+  .crng button.crng-active { background:var(--accent); color:#fff; border-color:var(--accent); }
+  .crng button:hover:not(.crng-active) { border-color:var(--accent); color:var(--accent); }
   .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
 
   /* TABLE */
@@ -250,6 +259,7 @@
        so show a compact icon-only Drive button in the always-visible
        mode-switch bar instead. Tap behavior is identical (driveConnectClick). */
     .app-mode-switch { justify-content: space-between; }
+    }
     .drive-sync-mobile {
       display: flex !important;
       align-items: center; justify-content: center;
@@ -343,10 +353,7 @@
 </head>
 <body>
 <script>
-// iOS standalone (home screen shortcut): navigator.standalone is true even when
-// display-mode media query doesn't fire (e.g. shortcut added before meta tag changes).
 if (window.navigator.standalone) {
-  document.documentElement.style.setProperty('--standalone-top', 'env(safe-area-inset-top)');
   document.addEventListener('DOMContentLoaded', function() {
     var el = document.querySelector('.app-mode-switch');
     if (el) el.style.paddingTop = 'calc(10px + env(safe-area-inset-top))';
@@ -393,6 +400,8 @@ if (window.navigator.standalone) {
 <!-- ===== DASHBOARD ===== -->
 <div id="page-dashboard" class="page active">
 
+  <div style="text-align:center;padding:18px 0 8px;font-size:2.2rem;font-weight:900;letter-spacing:0.08em;color:var(--accent);text-transform:uppercase;">DON'T GIVE UP</div>
+
   <!-- Projection banner -->
   <div class="projection" id="proj-banner" style="margin-bottom:24px">
     <div class="proj-item">
@@ -423,20 +432,24 @@ if (window.navigator.standalone) {
   <!-- SECTION: Trend Charts -->
   <div class="section-group"><span class="section-group-label">Trend Charts</span><div class="section-group-line"></div></div>
   <div class="card" style="margin-bottom:16px">
-    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:var(--accent)"></div>Weight (lbs)</div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-weight')">Reset Zoom</button></div>
+    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:var(--accent)"></div>Weight (lbs)</div><div style="display:flex;align-items:center;gap:8px"><div class="crng"><button class="crng-active" onclick="setChartRange('chart-weight','data',this)">Data</button><button onclick="setChartRange('chart-weight','+4w',this)">+4 Wks</button><button onclick="setChartRange('chart-weight','goal',this)">Goal</button></div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-weight')">Reset Zoom</button></div>
     <div class="chart-wrap"><canvas id="chart-weight"></canvas></div>
   </div>
   <div class="card" style="margin-bottom:16px">
-    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:var(--warn)"></div>Body Fat %</div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-bf')">Reset Zoom</button></div>
+    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:var(--warn)"></div>Body Fat %</div><div style="display:flex;align-items:center;gap:8px"><div class="crng"><button class="crng-active" onclick="setChartRange('chart-bf','data',this)">Data</button><button onclick="setChartRange('chart-bf','+4w',this)">+4 Wks</button><button onclick="setChartRange('chart-bf','goal',this)">Goal</button></div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-bf')">Reset Zoom</button></div>
     <div class="chart-wrap"><canvas id="chart-bf"></canvas></div>
   </div>
-  <div class="card" style="margin-bottom:24px">
-    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:#a855f7"></div>Muscle Mass % — Trend</div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-mm')">Reset Zoom</button></div>
-    <div class="chart-wrap"><canvas id="chart-mm"></canvas></div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:var(--accent2)"></div>Subcutaneous Fat % — Trend</div><div style="display:flex;align-items:center;gap:8px"><div class="crng"><button class="crng-active" onclick="setChartRange('chart-sf','data',this)">Data</button><button onclick="setChartRange('chart-sf','+4w',this)">+4 Wks</button><button onclick="setChartRange('chart-sf','goal',this)">Goal</button></div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-sf')">Reset Zoom</button></div>
+    <div class="chart-wrap"><canvas id="chart-sf"></canvas></div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:#34d399"></div>Skeletal Muscle (lbs) — Trend</div><div style="display:flex;align-items:center;gap:8px"><div class="crng"><button class="crng-active" onclick="setChartRange('chart-sm','data',this)">Data</button><button onclick="setChartRange('chart-sm','+4w',this)">+4 Wks</button><button onclick="setChartRange('chart-sm','goal',this)">Goal</button></div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-sm')">Reset Zoom</button></div>
+    <div class="chart-wrap"><canvas id="chart-sm"></canvas></div>
   </div>
   <div class="card" style="margin-bottom:24px">
-    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:var(--accent2)"></div>Subcutaneous Fat % — Trend</div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-sf')">Reset Zoom</button></div>
-    <div class="chart-wrap"><canvas id="chart-sf"></canvas></div>
+    <div class="chart-header"><div class="card-section-title"><div class="dot" style="background:#a855f7"></div>Muscle Mass % — Trend</div><div style="display:flex;align-items:center;gap:8px"><div class="crng"><button class="crng-active" onclick="setChartRange('chart-mm','data',this)">Data</button><button onclick="setChartRange('chart-mm','+4w',this)">+4 Wks</button><button onclick="setChartRange('chart-mm','goal',this)">Goal</button></div><button class="btn btn-sm btn-secondary" onclick="resetChart('chart-mm')">Reset Zoom</button></div>
+    <div class="chart-wrap"><canvas id="chart-mm"></canvas></div>
   </div>
 
   <!-- SECTION: Composition & Activity -->
@@ -495,6 +508,10 @@ if (window.navigator.standalone) {
       <div class="field">
         <label>Muscle Mass %</label>
         <input type="number" id="log-mm" step="0.1" placeholder="—">
+      </div>
+      <div class="field">
+        <label>Skeletal Muscle (lbs)</label>
+        <input type="number" id="log-sm" step="0.1" placeholder="—">
       </div>
       <div class="field">
         <label>Workout</label>
@@ -828,17 +845,23 @@ if (window.navigator.standalone) {
   <button onclick="saveJSON()" style="margin-left:auto;color:var(--accent2);border-bottom-color:transparent">📦 Save JSON</button>
   <button class="drive-sync-status" onclick="driveConnectClick()" style="color:var(--muted);border-bottom-color:transparent;font-size:12px;white-space:nowrap" title="Connect or re-sync Google Drive">☁️ Drive: tap to connect</button>
 </nav>
+
+<!-- Bottom nav — mobile only -->
 <nav class="bottom-nav" style="display:none">
   <button class="active" onclick="showLiftPage('liftlog')"><span class="nav-icon">✏️</span>Log</button>
   <button onclick="showLiftPage('lifthistory')"><span class="nav-icon">🕘</span>History</button>
   <button onclick="showLiftPage('liftprogress')"><span class="nav-icon">📈</span>Progress</button>
+  <button onclick="showLiftPage('liftcoach')"><span class="nav-icon">🤖</span>Coach</button>
 </nav>
+
 <main>
+
+<!-- ===== LOG WORKOUT ===== -->
 <div id="page-liftlog" class="page active">
   <div class="section-title">Log Workout</div>
   <div class="card" style="margin-bottom:16px">
     <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px">
-      <input type="date" id="lift-log-date" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px">
+      <input type="date" id="lift-log-date" onchange="renderLiftExerciseChecklist(_liftType)" style="padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px">
       <div style="display:flex;gap:8px">
         <button id="lift-type-upper" class="btn btn-primary" onclick="selectLiftType('Upper')">Upper Day</button>
         <button id="lift-type-lower" class="btn btn-secondary" onclick="selectLiftType('Lower')">Lower Day</button>
@@ -858,6 +881,8 @@ if (window.navigator.standalone) {
     </div>
   </div>
 </div>
+
+<!-- ===== HISTORY ===== -->
 <div id="page-lifthistory" class="page">
   <div class="section-title">Workout History</div>
   <div id="lift-history-list"></div>
@@ -879,34 +904,52 @@ if (window.navigator.standalone) {
       <button id="lift-prog-tab-upper" class="btn btn-primary" style="flex:1" onclick="showLiftProgTab('Upper')">💪 Upper Body</button>
       <button id="lift-prog-tab-lower" class="btn btn-secondary" style="flex:1" onclick="showLiftProgTab('Lower')">🦵 Lower Body</button>
     </div>
-    <div id="lift-prog-ex-list" style="margin-bottom:8px"></div>
+    <div id="lift-prog-type-chart" style="margin-bottom:4px"></div>
+    <div id="lift-prog-ex-selector"></div>
     <div id="lift-ex-progress"></div>
   </div>
 </div>
+
+<!-- ===== AI COACH ===== -->
+<div id="page-liftcoach" class="page">
+  <div class="section-title">AI Coach</div>
+  <div id="coach-key-setup" class="card" style="margin-bottom:16px;display:none">
+    <div class="card-title" style="margin-bottom:8px">🔑 API Key Setup</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.5">Enter your <strong style="color:var(--text)">free</strong> Google Gemini API key. Get one at <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent)">aistudio.google.com/apikey</a> — just sign in with Google, click "Get API key", done. No credit card needed. Your key is stored only in this browser.</p>
+    <div style="display:flex;gap:8px">
+      <input type="password" id="coach-api-key-input" placeholder="sk-ant-..." style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px">
+      <button class="btn btn-primary" onclick="saveCoachApiKey()">Save</button>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:12px;padding:10px 12px">
+    <div style="font-size:11px;font-weight:600;color:var(--muted);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px">Quick Actions</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px">
+      <button class="btn btn-sm btn-secondary" onclick="coachQuickPrompt('Analyze my recent workouts and give me specific progressive overload targets for my next session — actual weights and reps to aim for.')">📊 Next Session Plan</button>
+      <button class="btn btn-sm btn-secondary" onclick="coachQuickPrompt('Look at my workout history across all exercises and identify where I\'m progressing well and where I\'m stalling or need to focus more.')">⚡ Identify Weak Points</button>
+      <button class="btn btn-sm btn-secondary" onclick="coachQuickPrompt('Review my body composition trends alongside my workout data and tell me how my training is affecting my physique goals. Am I on track?')">🏃 Body Comp Review</button>
+      <button class="btn btn-sm btn-secondary" onclick="coachQuickPrompt('Based on my training history, suggest an optimal weekly split and volume for my goals.')">📅 Weekly Plan</button>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:12px;padding:0;overflow:hidden">
+    <div id="coach-messages" style="min-height:220px;max-height:55vh;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px">
+      <div id="coach-welcome" style="text-align:center;color:var(--muted);font-size:13px;padding:24px 16px;line-height:1.6">🤖 <strong style="color:var(--text)">AI Coach</strong><br>I have full access to your workout history and body composition data. Ask me anything — I'll give you specific, data-driven advice.</div>
+    </div>
+    <div style="padding:10px 12px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end">
+      <textarea id="coach-input" placeholder="Ask your coach…" rows="2" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;resize:none;font-family:inherit;line-height:1.4" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendCoachMessage();}"></textarea>
+      <button class="btn btn-primary" onclick="sendCoachMessage()" style="padding:8px 14px;flex-shrink:0">Send</button>
+    </div>
+  </div>
+  <div style="text-align:center;margin-bottom:8px">
+    <button onclick="clearCoachChat()" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;margin-right:12px">Clear chat</button>
+    <button onclick="showChangeApiKey()" style="background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer">Change API key</button>
+  </div>
+</div>
+
 </main>
 </div><!-- /wrap-lift -->
 
 
 <script type="text/plain" id="ht-app-source">
-
-// ===== DIAGNOSTICS (remove once iOS blank-screen issue is resolved) =====
-function _diagStep(msg) {
-  try {
-    var el = document.getElementById('_diag_step');
-    if (el) el.textContent = msg;
-    var log = document.getElementById('_diag_log');
-    if (log) log.innerHTML += '<div>' + new Date().toISOString().slice(11,23) + ' ' + msg + '</div>';
-  } catch(e) {}
-}
-function _diagErr(label, err) {
-  try {
-    var d = document.getElementById('_diag');
-    if (d) { d.style.background = '#8B0000'; d.style.borderColor = '#f87171'; }
-    _diagStep('ERROR @ ' + label + ': ' + (err && err.message ? err.message : String(err)));
-  } catch(e) {}
-}
-_diagStep('eval() started');
-
 // ===== TEMP DIAGNOSTIC: visible error overlay (helps debug blank-screen
 // issues on real devices where we can't see the console). Safe to remove
 // once mobile rendering is confirmed stable. =====
@@ -929,6 +972,8 @@ _diagStep('eval() started');
     else document.addEventListener('DOMContentLoaded', render);
   }
   window.addEventListener('error', function(e) {
+    // Suppress benign ResizeObserver warning from Chart.js
+    if (e.message && e.message.indexOf('ResizeObserver') !== -1) { e.stopImmediatePropagation(); return; }
     try {
       var msg = (e.error && e.error.stack) ? e.error.stack
         : ((e.message || 'Unknown error') + ' @ ' + (e.filename || '') + ':' + (e.lineno || '') + ':' + (e.colno || ''));
@@ -943,7 +988,6 @@ _diagStep('eval() started');
     } catch (_) {}
   });
 })();
-_diagStep("error handler ready");
 
 // Drive sync state (declared early so seed/init code that fires before the
 // Drive sync block below can safely call scheduleDriveSync without a TDZ error)
@@ -951,14 +995,28 @@ let driveTokenClient = null;
 let driveAccessToken = null;
 let driveTokenExpiry = 0;
 let driveSyncTimer = null;
+let driveHasSynced = false;
 let driveBusy = false;
-
 // ===== ZOOM HELPER =====
 const ZOOM_OPTS = {
   zoom: { wheel:{ enabled:true }, pinch:{ enabled:true }, mode:'x' },
   pan:  { enabled:true, mode:'x' }
 };
 function resetChart(id) { if (charts[id]) charts[id].resetZoom(); }
+
+// ===== CHART RANGE TOGGLE =====
+const _chartRangeState = {};
+function setChartRange(chartId, range, btn) {
+  _chartRangeState[chartId] = range;
+  btn.closest('.crng').querySelectorAll('button').forEach(b => b.classList.remove('crng-active'));
+  btn.classList.add('crng-active');
+  const entries = getData().sort((a,b) => a.date.localeCompare(b.date));
+  if (chartId === 'chart-weight') renderProgressChart('chart-weight', entries, 'weight', BASELINE.weight, GOAL.weight, 'lbs', '#4f8ef7', range);
+  else if (chartId === 'chart-bf') renderProgressChart('chart-bf', entries, 'bodyFat', BASELINE.bodyFat, GOAL.bodyFat, '%', '#f59e0b', range);
+  else if (chartId === 'chart-sm') renderSkeletalMuscleChart(entries, range);
+  else if (chartId === 'chart-mm') renderMuscleMassChart(entries, range);
+  else if (chartId === 'chart-sf') renderSubcutaneousFatChart(entries, range);
+}
 
 // ===== CONSTANTS =====
 const BASELINE = {
@@ -970,13 +1028,13 @@ const BASELINE = {
   muscleMass: null
 };
 const GOAL = {
-  weight: 172.5, // midpoint 170-175
-  bodyFat: 15.0,
-  date: '2026-10-31'
+  weight: 183.9, // lean mass 161.8 / 0.88 at 12% BF
+  bodyFat: 12.0,
+  date: '2027-01-31'
 };
 const GOAL_DATE = new Date('2026-10-31');
 const START_DATE = new Date('2026-05-28');
-const INBODY_GOAL = { bodyFat: 15.0 };
+const INBODY_GOAL = { bodyFat: 12.0 };
 const VISCERAL_HEALTHY_MAX = 10;
 const ECW_TBW_HEALTHY = [0.360, 0.380];
 
@@ -1002,7 +1060,7 @@ function saveInBody(scans) {
 
 // ===== SEED INBODY DATA (from June 17, 2026 scan) =====
 (function() {
-  const seed = [];
+  const seed = [{"date":"2026-06-17","time":"06:05","weight":206.8,"pbf":26.7,"bodyFatMass":55.1,"leanBodyMass":151.7,"smm":87.3,"bmi":28.0,"visceralFat":11,"bmr":1855,"smi":8.4,"ecwTbw":0.363,"icw":70.3,"ecw":40.1,"tbw":110.5,"dryLeanMass":41.2,"segLean":{"ra":8.93,"la":8.82,"tr":68.4,"rl":22.33,"ll":22.07},"segLeanPct":{"ra":107.7,"la":106.4,"tr":103.6,"rl":96.9,"ll":95.7},"segFat":{"ra":3.3,"la":3.3,"tr":31.5,"rl":6.8,"ll":6.8},"segFatPct":{"ra":230.1,"la":233.2,"tr":307.7,"rl":162.5,"ll":163.7},"notes":null},{"date":"2026-07-29","time":"06:10","weight":196.8,"pbf":18.9,"bodyFatMass":37.2,"leanBodyMass":159.6,"smm":91.9,"bmi":26.7,"visceralFat":7,"bmr":1933,"smi":8.7,"ecwTbw":0.364,"icw":73.9,"ecw":42.3,"tbw":116.2,"dryLeanMass":43.4,"segLean":{"ra":9.59,"la":9.41,"tr":71.3,"rl":22.71,"ll":22.53},"segLeanPct":{"ra":117.5,"la":115.3,"tr":109.6,"rl":100.0,"ll":99.3},"segFat":{"ra":1.81,"la":1.81,"tr":21.61,"rl":4.61,"ll":4.61},"segFatPct":{"ra":115.3,"la":121.0,"tr":210.1,"rl":110.2,"ll":110.9},"notes":null},{"date":"2026-09-09","time":"05:11","weight":191.1,"pbf":15.3,"bodyFatMass":29.3,"leanBodyMass":161.8,"smm":93.3,"bmi":25.9,"visceralFat":5,"bmr":1955,"smi":8.9,"ecwTbw":0.365,"icw":74.7,"ecw":43.2,"tbw":117.9,"dryLeanMass":43.9,"segLean":{"ra":9.72,"la":9.55,"tr":71.7,"rl":23.19,"ll":22.88},"segLeanPct":{"ra":120.1,"la":117.9,"tr":111.1,"rl":103.1,"ll":101.8},"segFat":{"ra":1.1,"la":1.1,"tr":16.5,"rl":3.7,"ll":3.7},"segFatPct":{"ra":74.4,"la":79.7,"tr":162.0,"rl":90.8,"ll":90.4},"notes":null}];
   const existing = getInBody();
   if (!existing.length) {
     saveInBody(seed);
@@ -1016,7 +1074,6 @@ function saveInBody(scans) {
   }
 })();
 
-_diagStep("constants & data store ready");
 // ===== NAVIGATION =====
 let charts = {};
 function showPage(name) {
@@ -1054,6 +1111,7 @@ function switchAppMode(mode) {
   if (mode === 'lift') initLiftLogPage();
 }
 
+
 // ===== LIFT: PROGRESS TAB =====
 var _liftProgressChart = null;
 
@@ -1078,6 +1136,7 @@ function getLiftExerciseData(workouts) {
 
 var _liftProgTab = 'Upper';
 var _liftProgSelectedEx = null;
+var _liftTypeChart = null;
 
 function renderLiftProgress() {
   var workouts = getLiftWorkouts().sort(function(a,b){return a.date.localeCompare(b.date);});
@@ -1087,51 +1146,88 @@ function renderLiftProgress() {
 
 function showLiftProgTab(type) {
   _liftProgTab = type;
+  _liftProgSelectedEx = null;
   var upBtn = document.getElementById('lift-prog-tab-upper');
   var loBtn = document.getElementById('lift-prog-tab-lower');
   if (upBtn) upBtn.className = type === 'Upper' ? 'btn btn-primary' : 'btn btn-secondary';
   if (loBtn) loBtn.className = type === 'Lower' ? 'btn btn-primary' : 'btn btn-secondary';
   var detEl = document.getElementById('lift-ex-progress');
   if (detEl) detEl.innerHTML = '';
-  _liftProgSelectedEx = null;
-  renderLiftExList(type);
+  renderLiftTypeChart(type);
+  renderLiftExDropdown(type);
 }
 
-function renderLiftExList(type) {
-  var listEl = document.getElementById('lift-prog-ex-list');
-  if (!listEl) return;
+function renderLiftTypeChart(type) {
+  var el = document.getElementById('lift-prog-type-chart');
+  if (!el) return;
+  var workouts = getLiftWorkouts()
+    .filter(function(w){ return w.type === type; })
+    .sort(function(a,b){ return a.date.localeCompare(b.date); });
+  if (!workouts.length) {
+    el.innerHTML = '<p style="color:var(--muted);font-size:13px;padding:8px 0">No ' + type.toLowerCase() + ' body workouts logged yet.</p>';
+    return;
+  }
+  var labels = workouts.map(function(w){ return fmtDate(w.date); });
+  var volumes = workouts.map(function(w){
+    return w.exercises.reduce(function(t, ex){
+      return t + ex.sets.reduce(function(s, set){ return s + (parseFloat(set.weight)||0)*(parseInt(set.reps)||0); }, 0);
+    }, 0);
+  });
+  el.innerHTML =
+    '<div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">' +
+      (type==='Upper'?'💪':'🦵') + ' Total Volume Per Session</div>' +
+    '<div style="height:180px;position:relative;margin-bottom:14px"><canvas id="lift-type-chart-canvas"></canvas></div>';
+  setTimeout(function() {
+    var canvas = document.getElementById('lift-type-chart-canvas');
+    if (!canvas || typeof Chart === 'undefined') return;
+    if (_liftTypeChart) { try { _liftTypeChart.destroy(); } catch(e){} _liftTypeChart = null; }
+    var accentCol = type === 'Upper' ? '#6366f1' : '#22c55e';
+    var gridCol = 'rgba(255,255,255,0.07)';
+    var textCol = '#94a3b8';
+    _liftTypeChart = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{ label: 'Volume (lbs)', data: volumes,
+          backgroundColor: accentCol + '99', borderColor: accentCol, borderWidth: 1, borderRadius: 4 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, datalabels: { display: false },
+          tooltip: { callbacks: { label: function(ctx){ return ctx.parsed.y.toLocaleString() + ' lbs'; } } } },
+        scales: {
+          x: { ticks: { color: textCol, font: { size: 10 }, maxRotation: 45 }, grid: { color: gridCol } },
+          y: { ticks: { color: textCol, font: { size: 10 } }, grid: { color: gridCol } }
+        }
+      }
+    });
+  }, 50);
+}
+
+function renderLiftExDropdown(type) {
+  var el = document.getElementById('lift-prog-ex-selector');
+  if (!el) return;
   var workouts = getLiftWorkouts().filter(function(w){ return w.type === type; });
   var exData = getLiftExerciseData(workouts);
   var names = Object.keys(exData).sort();
-  if (!names.length) {
-    listEl.innerHTML = '<p style="color:var(--muted);font-size:13px;padding:8px 0">No ' + type.toLowerCase() + ' body workouts logged yet.</p>';
-    return;
-  }
-  listEl.innerHTML = names.map(function(name) {
-    var sessions = exData[name];
-    var pr = Math.max.apply(null, sessions.map(function(s){return s.maxWeight;}));
-    var firstMax = sessions[0].maxWeight;
-    var lastMax  = sessions[sessions.length-1].maxWeight;
-    var pct = firstMax > 0 ? (lastMax-firstMax)/firstMax*100 : 0;
-    var pctCol = pct >= 0 ? 'var(--accent2)' : '#f87171';
-    var isSelected = name === _liftProgSelectedEx;
-    return '<div class="lift-ex-row" data-exname="' + escapeHtml(name) + '" onclick="selectLiftEx(this.dataset.exname)" ' +
-      'style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:8px;cursor:pointer;margin-bottom:6px;' +
-      (isSelected ? 'background:var(--accent);color:#fff' : 'background:var(--surface2)') + '">' +
-      '<span style="font-weight:600;font-size:14px">' + escapeHtml(name) + '</span>' +
-      '<span style="display:flex;gap:10px;align-items:center;flex-shrink:0">' +
-        '<span style="font-size:11px;color:' + (isSelected?'rgba(255,255,255,.8)':'var(--muted)') + '">' + sessions.length + 'x</span>' +
-        '<span style="font-size:12px;font-weight:600;color:' + (isSelected?'#fff':'var(--accent)') + '">' + pr + ' lbs</span>' +
-        '<span style="font-size:12px;font-weight:700;color:' + (isSelected?'#fff':pctCol) + '">' + (pct>=0?'+':'') + pct.toFixed(0) + '%</span>' +
-      '</span>' +
-    '</div>';
-  }).join('');
+  if (!names.length) { el.innerHTML = ''; return; }
+  el.innerHTML =
+    '<label style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:6px">Drill Down: Select Exercise</label>' +
+    '<select id="lift-ex-select" onchange="selectLiftEx(this.value)" ' +
+      'style="width:100%;background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:14px;outline:none;margin-bottom:4px">' +
+    '<option value="">Select an exercise…</option>' +
+    names.map(function(n) {
+      var s = exData[n];
+      var pr = Math.max.apply(null, s.map(function(x){return x.maxWeight;}));
+      return '<option value="' + escapeHtml(n) + '">' + escapeHtml(n) + ' · ' + s.length + ' session' + (s.length===1?'':'s') + ' · ' + pr + ' lbs PR</option>';
+    }).join('') +
+    '</select>';
 }
 
 function selectLiftEx(name) {
   _liftProgSelectedEx = name;
-  renderLiftExList(_liftProgTab);
-  renderLiftExerciseProgress(name);
+  if (name) renderLiftExerciseProgress(name);
+  else { var d = document.getElementById('lift-ex-progress'); if (d) d.innerHTML = ''; }
 }
 
 function renderLiftOverallStats(workouts) {
@@ -1324,26 +1420,26 @@ function renderLiftExerciseProgress(name) {
   }
 }
 
-
 // ===== LIFT NAVIGATION =====
 function showLiftPage(name) {
   const scope = document.getElementById('wrap-lift');
   scope.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   const pg = scope.querySelector('#page-'+name);
   if (pg) pg.classList.add('active');
-  const labels = ['liftlog','lifthistory','liftprogress'];
+  const labels = ['liftlog','lifthistory','liftprogress','liftcoach'];
   scope.querySelectorAll('nav.top-nav button').forEach((b,i) => b.classList.toggle('active', labels[i]===name));
   scope.querySelectorAll('nav.bottom-nav button').forEach((b,i) => b.classList.toggle('active', labels[i]===name));
   window.scrollTo(0,0);
   if (name === 'lifthistory') renderLiftHistory();
   if (name === 'liftlog') initLiftLogPage();
   if (name === 'liftprogress') renderLiftProgress();
+  if (name === 'liftcoach') initCoachPage();
 }
 
 
 // ===== LIFT DATA STORE =====
 const UPPER_EXERCISES = [
-  'Pectoral Fly','Rear Deltoid','Inclined Bend (SMITH)','Lat Pulldown',
+  'Pectoral Fly','Rear Deltoid','Inclined Bench (SMITH)','Lat Pulldown',
   'Lower Chest Pull Down','Preacher Bar Curls','Bull Testicals',
   'Dumbbell Curls','Behind Head Tricep Raises','Flat Bench (SMITH)',
   'Seated Row','High-Low Cross Over (Lower Pec)','Shoulder Press',
@@ -1360,7 +1456,7 @@ function getLiftWorkouts() {
 function saveLiftWorkouts(list) { localStorage.setItem('ht_lift_workouts', JSON.stringify(list)); scheduleDriveSync(); }
 function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : s; return d.innerHTML; }
 
-// ===== SEED LIFT DATA (from Lifting Google Sheet, Jun-Jul 2026) =====
+// ===== SEED LIFT DATA (from Lifting Google Sheet, Jun–Jul 2026) =====
 (function() {
   if (localStorage.getItem('ht_lift_workouts') !== null) return;
   const seed = [
@@ -1439,9 +1535,11 @@ function escapeHtml(s) { const d = document.createElement('div'); d.textContent 
   if (localStorage.getItem('ht_lift_version') === '2') return;
   const workouts = getLiftWorkouts();
   if (!workouts.length) { localStorage.setItem('ht_lift_version', '2'); return; }
+  // Fix typo: 'Inclined Bend' → 'Inclined Bench'
   workouts.forEach(w => w.exercises.forEach(ex => {
     if (ex.name === 'Inclined Bend (SMITH)') ex.name = 'Inclined Bench (SMITH)';
   }));
+  // Fix Jun 21: move Jun 22 exercises out
   const jun22Names = ['Preacher Bar Curls','Bull Testicals','Dumbbell Curls','Behind Head Tricep Raises'];
   const jun21 = workouts.find(w => w.date === '2026-06-21' && w.type === 'Upper');
   if (jun21) {
@@ -1451,6 +1549,7 @@ function escapeHtml(s) { const d = document.createElement('div'); d.textContent 
       workouts.push({ date:'2026-06-22', type:'Upper', exercises: toMove });
     }
   }
+  // Add Jul 4 Upper if missing
   if (!workouts.find(w => w.date === '2026-07-04' && w.type === 'Upper')) {
     workouts.push({ date:'2026-07-04', type:'Upper', exercises:[
       { name:'Pectoral Fly', sets:[{weight:175,reps:8},{weight:175,reps:8},{weight:175,reps:7}] },
@@ -1530,7 +1629,6 @@ function makeChart(id, cfg) {
 
 // ===== DASHBOARD =====
 function renderDashboard() {
-  _diagStep("renderDashboard called");
   const entries = getData().sort((a,b)=>a.date.localeCompare(b.date));
   const latest = entries[entries.length - 1];
   const today = new Date();
@@ -1541,11 +1639,14 @@ function renderDashboard() {
   const currW = latest?.weight ?? BASELINE.weight;
   const currBF = latest?.bodyFat ?? BASELINE.bodyFat;
   const currMM = latest?.muscleMass ?? null;
-  // Find first logged muscle mass for baseline delta
+  const currSM = latest?.skeletalMuscle ?? null;
+  // Find first logged muscle mass / skeletal muscle for baseline delta
   const firstMM = entries.find(e => e.muscleMass != null)?.muscleMass ?? null;
+  const firstSM = entries.find(e => e.skeletalMuscle != null)?.skeletalMuscle ?? null;
   const lostW = (BASELINE.weight - currW).toFixed(1);
   const lostBF = (BASELINE.bodyFat - currBF).toFixed(1);
   const gainMM = currMM != null && firstMM != null ? (currMM - firstMM).toFixed(1) : null;
+  const gainSM = currSM != null && firstSM != null ? (currSM - firstSM).toFixed(1) : null;
   const remW = (currW - GOAL.weight).toFixed(1);
   const remBF = (currBF - GOAL.bodyFat).toFixed(1);
   const pctW = Math.min(100, Math.max(0, ((BASELINE.weight - currW)/(BASELINE.weight - GOAL.weight))*100));
@@ -1553,6 +1654,8 @@ function renderDashboard() {
 
   const mmDelta = gainMM != null ? (gainMM > 0 ? `↑ +${gainMM}% gained` : gainMM < 0 ? `↓ ${gainMM}% lost` : 'No change') : 'Log muscle mass to track';
   const mmCls = gainMM != null ? (gainMM > 0 ? 'good' : gainMM < 0 ? 'bad' : 'neutral') : 'neutral';
+  const smDelta = gainSM != null ? (gainSM > 0 ? `↑ +${gainSM} lbs gained` : gainSM < 0 ? `↓ ${Math.abs(gainSM)} lbs lost` : 'No change') : 'Log to track';
+  const smCls = gainSM != null ? (gainSM > 0 ? 'good' : gainSM < 0 ? 'bad' : 'neutral') : 'neutral';
 
   // Subcutaneous fat (same pattern as muscle mass)
   const currSF = latest?.subcutaneousFat ?? null;
@@ -1561,14 +1664,31 @@ function renderDashboard() {
   const sfDelta = lostSF != null ? (lostSF > 0 ? `↓ ${lostSF}% lost` : lostSF < 0 ? `↑ ${Math.abs(lostSF)}% gained` : 'No change') : 'Log subcut. fat to track';
   const sfCls = lostSF != null ? (lostSF > 0 ? 'good' : lostSF < 0 ? 'bad' : 'neutral') : 'neutral';
 
+  // InBody-derived stats (from latest InBody scan)
+  const inbodyScans = getInBody().slice().sort((a,b)=>a.date.localeCompare(b.date));
+  const latestIB = inbodyScans[inbodyScans.length - 1];
+  const ibFatMass   = latestIB?.bodyFatMass ?? null;
+  const ibLeanMass  = latestIB?.leanBodyMass ?? null;
+  const ibWeight    = latestIB?.weight ?? null;
+  const ibBF        = latestIB?.pbf ?? null;
+  const ibLeanPct   = ibBF != null ? (100 - ibBF).toFixed(1) : null;
+  // Goal weight at 12% BF keeping current lean mass constant
+  const goalBFPct   = GOAL.bodyFat / 100;
+  const goalWeightAtTarget = ibLeanMass != null ? (ibLeanMass / (1 - goalBFPct)).toFixed(1) : null;
+  const fatToLose   = ibFatMass != null && goalWeightAtTarget != null
+    ? Math.max(0, (ibFatMass - (parseFloat(goalWeightAtTarget) * goalBFPct))).toFixed(1)
+    : null;
+  const ibScanDate  = latestIB?.date ? new Date(latestIB.date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+
   const stats = [
-    { icon:'⚖️',  label:'Current Weight',  num: fmt(currW,1),  unit:'lbs', sub:`Goal: ${GOAL.weight} lbs`,        delta: lostW > 0 ? `↓ ${lostW} lbs lost` : 'At baseline',      cls: lostW > 0 ? 'good':'neutral', progress:pctW,  accent:'accent-blue'   },
-    { icon:'🔥',  label:'Body Fat',         num: fmt(currBF,1), unit:'%',   sub:`Goal: ${GOAL.bodyFat}%`,          delta: lostBF > 0 ? `↓ ${lostBF}% lost` : 'At baseline',      cls: lostBF>0 ? 'good':'neutral',  progress:pctBF, accent:'accent-orange'  },
-    { icon:'💪',  label:'Muscle Mass',      num: currMM!=null ? fmt(currMM,1):'—', unit:currMM!=null?'%':'', sub: firstMM!=null ? `Started: ${fmt(firstMM,1)}%`:'Log to track', delta:mmDelta, cls:mmCls, progress:null, accent:'accent-purple'  },
-    { icon:'📏',  label:'Subcut. Fat',      num: currSF!=null ? fmt(currSF,1):'—', unit:currSF!=null?'%':'', sub: firstSF!=null ? `Started: ${fmt(firstSF,1)}%`:'Log to track', delta:sfDelta, cls:sfCls, progress:null, accent:'accent-green'  },
-    { icon:'📉',  label:'Remaining',        num: remW > 0 ? remW:' ✓', unit:remW>0?'lbs':'', sub:`${remBF>0?remBF+'% BF left':'Body fat goal ✓'}`, delta:`${daysLeft} days left`, cls:'neutral', progress:null, accent:'accent-muted' },
-    { icon:'🏋️', label:'Weight Progress',  num: Math.round(pctW), unit:'%', sub:'toward weight goal',             delta:`${entries.length} entries logged`,                       cls:pctW>=100?'good':'neutral',    progress:pctW,  accent:'accent-blue'   },
-    { icon:'📊',  label:'BF% Progress',     num: Math.round(pctBF), unit:'%', sub:'toward body fat goal',         delta:pctBF>=100?'✓ Goal reached!':`${remBF>0?remBF+'% to go':'Done!'}`, cls:pctBF>=100?'good':'neutral', progress:pctBF, accent:'accent-orange' },
+    { icon:'⚖️',  label:'Current Weight',  num: fmt(currW,1),  unit:'lbs', sub:`Start: ${BASELINE.weight} lbs<br>Goal: ${GOAL.weight} lbs`,  delta: lostW > 0 ? `↓ ${lostW} lbs lost` : 'At baseline',      cls: lostW > 0 ? 'good':'neutral', progress:pctW,  accent:'accent-blue'   },
+    { icon:'🔥',  label:'Body Fat %',       num: ibBF!=null ? fmt(ibBF,1) : fmt(currBF,1), unit:'%', sub:`Goal: ${GOAL.bodyFat}% · Start: ${BASELINE.bodyFat}%`, delta: ibBF!=null ? `↓ ${(BASELINE.bodyFat-ibBF).toFixed(1)}% lost` : (lostBF>0?`↓ ${lostBF}% lost`:'At baseline'), cls:'good', progress:pctBF, accent:'accent-orange' },
+    { icon:'🏋️', label:'Body Fat Mass',    num: ibFatMass!=null ? fmt(ibFatMass,1):'—', unit:'lbs', sub: ibFatMass!=null ? `As of ${ibScanDate} InBody scan`:'Log InBody scan', delta: ibFatMass!=null ? `${fatToLose} lbs to goal`:'—', cls: ibFatMass!=null?'good':'neutral', progress:null, accent:'accent-orange' },
+    { icon:'💚',  label:'Lean Body Mass %', num: ibLeanPct!=null ? ibLeanPct:'—', unit:'%', sub: ibLeanPct!=null ? `${(100-GOAL.bodyFat).toFixed(0)}% at goal · as of ${ibScanDate}`:'Log InBody scan', delta: ibLeanPct!=null ? `${(ibLeanPct-(100-BASELINE.bodyFat)).toFixed(1)}% gained`:'—', cls: ibLeanPct!=null?'good':'neutral', progress:null, accent:'accent-green' },
+    { icon:'💪',  label:'Lean Body Mass',   num: ibLeanMass!=null ? fmt(ibLeanMass,1):'—', unit:'lbs', sub: ibLeanMass!=null ? `Goal: ${goalWeightAtTarget ? goalWeightAtTarget+' lbs total weight' : '—'}`:'Log InBody scan', delta: ibLeanMass!=null ? `↑ ${(ibLeanMass-(BASELINE.weight*(1-BASELINE.bodyFat/100))).toFixed(1)} lbs gained`:'—', cls: ibLeanMass!=null?'good':'neutral', progress:null, accent:'accent-green' },
+    { icon:'🎯',  label:'Goal Weight @12%', num: goalWeightAtTarget!=null ? goalWeightAtTarget:'—', unit:'lbs', sub:`Keeping ${ibLeanMass!=null?fmt(ibLeanMass,1):'—'} lbs lean mass`, delta: fatToLose!=null ? `${fatToLose} lbs fat to lose`:'—', cls:'neutral', progress:null, accent:'accent-purple' },
+    { icon:'📊',  label:'BF% Progress',     num: Math.round(pctBF), unit:'%', sub:'toward 12% BF goal', delta:pctBF>=100?'✓ Goal reached!':`${remBF>0?remBF+'% to go':'Done!'}`, cls:pctBF>=100?'good':'neutral', progress:pctBF, accent:'accent-orange' },
+    { icon:'📉',  label:'Fat Left to Lose', num: fatToLose!=null ? fatToLose:'—', unit:'lbs', sub:`To reach ${GOAL.bodyFat}% body fat`, delta:`${daysLeft} days until ${new Date(GOAL.date).toLocaleDateString('en-US',{month:'short',year:'numeric'})}`, cls: fatToLose!=null&&parseFloat(fatToLose)<10?'good':'neutral', progress:null, accent:'accent-muted' },
   ];
   document.getElementById('headline-stats').innerHTML = stats.map(s => `
     <div class="stat ${s.accent}">
@@ -1588,33 +1708,39 @@ function renderDashboard() {
   document.getElementById('proj-days').textContent = daysLeft + ' days';
 
   // Weight chart
-  renderProgressChart('chart-weight', entries, 'weight', BASELINE.weight, GOAL.weight, 'lbs', '#4f8ef7');
-  renderProgressChart('chart-bf', entries, 'bodyFat', BASELINE.bodyFat, GOAL.bodyFat, '%', '#f59e0b');
+  renderProgressChart('chart-weight', entries, 'weight', BASELINE.weight, GOAL.weight, 'lbs', '#4f8ef7', _chartRangeState['chart-weight']||'data');
+  renderProgressChart('chart-bf', entries, 'bodyFat', BASELINE.bodyFat, GOAL.bodyFat, '%', '#f59e0b', _chartRangeState['chart-bf']||'data');
 
-  // Muscle mass trend (no goal line)
-  renderMuscleMassChart(entries);
+  // Skeletal muscle trend
+  renderSkeletalMuscleChart(entries, _chartRangeState['chart-sm']||'data');
 
-  // Subcutaneous fat trend (no goal line)
-  renderSubcutaneousFatChart(entries);
+  // Muscle mass trend
+  renderMuscleMassChart(entries, _chartRangeState['chart-mm']||'data');
+
+  // Subcutaneous fat trend
+  renderSubcutaneousFatChart(entries, _chartRangeState['chart-sf']||'data');
 
   // Body comp latest
   const compEl = document.getElementById('comp-latest');
   if (latest) {
     const firstMMEntry = entries.find(e => e.muscleMass != null);
     const mmBaseline = firstMMEntry?.muscleMass ?? null;
+    const firstSMEntry = entries.find(e => e.skeletalMuscle != null);
+    const smBaseline = firstSMEntry?.skeletalMuscle ?? null;
     const items = [
       { label:'Visceral Fat', val: latest.visceralFat, unit:'%', baseline: BASELINE.visceralFat },
       { label:'Subcut. Fat', val: latest.subcutaneousFat, unit:'%', baseline: BASELINE.subcutaneousFat },
       { label:'Muscle Mass', val: latest.muscleMass, unit:'%', baseline: mmBaseline },
+      { label:'Skeletal Muscle', val: latest.skeletalMuscle, unit:' lbs', baseline: smBaseline },
     ];
     compEl.innerHTML = items.map(item => {
       const diff = item.val != null && item.baseline != null ? (parseFloat(item.val) - item.baseline).toFixed(1) : null;
-      const cls = diff != null ? (item.label==='Muscle Mass' ? (diff>0?'good':'bad') : (diff<0?'good':'bad')) : 'neutral';
+      const cls = diff != null ? (item.label==='Muscle Mass'||item.label==='Skeletal Muscle' ? (diff>0?'good':'bad') : (diff<0?'good':'bad')) : 'neutral';
       return `<div class="comp-row">
         <span class="comp-label">${item.label}</span>
-        <span class="comp-val">${fmt(item.val)}${item.unit}${diff!=null?`<span class="comp-delta ${cls}">${diff>0?'+'+diff:diff}%</span>`:''}</span>
+        <span class="comp-val">${fmt(item.val)}${item.unit}${diff!=null?`<span class="comp-delta ${cls}">${diff>0?'+'+diff:diff}${item.unit.includes('lbs')?'lbs':'%'}</span>`:''}</span>
       </div>`;
-    }).join('') + `<div style="font-size:10px;color:var(--muted);margin-top:10px;letter-spacing:.03em">vs. May 28 baseline · muscle mass vs. first entry</div>`;
+    }).join('') + `<div style="font-size:10px;color:var(--muted);margin-top:10px;letter-spacing:.03em">vs. May 28 baseline · muscle mass &amp; skeletal muscle vs. first entry</div>`;
   } else {
     compEl.innerHTML = '<p style="color:var(--muted);font-size:13px">No entries yet.</p>';
   }
@@ -1698,10 +1824,11 @@ function renderCurrentTrend(entries) {
   const goalDailyBF = (GOAL.bodyFat - latestBF) / daysLeft;
 
   const metrics = [
-    { ...calcTrend('weight',     'lbs', 'Weight',     true),  goalDaily: goalDailyW,  showGoal: true },
-    { ...calcTrend('bodyFat',    '%',   'Body Fat',   true),  goalDaily: goalDailyBF, showGoal: true },
-    { ...calcTrend('muscleMass', '%',   'Muscle Mass',false), goalDaily: null,        showGoal: false },
-    { ...calcTrend('subcutaneousFat', '%', 'Subcut. Fat',true), goalDaily: null,        showGoal: false },
+    { ...calcTrend('weight',          'lbs', 'Weight',          true),  goalDaily: goalDailyW,  showGoal: true },
+    { ...calcTrend('bodyFat',         '%',   'Body Fat',        true),  goalDaily: goalDailyBF, showGoal: true },
+    { ...calcTrend('muscleMass',      '%',   'Muscle Mass',     false), goalDaily: null,        showGoal: false },
+    { ...calcTrend('skeletalMuscle',  'lbs', 'Skeletal Muscle', false), goalDaily: null,        showGoal: false },
+    { ...calcTrend('subcutaneousFat', '%',   'Subcut. Fat',     true),  goalDaily: null,        showGoal: false },
   ];
 
   if (metrics.every(m => m.daily === null)) {
@@ -1736,26 +1863,32 @@ function renderCurrentTrend(entries) {
   `;
 }
 
-function renderProgressChart(canvasId, entries, field, baselineVal, goalVal, unit, color) {
-  const totalDays = daysBetween(BASELINE.date, GOAL.date);
-  const today = new Date();
-
-  // Build label set from actual entry dates + sparse goal reference points
+function renderProgressChart(canvasId, entries, field, baselineVal, goalVal, unit, color, windowEnd) {
+  windowEnd = windowEnd || 'data';
+  const totalGoalDays = daysBetween(BASELINE.date, GOAL.date); // for goal pace slope
   const actualEntries = entries.filter(e=>e[field]!=null).sort((a,b)=>a.date.localeCompare(b.date));
   const actualDates = new Set(actualEntries.map(e=>e.date));
+  const lastEntryDate = actualEntries.length ? actualEntries[actualEntries.length-1].date : GOAL.date;
 
-  // Build a uniform daily date axis from start through the goal date — no
-  // further — so points are evenly spaced by real calendar time and the
-  // chart doesn't run past the goal.
-  const axisLen = totalDays;
+  // Compute axis end date based on windowEnd
+  let axisEndDate;
+  if (windowEnd === 'data') {
+    axisEndDate = lastEntryDate;
+  } else if (windowEnd === '+4w') {
+    const dt = new Date(lastEntryDate+'T00:00:00'); dt.setDate(dt.getDate()+28);
+    axisEndDate = isoDate(dt);
+  } else { // 'goal'
+    axisEndDate = GOAL.date;
+  }
+  const axisLen = daysBetween(BASELINE.date, axisEndDate);
+
+  // Build uniform daily date axis from start to axisEndDate
   const allDates = [];
   for (let d=0; d<=axisLen; d++) {
     const dt = new Date(START_DATE); dt.setDate(dt.getDate()+d);
     allDates.push(isoDate(dt));
   }
-  // Include any actual entry dates that fall before the generated range
-  // (e.g. backfilled data before START_DATE); drop anything past the goal date.
-  actualDates.forEach(d => { if (!allDates.includes(d) && d <= allDates[allDates.length-1]) allDates.push(d); });
+  actualDates.forEach(d => { if (!allDates.includes(d) && d <= axisEndDate) allDates.push(d); });
   allDates.sort();
 
   // Build per-date data
@@ -1767,17 +1900,18 @@ function renderProgressChart(canvasId, entries, field, baselineVal, goalVal, uni
   allDates.forEach(iso => {
     const d = daysBetween(BASELINE.date, iso);
     labels.push(new Date(iso+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'numeric'}));
-    goalLine.push(d>=0 && d<=totalDays ? baselineVal+(goalVal-baselineVal)*(d/totalDays) : null);
+    goalLine.push(d>=0 && d<=totalGoalDays ? baselineVal+(goalVal-baselineVal)*(d/totalGoalDays) : null);
     actualData.push(actualMap[iso] ?? null);
     rollingData.push(rollingMap[iso] ?? null);
   });
 
-  // Projected line (regression from first to last actual, extended to axis end)
+  // Projected line: only for non-'data' ranges (axis extends beyond last entry)
   const pts = actualEntries.map(e=>({x:daysBetween(BASELINE.date,e.date),y:parseFloat(e[field])}));
-  const projData = allDates.map(()=>null);
-  if (pts.length >= 2) {
+  let projData = null;
+  if (windowEnd !== 'data' && pts.length >= 2) {
     const reg = linearRegression(pts.map(p=>p.x),pts.map(p=>p.y));
     if (reg) {
+      projData = allDates.map(()=>null);
       const firstIdx = allDates.findIndex(iso=>actualMap[iso]!=null);
       for (let i=firstIdx; i<allDates.length; i++) {
         const d=daysBetween(BASELINE.date,allDates[i]);
@@ -1786,17 +1920,16 @@ function renderProgressChart(canvasId, entries, field, baselineVal, goalVal, uni
     }
   }
 
+  const datasets = [
+    { label:'Goal Pace', data:goalLine, borderColor:'rgba(248,113,113,.6)', borderDash:[6,4], borderWidth:2, pointRadius:0, fill:false, tension:0 },
+    { label:'Actual', data:actualData, borderColor:color, backgroundColor:color+'33', borderWidth:2.5, pointRadius:0, pointHoverRadius:6, fill:false, tension:.3, spanGaps:true },
+    { label:'7-Day Avg', data:rollingData, borderColor:color+'aa', borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:.3, spanGaps:true },
+  ];
+  if (projData) datasets.push({ label:'Projected', data:projData, borderColor:'rgba(52,211,153,.7)', borderDash:[4,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0, spanGaps:true });
+
   makeChart(canvasId, {
     type:'line',
-    data:{
-      labels,
-      datasets:[
-        { label:'Goal Pace', data:goalLine, borderColor:'rgba(248,113,113,.6)', borderDash:[6,4], borderWidth:2, pointRadius:0, fill:false, tension:0 },
-        { label:'Actual', data:actualData, borderColor:color, backgroundColor:color+'33', borderWidth:2.5, pointRadius:0, pointHoverRadius:6, fill:false, tension:.3, spanGaps:false },
-        { label:'7-Day Avg', data:rollingData, borderColor:color+'aa', borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:.3, spanGaps:false },
-        { label:'Projected', data:projData, borderColor:'rgba(52,211,153,.7)', borderDash:[4,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0, spanGaps:false },
-      ]
-    },
+    data:{ labels, datasets },
     options:{
       responsive:true, maintainAspectRatio:false,
       interaction:{mode:'index',intersect:false},
@@ -1809,122 +1942,92 @@ function renderProgressChart(canvasId, entries, field, baselineVal, goalVal, uni
   });
 }
 
-function renderMuscleMassChart(entries) {
-  const mmEntries = entries.filter(e => e.muscleMass != null).sort((a,b)=>a.date.localeCompare(b.date));
-  if (!mmEntries.length) {
-    makeChart('chart-mm', { type:'line', data:{ labels:['No data yet'], datasets:[{ data:[null], borderColor:'#a855f7', borderWidth:2 }]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{ticks:{color:'#8892a4',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10}},grid:{display:false}} } }});
+// Shared trend chart builder for all windowEnd-aware trend charts
+function _buildTrendChart(id, field, entries, windowEnd, color, colorFaded, projColor, unitSuffix, bgColor) {
+  const filtered = entries.filter(e => e[field] != null).sort((a,b)=>a.date.localeCompare(b.date));
+  if (!filtered.length) {
+    makeChart(id, { type:'line', data:{ labels:['No data yet'], datasets:[{ data:[null], borderColor:color, borderWidth:2 }]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{ticks:{color:'#8892a4',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10}},grid:{display:false}} } }});
     return;
   }
-  const labels = mmEntries.map(e => fmtDate(e.date).split(',')[0]);
-  const actualData = mmEntries.map(e => parseFloat(e.muscleMass));
-  const rolling = rollingAvg(mmEntries, 'muscleMass', 7);
+  const labels = filtered.map(e => fmtDate(e.date).split(',')[0]);
+  const actualData = filtered.map(e => parseFloat(e[field]));
+  const rolling = rollingAvg(filtered, field, 7);
+  const pts = filtered.map(e => ({ x: daysBetween(BASELINE.date, e.date), y: parseFloat(e[field]) }));
+  const lastEntryDate = filtered[filtered.length-1].date;
+  const lastDay = pts[pts.length-1].x;
 
-  // Projected trend line
-  const pts = mmEntries.map(e => ({ x: daysBetween(BASELINE.date, e.date), y: parseFloat(e.muscleMass) }));
-  let projLabels = [...labels], projData = actualData.map(() => null);
+  const commonOpts = (legend) => ({
+    responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
+    plugins:{ legend: legend ? {labels:{color:'#8892a4',font:{size:11},boxWidth:12}} : {display:false}, zoom:ZOOM_OPTS },
+    scales:{ y:{ticks:{color:'#8892a4',font:{size:10},callback:v=>v!=null?v.toFixed(1)+unitSuffix:null},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:12},grid:{display:false}} }
+  });
+
+  // 'data' mode: no projection beyond last entry
+  if (windowEnd === 'data') {
+    makeChart(id, {
+      type:'line',
+      data:{ labels, datasets:[
+        { label:'Actual', data:actualData, borderColor:color, backgroundColor:bgColor, borderWidth:2.5, pointRadius:3, pointHoverRadius:5, fill:true, tension:.3, spanGaps:true },
+        { label:'7-Day Avg', data:rolling, borderColor:colorFaded, borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:.3, spanGaps:true },
+      ]},
+      options: commonOpts(true)
+    });
+    return;
+  }
+
+  // Compute projection end date
+  let projEndDate;
+  if (windowEnd === '+4w') {
+    const dt = new Date(lastEntryDate+'T00:00:00'); dt.setDate(dt.getDate()+28);
+    projEndDate = isoDate(dt);
+  } else {
+    projEndDate = GOAL.date;
+  }
+  const projDays = Math.max(1, daysBetween(lastEntryDate, projEndDate));
+
   if (pts.length >= 2) {
     const reg = linearRegression(pts.map(p=>p.x), pts.map(p=>p.y));
     if (reg) {
-      // Extend projection 60 days beyond last entry
-      const lastDay = pts[pts.length-1].x;
-      const extDays = 60;
-      const step = Math.max(1, Math.round(extDays / 10));
+      const numSteps = Math.min(projDays, 12);
+      const step = Math.max(1, Math.round(projDays / numSteps));
       const extLabels = [], extProj = [];
-      for (let d = 0; d <= extDays; d += step) {
-        const dt = new Date(START_DATE); dt.setDate(dt.getDate() + lastDay + d);
+      for (let d = step; d < projDays; d += step) {
+        const dt = new Date(lastEntryDate+'T00:00:00'); dt.setDate(dt.getDate()+d);
         extLabels.push(dt.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
-        extProj.push(reg.slope * (lastDay + d) + reg.intercept);
+        extProj.push(reg.slope*(lastDay+d)+reg.intercept);
       }
-      projLabels = [...labels, ...extLabels];
-      projData = [...actualData.map(()=>null), ...extProj];
-      // Align actual and rolling to full label set
+      const endDt = new Date(projEndDate+'T00:00:00');
+      extLabels.push(endDt.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
+      extProj.push(reg.slope*(lastDay+projDays)+reg.intercept);
+      const projLabels = [...labels, ...extLabels];
       const pad = extLabels.length;
-      makeChart('chart-mm', {
+      makeChart(id, {
         type:'line',
-        data:{
-          labels: projLabels,
-          datasets:[
-            { label:'Actual', data:[...actualData, ...Array(pad).fill(null)], borderColor:'#a855f7', backgroundColor:'rgba(168,85,247,.15)', borderWidth:2.5, pointRadius:3, pointHoverRadius:5, fill:true, tension:.3, spanGaps:false },
-            { label:'7-Day Avg', data:[...rolling, ...Array(pad).fill(null)], borderColor:'rgba(168,85,247,.5)', borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:.3, spanGaps:false },
-            { label:'Projected', data:[...Array(actualData.length).fill(null), ...extProj], borderColor:'rgba(52,211,153,.7)', borderDash:[4,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0, spanGaps:false },
-          ]
-        },
-        options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
-          plugins:{legend:{labels:{color:'#8892a4',font:{size:11},boxWidth:12}}, zoom:ZOOM_OPTS},
-          scales:{ y:{ticks:{color:'#8892a4',font:{size:10},callback:v=>v!=null?v.toFixed(1)+'%':null},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:12},grid:{display:false}} }
-        }
+        data:{ labels:projLabels, datasets:[
+          { label:'Actual', data:[...actualData,...Array(pad).fill(null)], borderColor:color, backgroundColor:bgColor, borderWidth:2.5, pointRadius:3, pointHoverRadius:5, fill:true, tension:.3, spanGaps:true },
+          { label:'7-Day Avg', data:[...rolling,...Array(pad).fill(null)], borderColor:colorFaded, borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:.3, spanGaps:true },
+          { label:'Projected', data:[...Array(actualData.length).fill(null),...extProj], borderColor:projColor, borderDash:[4,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0, spanGaps:true },
+        ]},
+        options: commonOpts(true)
       });
       return;
     }
   }
-  // Fallback: just actual points
-  makeChart('chart-mm', {
-    type:'line',
-    data:{ labels, datasets:[
-      { label:'Actual', data:actualData, borderColor:'#a855f7', backgroundColor:'rgba(168,85,247,.15)', borderWidth:2.5, pointRadius:3, fill:true, tension:.3 },
-    ]},
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
-      scales:{ y:{ticks:{color:'#8892a4',font:{size:10},callback:v=>v.toFixed(1)+'%'},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10}},grid:{display:false}} }
-    }
+  // Fallback: just actual
+  makeChart(id, {
+    type:'line', data:{ labels, datasets:[{ label:'Actual', data:actualData, borderColor:color, backgroundColor:bgColor, borderWidth:2.5, pointRadius:3, fill:true, tension:.3 }]},
+    options: commonOpts(false)
   });
 }
 
-function renderSubcutaneousFatChart(entries) {
-  const sfEntries = entries.filter(e => e.subcutaneousFat != null).sort((a,b)=>a.date.localeCompare(b.date));
-  if (!sfEntries.length) {
-    makeChart('chart-sf', { type:'line', data:{ labels:['No data yet'], datasets:[{ data:[null], borderColor:'#34d399', borderWidth:2 }]}, options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{ y:{ticks:{color:'#8892a4',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10}},grid:{display:false}} } }});
-    return;
-  }
-  const labels = sfEntries.map(e => fmtDate(e.date).split(',')[0]);
-  const actualData = sfEntries.map(e => parseFloat(e.subcutaneousFat));
-  const rolling = rollingAvg(sfEntries, 'subcutaneousFat', 7);
-
-  // Projected trend line
-  const pts = sfEntries.map(e => ({ x: daysBetween(BASELINE.date, e.date), y: parseFloat(e.subcutaneousFat) }));
-  let projLabels = [...labels], projData = actualData.map(() => null);
-  if (pts.length >= 2) {
-    const reg = linearRegression(pts.map(p=>p.x), pts.map(p=>p.y));
-    if (reg) {
-      const lastDay = pts[pts.length-1].x;
-      const extDays = 60;
-      const step = Math.max(1, Math.round(extDays / 10));
-      const extLabels = [], extProj = [];
-      for (let d = 0; d <= extDays; d += step) {
-        const dt = new Date(START_DATE); dt.setDate(dt.getDate() + lastDay + d);
-        extLabels.push(dt.toLocaleDateString('en-US',{month:'short',day:'numeric'}));
-        extProj.push(reg.slope * (lastDay + d) + reg.intercept);
-      }
-      projLabels = [...labels, ...extLabels];
-      projData = [...actualData.map(()=>null), ...extProj];
-      const pad = extLabels.length;
-      makeChart('chart-sf', {
-        type:'line',
-        data:{
-          labels: projLabels,
-          datasets:[
-            { label:'Actual', data:[...actualData, ...Array(pad).fill(null)], borderColor:'#34d399', backgroundColor:'rgba(52,211,153,.15)', borderWidth:2.5, pointRadius:3, pointHoverRadius:5, fill:true, tension:.3, spanGaps:false },
-            { label:'7-Day Avg', data:[...rolling, ...Array(pad).fill(null)], borderColor:'rgba(52,211,153,.5)', borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:.3, spanGaps:false },
-            { label:'Projected', data:[...Array(actualData.length).fill(null), ...extProj], borderColor:'rgba(79,142,247,.7)', borderDash:[4,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0, spanGaps:false },
-          ]
-        },
-        options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
-          plugins:{legend:{labels:{color:'#8892a4',font:{size:11},boxWidth:12}}, zoom:ZOOM_OPTS},
-          scales:{ y:{ticks:{color:'#8892a4',font:{size:10},callback:v=>v!=null?v.toFixed(1)+'%':null},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10},maxRotation:45,autoSkip:true,maxTicksLimit:12},grid:{display:false}} }
-        }
-      });
-      return;
-    }
-  }
-  // Fallback: just actual points
-  makeChart('chart-sf', {
-    type:'line',
-    data:{ labels, datasets:[
-      { label:'Actual', data:actualData, borderColor:'#34d399', backgroundColor:'rgba(52,211,153,.15)', borderWidth:2.5, pointRadius:3, fill:true, tension:.3 },
-    ]},
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
-      scales:{ y:{ticks:{color:'#8892a4',font:{size:10},callback:v=>v.toFixed(1)+'%'},grid:{color:'rgba(255,255,255,.05)'}}, x:{ticks:{color:'#8892a4',font:{size:10}},grid:{display:false}} }
-    }
-  });
+function renderSkeletalMuscleChart(entries, windowEnd) {
+  _buildTrendChart('chart-sm','skeletalMuscle',entries,windowEnd||'data','#34d399','rgba(52,211,153,.5)','rgba(168,85,247,.7)',' lbs','rgba(52,211,153,.15)');
+}
+function renderMuscleMassChart(entries, windowEnd) {
+  _buildTrendChart('chart-mm','muscleMass',entries,windowEnd||'data','#a855f7','rgba(168,85,247,.5)','rgba(52,211,153,.7)','%','rgba(168,85,247,.15)');
+}
+function renderSubcutaneousFatChart(entries, windowEnd) {
+  _buildTrendChart('chart-sf','subcutaneousFat',entries,windowEnd||'data','#34d399','rgba(52,211,153,.5)','rgba(79,142,247,.7)','%','rgba(52,211,153,.15)');
 }
 
 // ===== BIG CHARTS =====
@@ -1978,11 +2081,11 @@ function makeBigProgressChart(canvasId, entries, field, baselineVal, goalVal, un
       datasets:[
         { label:'Goal Pace', data:goalLine, borderColor:'rgba(248,113,113,.6)', borderDash:[6,4], borderWidth:2, pointRadius:0, fill:false, tension:0,
           datalabels:{ display:false } },
-        { label:'Actual', data:actualData, borderColor:color, backgroundColor:color+'22', borderWidth:2.5, pointRadius:0, pointHoverRadius:8, fill:true, tension:.3, spanGaps:false,
+        { label:'Actual', data:actualData, borderColor:color, backgroundColor:color+'22', borderWidth:2.5, pointRadius:0, pointHoverRadius:8, fill:true, tension:.3, spanGaps:true,
           datalabels:{ display: ctx=>ctx.dataset.data[ctx.dataIndex]!=null, align:'top', anchor:'top', color:color, font:{size:11,weight:'600'}, formatter:v=>v!=null?v.toFixed(1)+unit:null, padding:4 } },
-        { label:'7-Day Avg', data:rollingData, borderColor:color+'88', borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:.3, spanGaps:false,
+        { label:'7-Day Avg', data:rollingData, borderColor:color+'88', borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:.3, spanGaps:true,
           datalabels:{ display:false } },
-        { label:'Projected', data:projData, borderColor:'rgba(52,211,153,.7)', borderDash:[4,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0, spanGaps:false,
+        { label:'Projected', data:projData, borderColor:'rgba(52,211,153,.7)', borderDash:[4,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0, spanGaps:true,
           datalabels:{ display:false } },
       ]
     },
@@ -2031,11 +2134,11 @@ function makeBigMuscleMassChart(entries) {
     data:{
       labels:[...labels,...extLabels],
       datasets:[
-        { label:'Actual', data:[...actualData,...Array(pad).fill(null)], borderColor:'#a855f7', backgroundColor:'rgba(168,85,247,.15)', borderWidth:2.5, pointRadius:5, pointHoverRadius:8, fill:true, tension:.3, spanGaps:false,
+        { label:'Actual', data:[...actualData,...Array(pad).fill(null)], borderColor:'#a855f7', backgroundColor:'rgba(168,85,247,.15)', borderWidth:2.5, pointRadius:5, pointHoverRadius:8, fill:true, tension:.3, spanGaps:true,
           datalabels:{ display: ctx=>ctx.dataset.data[ctx.dataIndex]!=null, align:'top', anchor:'top', color:'#c4b5fd', font:{size:11,weight:'600'}, formatter:v=>v!=null?v.toFixed(1)+'%':null, padding:4 } },
-        { label:'7-Day Avg', data:[...rolling,...Array(pad).fill(null)], borderColor:'rgba(168,85,247,.5)', borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:.3, spanGaps:false,
+        { label:'7-Day Avg', data:[...rolling,...Array(pad).fill(null)], borderColor:'rgba(168,85,247,.5)', borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:.3, spanGaps:true,
           datalabels:{display:false} },
-        { label:'Projected', data:[...Array(actualData.length).fill(null),...extProj], borderColor:'rgba(52,211,153,.7)', borderDash:[4,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0, spanGaps:false,
+        { label:'Projected', data:[...Array(actualData.length).fill(null),...extProj], borderColor:'rgba(52,211,153,.7)', borderDash:[4,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0, spanGaps:true,
           datalabels:{display:false} },
       ]
     },
@@ -2080,11 +2183,11 @@ function makeBigSubcutaneousFatChart(entries) {
     data:{
       labels:[...labels,...extLabels],
       datasets:[
-        { label:'Actual', data:[...actualData,...Array(pad).fill(null)], borderColor:'#34d399', backgroundColor:'rgba(52,211,153,.15)', borderWidth:2.5, pointRadius:5, pointHoverRadius:8, fill:true, tension:.3, spanGaps:false,
+        { label:'Actual', data:[...actualData,...Array(pad).fill(null)], borderColor:'#34d399', backgroundColor:'rgba(52,211,153,.15)', borderWidth:2.5, pointRadius:5, pointHoverRadius:8, fill:true, tension:.3, spanGaps:true,
           datalabels:{ display: ctx=>ctx.dataset.data[ctx.dataIndex]!=null, align:'top', anchor:'top', color:'#6ee7b7', font:{size:11,weight:'600'}, formatter:v=>v!=null?v.toFixed(1)+'%':null, padding:4 } },
-        { label:'7-Day Avg', data:[...rolling,...Array(pad).fill(null)], borderColor:'rgba(52,211,153,.5)', borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:.3, spanGaps:false,
+        { label:'7-Day Avg', data:[...rolling,...Array(pad).fill(null)], borderColor:'rgba(52,211,153,.5)', borderDash:[3,3], borderWidth:1.5, pointRadius:0, fill:false, tension:.3, spanGaps:true,
           datalabels:{display:false} },
-        { label:'Projected', data:[...Array(actualData.length).fill(null),...extProj], borderColor:'rgba(79,142,247,.7)', borderDash:[4,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0, spanGaps:false,
+        { label:'Projected', data:[...Array(actualData.length).fill(null),...extProj], borderColor:'rgba(79,142,247,.7)', borderDash:[4,4], borderWidth:1.5, pointRadius:0, fill:false, tension:0, spanGaps:true,
           datalabels:{display:false} },
       ]
     },
@@ -2110,38 +2213,9 @@ function renderBigCharts() {
 
 // ===== LOG ENTRY =====
 function _initApp() {
-  _diagStep("_initApp called");
   document.getElementById('log-date').value = isoDate(new Date());
-  try { renderDashboard(); _diagStep("renderDashboard done"); } catch(e) { _diagErr("renderDashboard", e); }
-  try { initDriveSync(); } catch(e) { _diagErr("initDriveSync", e); }
-  setTimeout(function() {
-    try {
-      var d = document.getElementById("page-dashboard");
-      var m = document.querySelector("#wrap-body main");
-      var wb = document.getElementById("wrap-body");
-      var ms = document.querySelector(".app-mode-switch");
-      var st = document.getElementById("headline-stats");
-      var cs = d ? window.getComputedStyle(d) : null;
-      var tb = document.getElementById("vis-test");
-      var tbs = tb ? window.getComputedStyle(tb) : null;
-      var dbr = d ? d.getBoundingClientRect() : null;
-      var mbr = m ? m.getBoundingClientRect() : null;
-      _diagStep(
-        "POST-RENDER:\n" +
-        "dashboard h=" + (d?d.offsetHeight:"null") + " display=" + (cs?cs.display:"?") + "\n" +
-        "  opacity=" + (cs?cs.opacity:"?") + " vis=" + (cs?cs.visibility:"?") + "\n" +
-        "  rect=" + (dbr?Math.round(dbr.top)+","+Math.round(dbr.left)+","+Math.round(dbr.width)+"x"+Math.round(dbr.height):"null") + "\n" +
-        "main h=" + (m?m.offsetHeight:"null") + " scrollTop=" + (m?m.scrollTop:"null") + "\n" +
-        "  rect=" + (mbr?Math.round(mbr.top)+","+Math.round(mbr.left)+"->"+Math.round(mbr.bottom):"null") + "\n" +
-        "body-bg=" + window.getComputedStyle(document.body).backgroundColor + "\n" +
-        "vis-test h=" + (tb?tb.offsetHeight:"null") + " display=" + (tbs?tbs.display:"null") + "\n" +
-        "  rect-top=" + (tb?Math.round(tb.getBoundingClientRect().top):"null") + "\n" +
-        "stats len=" + (st?st.innerHTML.length:"null") + "\n" +
-        "color=" + (cs?cs.color:"?") + "\n" +
-        "scrollY=" + window.scrollY + " vp=" + window.innerWidth + "x" + window.innerHeight
-      );
-    } catch(e2) { _diagErr("post-check", e2); }
-  }, 300);
+  renderDashboard();
+  initDriveSync();
 
   // Inject PWA manifest as inline data URL
   const manifest = {
@@ -2161,7 +2235,6 @@ function _initApp() {
   const el = document.getElementById('pwa-manifest');
   if (el) el.href = URL.createObjectURL(blob);
 }
-_diagStep("readyState=" + document.readyState);
 // iOS Safari may fire DOMContentLoaded before eval() runs — guard with readyState
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', _initApp);
@@ -2173,8 +2246,8 @@ function prefillToday() {
   const entries = getData().sort((a,b)=>a.date.localeCompare(b.date));
   const last = entries[entries.length-1];
   if (!last) return;
-  const fields = ['weight','bf','vf','sf','mm','workout','recovery'];
-  const keys = ['weight','bodyFat','visceralFat','subcutaneousFat','muscleMass','workout','recovery'];
+  const fields = ['weight','bf','vf','sf','mm','sm','workout','recovery'];
+  const keys = ['weight','bodyFat','visceralFat','subcutaneousFat','muscleMass','skeletalMuscle','workout','recovery'];
   fields.forEach((f,i)=>{ const el=document.getElementById('log-'+f); if(el&&last[keys[i]]!=null) el.value=last[keys[i]]; });
   if (last.waist) document.getElementById('log-waist').value=last.waist;
   if (last.chest) document.getElementById('log-chest').value=last.chest;
@@ -2196,6 +2269,7 @@ function saveEntry() {
     visceralFat: n('log-vf'),
     subcutaneousFat: n('log-sf'),
     muscleMass: n('log-mm'),
+    skeletalMuscle: n('log-sm'),
     workout: get('log-workout') || null,
     recovery: n('log-recovery'),
     notes: get('log-notes'),
@@ -2233,7 +2307,7 @@ function renderHistory() {
   const el = document.getElementById('history-table');
   if (!entries.length) { el.innerHTML='<p style="color:var(--muted);font-size:13px;padding:8px 0">No entries logged yet.</p>'; return; }
   el.innerHTML = `<table>
-    <thead><tr><th>Date</th><th>Weight</th><th>Body Fat</th><th>Visceral</th><th>Subcut.</th><th>Muscle</th><th>Workout</th><th>Recovery</th><th>Waist</th><th>Notes</th><th></th></tr></thead>
+    <thead><tr><th>Date</th><th>Weight</th><th>Body Fat</th><th>Visceral</th><th>Subcut.</th><th>Muscle</th><th>Skel. Muscle</th><th>Workout</th><th>Recovery</th><th>Waist</th><th>Notes</th><th></th></tr></thead>
     <tbody>${entries.map(e=>`<tr>
       <td>${fmtDate(e.date)}</td>
       <td>${fmt(e.weight)} lbs</td>
@@ -2241,11 +2315,15 @@ function renderHistory() {
       <td>${fmt(e.visceralFat)}%</td>
       <td>${fmt(e.subcutaneousFat)}%</td>
       <td>${fmt(e.muscleMass)}%</td>
+      <td>${fmt(e.skeletalMuscle)} lbs</td>
       <td>${workoutBadge(e.workout)}</td>
       <td>${fmt(e.recovery,0)}</td>
       <td>${fmt(e.waist)}"</td>
       <td style="max-width:160px;font-size:12px;color:var(--muted)">${e.notes||''}</td>
-      <td><button class="btn btn-sm btn-danger" onclick="deleteEntry('${e.date}')">✕</button></td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-sm btn-secondary" onclick="editEntry('${e.date}')" style="margin-right:4px">✏️</button>
+        <button class="btn btn-sm btn-danger" onclick="deleteEntry('${e.date}')">✕</button>
+      </td>
     </tr>`).join('')}</tbody>
   </table>`;
 }
@@ -2255,6 +2333,66 @@ function deleteEntry(date) {
   const entries = getData().filter(e=>e.date!==date);
   saveData(entries);
   renderHistory();
+}
+
+function editEntry(date) {
+  const entries = getData();
+  const e = entries.find(x => x.date === date);
+  if (!e) return;
+  const modal = document.getElementById('edit-entry-modal');
+  document.getElementById('edit-date').value = e.date;
+  document.getElementById('edit-weight').value = e.weight ?? '';
+  document.getElementById('edit-bf').value = e.bodyFat ?? '';
+  document.getElementById('edit-vf').value = e.visceralFat ?? '';
+  document.getElementById('edit-sf').value = e.subcutaneousFat ?? '';
+  document.getElementById('edit-mm').value = e.muscleMass ?? '';
+  document.getElementById('edit-sm').value = e.skeletalMuscle ?? '';
+  document.getElementById('edit-workout').value = e.workout ?? '';
+  document.getElementById('edit-recovery').value = e.recovery ?? '';
+  document.getElementById('edit-waist').value = e.waist ?? '';
+  document.getElementById('edit-chest').value = e.chest ?? '';
+  document.getElementById('edit-hips').value = e.hips ?? '';
+  document.getElementById('edit-arm').value = e.arm ?? '';
+  document.getElementById('edit-thigh').value = e.thigh ?? '';
+  document.getElementById('edit-notes').value = e.notes ?? '';
+  document.getElementById('edit-entry-label').textContent = fmtDate(date);
+  document.getElementById('edit-msg').textContent = '';
+  modal.style.display = 'flex';
+}
+
+function saveEditEntry() {
+  const n = id => { const v = document.getElementById(id).value; return v !== '' ? parseFloat(v) : null; };
+  const s = id => document.getElementById(id).value || null;
+  const date = document.getElementById('edit-date').value;
+  const entries = getData();
+  const idx = entries.findIndex(e => e.date === date);
+  if (idx < 0) return;
+  entries[idx] = {
+    ...entries[idx],
+    weight: n('edit-weight'),
+    bodyFat: n('edit-bf'),
+    visceralFat: n('edit-vf'),
+    subcutaneousFat: n('edit-sf'),
+    muscleMass: n('edit-mm'),
+    skeletalMuscle: n('edit-sm'),
+    workout: s('edit-workout'),
+    recovery: n('edit-recovery'),
+    waist: n('edit-waist'),
+    chest: n('edit-chest'),
+    hips: n('edit-hips'),
+    arm: n('edit-arm'),
+    thigh: n('edit-thigh'),
+    notes: s('edit-notes'),
+  };
+  saveData(entries);
+  const msg = document.getElementById('edit-msg');
+  msg.style.color = 'var(--accent2)';
+  msg.textContent = '✅ Saved!';
+  setTimeout(() => { closeEditModal(); renderHistory(); renderDashboard(); }, 900);
+}
+
+function closeEditModal() {
+  document.getElementById('edit-entry-modal').style.display = 'none';
 }
 
 // ===== PHOTOS =====
@@ -2316,7 +2454,7 @@ function renderMeasurements() {
   makeChart('chart-allm', {
     type:'line',
     data:{ labels, datasets: mFields.map((f,i)=>({
-      label:mLabels[i], data:entries.map(e=>e[f]??null), borderColor:mColors[i], borderWidth:1.5, pointRadius:2, fill:false, tension:.3, spanGaps:false
+      label:mLabels[i], data:entries.map(e=>e[f]??null), borderColor:mColors[i], borderWidth:1.5, pointRadius:2, fill:false, tension:.3, spanGaps:true
     }))},
     options:{ responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#8892a4',font:{size:10},boxWidth:10}}},scales:{y:{ticks:{color:'#8892a4',font:{size:10},callback:v=>v+'"'},grid:{color:'rgba(255,255,255,.05)'}},x:{ticks:{color:'#8892a4',font:{size:10}},grid:{display:false}}} }
   });
@@ -2602,7 +2740,7 @@ function importCSV(text) {
     const date = vals[col('date')];
     const n = key => { const v=vals[col(key)]; return v&&v!==''?parseFloat(v):null; };
     const s = key => { const v=vals[col(key)]; return v&&v!==''?v:null; };
-    const entry = { date, weight:n('weight'), bodyFat:n('body_fat'), visceralFat:n('visceral_fat'), subcutaneousFat:n('subcutaneous_fat'), muscleMass:n('muscle_mass'), workout:s('workout'), recovery:n('recovery'), notes:s('notes'), waist:n('waist'), chest:n('chest'), hips:n('hips'), arm:n('arm'), thigh:n('thigh') };
+    const entry = { date, weight:n('weight'), bodyFat:n('body_fat'), visceralFat:n('visceral_fat'), subcutaneousFat:n('subcutaneous_fat'), muscleMass:n('muscle_mass'), skeletalMuscle:n('skeletal_muscle'), workout:s('workout'), recovery:n('recovery'), notes:s('notes'), waist:n('waist'), chest:n('chest'), hips:n('hips'), arm:n('arm'), thigh:n('thigh') };
     const idx = entries.findIndex(e=>e.date===date);
     if (idx>=0) { Object.assign(entries[idx],entry); updated++; } else { entries.push(entry); added++; }
   }
@@ -2717,8 +2855,8 @@ async function saveApp() {
 }
 function exportCSV() {
   const entries = getData().sort((a,b)=>a.date.localeCompare(b.date));
-  const headers = 'date,weight,body_fat,visceral_fat,subcutaneous_fat,muscle_mass,workout,recovery,notes,waist,chest,hips,arm,thigh';
-  const rows = entries.map(e=>[e.date,e.weight??'',e.bodyFat??'',e.visceralFat??'',e.subcutaneousFat??'',e.muscleMass??'',e.workout??'',e.recovery??'',e.notes??'',e.waist??'',e.chest??'',e.hips??'',e.arm??'',e.thigh??''].join(','));
+  const headers = 'date,weight,body_fat,visceral_fat,subcutaneous_fat,muscle_mass,skeletal_muscle,workout,recovery,notes,waist,chest,hips,arm,thigh';
+  const rows = entries.map(e=>[e.date,e.weight??'',e.bodyFat??'',e.visceralFat??'',e.subcutaneousFat??'',e.muscleMass??'',e.skeletalMuscle??'',e.workout??'',e.recovery??'',e.notes??'',e.waist??'',e.chest??'',e.hips??'',e.arm??'',e.thigh??''].join(','));
   const blob = new Blob([[headers,...rows].join('\n')],{type:'text/csv'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='health-tracker-export.csv'; a.click();
 }
@@ -2749,35 +2887,64 @@ function selectLiftType(type) {
 }
 
 function renderLiftExerciseChecklist(type) {
-  const exList = (type === 'Upper' ? UPPER_EXERCISES : LOWER_EXERCISES).slice().sort((a,b) => a.localeCompare(b));
+  const masterList = (type === 'Upper' ? UPPER_EXERCISES : LOWER_EXERCISES).slice().sort((a,b) => a.localeCompare(b));
+  const masterSet = new Set(masterList);
   const date = document.getElementById('lift-log-date').value;
-  const existing = getLiftWorkouts().find(w => w.date === date && w.type === type);
+  const allTypeWorkouts = getLiftWorkouts().filter(w => w.type === type);
+  const existing = allTypeWorkouts.find(w => w.date === date);
+  // Collect custom exercise names from ALL workouts of this type (so they persist across sessions)
+  const customNames = new Set();
+  allTypeWorkouts.forEach(w => w.exercises.forEach(ex => { if (!masterSet.has(ex.name)) customNames.add(ex.name); }));
+  const customList = Array.from(customNames).sort((a,b) => a.localeCompare(b));
+  // Build last-session map: most recent past workout containing each exercise
+  const lastSessionMap = {};
+  allTypeWorkouts
+    .filter(w => w.date < date)
+    .sort((a,b) => b.date.localeCompare(a.date))
+    .forEach(w => {
+      w.exercises.forEach(ex => {
+        if (!lastSessionMap[ex.name]) lastSessionMap[ex.name] = { date: w.date, sets: ex.sets };
+      });
+    });
   const container = document.getElementById('lift-log-exercises');
-  container.innerHTML = exList.map(name => {
-    const exData = existing ? existing.exercises.find(e => e.name === name) : null;
+  function exBlockHtml(name, exData) {
     const checked = !!exData;
     const sets = exData ? exData.sets : [{weight:'',reps:''}];
-    return `<div class="lift-ex-block" id="leb-${CSS.escape(name)}" style="margin-bottom:16px;border-top:1px solid var(--border);padding-top:12px">
+    const last = lastSessionMap[name];
+    let lastHtml = '';
+    if (last) {
+      const d = new Date(last.date + 'T00:00:00');
+      const dateStr = d.toLocaleDateString('en-US', {month:'short', day:'numeric'});
+      const setsStr = last.sets.filter(s => s.weight || s.reps).map(s => `${s.weight||'?'}×${s.reps||'?'}`).join(' · ');
+      if (setsStr) lastHtml = `<div style="font-size:11px;color:var(--muted);margin:-4px 0 8px 24px">Last (${dateStr}): ${setsStr}</div>`;
+    }
+    return `
+    <div class="lift-ex-block" id="leb-${CSS.escape(name)}" data-exname="${escapeHtml(name)}" style="margin-bottom:16px;border-top:1px solid var(--border);padding-top:12px">
       <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;font-weight:600;font-size:14px">
         <input type="checkbox" class="lift-ex-check" onchange="toggleLiftExercise('${name.replace(/'/g,"\'")}', this.checked)" ${checked?'checked':''} style="width:16px;height:16px;accent-color:var(--accent)">
         ${escapeHtml(name)}
       </label>
+      ${lastHtml}
       <div class="lift-sets-wrap" style="${checked?'':'display:none'}">
         ${sets.map((s,i) => liftSetRowHtml(name, i, s.weight, s.reps)).join('')}
-        <button class="btn btn-sm btn-secondary" style="margin-top:4px" onclick="addLiftSet('${name.replace(/'/g,"\'")}')">+ Add Set</button>
+        <button class="btn btn-sm btn-secondary" style="margin-top:4px" onclick="addLiftSet('${name.replace(/'/g,"\'")}')">＋ Add Set</button>
       </div>
     </div>`;
-  }).join('');
+  }
+  container.innerHTML =
+    masterList.map(name => exBlockHtml(name, existing ? existing.exercises.find(e => e.name === name) : null)).join('') +
+    customList.map(name => exBlockHtml(name, existing ? existing.exercises.find(e => e.name === name) : null)).join('');
 }
 
 function liftSetRowHtml(name, idx, weight, reps) {
+  const eid = CSS.escape(name);
   return `<div class="lift-set-row" style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
     <span style="color:var(--muted);font-size:12px;min-width:40px">Set ${idx+1}</span>
     <input type="number" placeholder="lbs" value="${weight||''}" step="2.5" min="0"
       style="width:70px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px">
     <input type="number" placeholder="reps" value="${reps||''}" min="1"
       style="width:60px;padding:6px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px">
-    <button onclick="this.closest('.lift-set-row').remove()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0 4px">x</button>
+    <button onclick="this.closest('.lift-set-row').remove()" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:0 4px">×</button>
   </div>`;
 }
 
@@ -2793,17 +2960,18 @@ function addLiftSet(name) {
   const btn = wrap.querySelector(':scope > button');
   const rows = wrap.querySelectorAll('.lift-set-row');
   const idx = rows.length;
+  // Pre-fill from last row's values
+  const lastRow = rows[rows.length-1];
   let w = '', r = '';
-  if (rows.length) {
-    const inputs = rows[rows.length-1].querySelectorAll('input');
+  if (lastRow) {
+    const inputs = lastRow.querySelectorAll('input');
     w = inputs[0].value; r = inputs[1].value;
   }
   const div = document.createElement('div');
   div.innerHTML = liftSetRowHtml(name, idx, w, r);
   wrap.insertBefore(div.firstElementChild, btn);
-  wrap.querySelectorAll('.lift-set-row').forEach((row, i) => {
-    row.querySelector('span').textContent = 'Set ' + (i+1);
-  });
+  // Re-number
+  renumberSets(wrap);
 }
 
 function addCustomLiftExercise() {
@@ -2817,14 +2985,14 @@ function addCustomLiftExercise() {
   }
   const container = document.getElementById('lift-log-exercises');
   const div = document.createElement('div');
-  div.innerHTML = `<div class="lift-ex-block" id="leb-${CSS.escape(name)}" style="margin-bottom:16px;border-top:1px solid var(--border);padding-top:12px">
+  div.innerHTML = `<div class="lift-ex-block" id="leb-${CSS.escape(name)}" data-exname="${escapeHtml(name)}" style="margin-bottom:16px;border-top:1px solid var(--border);padding-top:12px">
     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:8px;font-weight:600;font-size:14px">
-      <input type="checkbox" class="lift-ex-check" onchange="toggleLiftExercise('${name.replace(/'/g,"\'")}', this.checked)" checked style="width:16px;height:16px;accent-color:var(--accent)">
+      <input type="checkbox" class="lift-ex-check" onchange="toggleLiftExercise('${name.replace(/'/g,"\\'")}', this.checked)" checked style="width:16px;height:16px;accent-color:var(--accent)">
       ${escapeHtml(name)}
     </label>
     <div class="lift-sets-wrap">
       ${liftSetRowHtml(name, 0, '', '')}
-      <button class="btn btn-sm btn-secondary" style="margin-top:4px" onclick="addLiftSet('${name.replace(/'/g,"\'")}')">+ Add Set</button>
+      <button class="btn btn-sm btn-secondary" style="margin-top:4px" onclick="addLiftSet('${name.replace(/'/g,"\\'")}')">+ Add Set</button>
     </div>
   </div>`;
   container.appendChild(div.firstElementChild);
@@ -2832,17 +3000,24 @@ function addCustomLiftExercise() {
   input.focus();
 }
 
+function renumberSets(wrap) {
+  wrap.querySelectorAll('.lift-set-row').forEach((row, i) => {
+    row.querySelector('span').textContent = 'Set ' + (i+1);
+  });
+}
+
 function saveLiftWorkout() {
   const date = document.getElementById('lift-log-date').value;
-  if (!date) { document.getElementById('lift-log-msg').textContent = 'Please select a date.'; return; }
+  const msgEl = document.getElementById('lift-log-msg');
+  if (!date) { msgEl.style.color = '#f87171'; msgEl.textContent = '⚠️ Please select a date.'; return; }
   const type = _liftType;
-  const exList = (type === 'Upper' ? UPPER_EXERCISES : LOWER_EXERCISES).slice().sort((a,b) => a.localeCompare(b));
   const exercises = [];
-  exList.forEach(name => {
-    const block = document.getElementById('leb-' + CSS.escape(name));
-    if (!block) return;
+  // Query ALL exercise blocks — handles both master-list and custom-added exercises
+  document.querySelectorAll('#lift-log-exercises .lift-ex-block').forEach(block => {
     const checkbox = block.querySelector('.lift-ex-check');
-    if (!checkbox.checked) return;
+    if (!checkbox || !checkbox.checked) return;
+    const name = block.dataset.exname;
+    if (!name) return;
     const rows = block.querySelectorAll('.lift-set-row');
     const sets = [];
     rows.forEach(row => {
@@ -2853,17 +3028,162 @@ function saveLiftWorkout() {
     });
     if (sets.length) exercises.push({ name, sets });
   });
-  if (!exercises.length) { document.getElementById('lift-log-msg').textContent = 'Select at least one exercise with sets.'; return; }
+  if (!exercises.length) { msgEl.style.color = '#f87171'; msgEl.textContent = '⚠️ Check at least one exercise and enter weight + reps.'; return; }
   const workouts = getLiftWorkouts();
   const idx = workouts.findIndex(w => w.date === date && w.type === type);
   if (idx >= 0) workouts[idx] = { date, type, exercises };
   else workouts.push({ date, type, exercises });
   saveLiftWorkouts(workouts);
-  document.getElementById('lift-log-msg').textContent = 'Saved!';
-  setTimeout(() => { document.getElementById('lift-log-msg').textContent = ''; }, 2000);
+  msgEl.style.color = 'var(--accent2)';
+  msgEl.textContent = '✅ Saved!';
+  setTimeout(() => { msgEl.textContent = ''; }, 2500);
 }
 
 // ===== LIFT: HISTORY =====
+// ===== AI COACH =====
+let _coachHistory = [];
+
+function initCoachPage() {
+  const hasKey = !!localStorage.getItem('ht_coach_api_key');
+  document.getElementById('coach-key-setup').style.display = hasKey ? 'none' : '';
+}
+
+function saveCoachApiKey() {
+  const key = document.getElementById('coach-api-key-input').value.trim();
+  if (!key) return;
+  localStorage.setItem('ht_coach_api_key', key);
+  document.getElementById('coach-key-setup').style.display = 'none';
+  document.getElementById('coach-api-key-input').value = '';
+}
+
+function showChangeApiKey() {
+  localStorage.removeItem('ht_coach_api_key');
+  document.getElementById('coach-key-setup').style.display = '';
+}
+
+function clearCoachChat() {
+  _coachHistory = [];
+  const el = document.getElementById('coach-messages');
+  el.innerHTML = '<div id="coach-welcome" style="text-align:center;color:var(--muted);font-size:13px;padding:24px 16px;line-height:1.6">🤖 <strong style="color:var(--text)">AI Coach</strong><br>I have full access to your workout history and body composition data. Ask me anything — I\'ll give you specific, data-driven advice.</div>';
+}
+
+function coachQuickPrompt(text) {
+  document.getElementById('coach-input').value = text;
+  sendCoachMessage();
+}
+
+function buildCoachSystemPrompt() {
+  const entries = getData().sort((a,b) => a.date.localeCompare(b.date));
+  const workouts = getLiftWorkouts().sort((a,b) => a.date.localeCompare(b.date));
+  const latest = entries.length ? entries[entries.length - 1] : null;
+  const recent = workouts.slice(-20);
+
+  let sys = `You are a personal fitness coach embedded in the user's private health tracking app. You have full access to their real data below. Be specific, data-driven, and actionable. Reference actual numbers from their data when giving advice. Keep responses concise but thorough. Use **bold** for key numbers and exercise names.
+
+USER GOALS:
+- Start: ${BASELINE.date} | Weight: ${BASELINE.weight} lbs | Body Fat: ${BASELINE.bodyFat}%
+- Target: ${GOAL.date} | Weight: ${GOAL.weight} lbs | Body Fat: ${GOAL.bodyFat}%`;
+
+  if (latest) {
+    sys += `\n\nCURRENT STATS (${latest.date}):`;
+    if (latest.weight != null) sys += `\n- Weight: ${latest.weight} lbs`;
+    if (latest.bodyFat != null) sys += `\n- Body Fat: ${latest.bodyFat}%`;
+    if (latest.muscleMass != null) sys += `\n- Muscle Mass: ${latest.muscleMass}%`;
+    if (latest.skeletalMuscle != null) sys += `\n- Skeletal Muscle: ${latest.skeletalMuscle} lbs`;
+    if (latest.subcutaneousFat != null) sys += `\n- Subcutaneous Fat: ${latest.subcutaneousFat}%`;
+    if (latest.visceralFat != null) sys += `\n- Visceral Fat: ${latest.visceralFat}`;
+  }
+
+  if (entries.length > 1) {
+    const first = entries[0];
+    sys += `\n\nPROGRESS SINCE START (${first.date} → ${latest.date}):`;
+    if (first.weight != null && latest.weight != null) sys += `\n- Weight: ${first.weight} → ${latest.weight} lbs (${(latest.weight - first.weight > 0 ? '+' : '')}${(latest.weight - first.weight).toFixed(1)})`;
+    if (first.bodyFat != null && latest.bodyFat != null) sys += `\n- Body Fat: ${first.bodyFat} → ${latest.bodyFat}% (${(latest.bodyFat - first.bodyFat > 0 ? '+' : '')}${(latest.bodyFat - first.bodyFat).toFixed(1)})`;
+    if (first.muscleMass != null && latest.muscleMass != null) sys += `\n- Muscle Mass: ${first.muscleMass} → ${latest.muscleMass}% (${(latest.muscleMass - first.muscleMass > 0 ? '+' : '')}${(latest.muscleMass - first.muscleMass).toFixed(1)})`;
+  }
+
+  if (recent.length) {
+    sys += `\n\nWORKOUT HISTORY (last ${recent.length} sessions):`;
+    recent.forEach(w => {
+      sys += `\n\n${w.date} — ${w.type}:`;
+      w.exercises.forEach(ex => {
+        const setsStr = (ex.sets || []).filter(s => s.weight || s.reps).map(s => `${s.weight||'?'}lbs×${s.reps||'?'}`).join(', ');
+        if (setsStr) sys += `\n  • ${ex.name}: ${setsStr}`;
+      });
+    });
+  }
+
+  sys += `\n\nFocus on progressive overload: small, consistent increases in weight, reps, or sets. When recommending next-session targets, give specific numbers based on the data above.`;
+  return sys;
+}
+
+async function sendCoachMessage() {
+  const apiKey = localStorage.getItem('ht_coach_api_key');
+  if (!apiKey) { document.getElementById('coach-key-setup').style.display = ''; return; }
+  const input = document.getElementById('coach-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  const messagesEl = document.getElementById('coach-messages');
+  // Remove welcome message on first real message
+  const welcome = document.getElementById('coach-welcome');
+  if (welcome) welcome.remove();
+  // User bubble
+  _coachHistory.push({ role: 'user', parts: [{ text }] });
+  const userBubble = document.createElement('div');
+  userBubble.style.cssText = 'display:flex;justify-content:flex-end';
+  userBubble.innerHTML = `<div style="max-width:85%;background:var(--accent);color:#fff;border-radius:14px 14px 3px 14px;padding:10px 14px;font-size:14px;line-height:1.5;word-break:break-word">${escapeHtml(text)}</div>`;
+  messagesEl.appendChild(userBubble);
+  // Thinking indicator
+  const thinkingEl = document.createElement('div');
+  thinkingEl.style.cssText = 'display:flex;justify-content:flex-start';
+  thinkingEl.innerHTML = `<div style="background:var(--surface2);border:1px solid var(--border);border-radius:14px 14px 14px 3px;padding:12px 16px;display:flex;gap:4px;align-items:center"><span class="coach-thinking-dot"></span><span class="coach-thinking-dot"></span><span class="coach-thinking-dot"></span></div>`;
+  messagesEl.appendChild(thinkingEl);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: buildCoachSystemPrompt() }] },
+        contents: _coachHistory
+      })
+    });
+    const data = await res.json();
+    thinkingEl.remove();
+    if (!res.ok) {
+      const errMsg = data.error?.message || `Error ${res.status}`;
+      const errEl = document.createElement('div');
+      errEl.style.cssText = 'color:#f87171;font-size:13px;padding:4px 0';
+      errEl.textContent = '⚠️ ' + errMsg;
+      messagesEl.appendChild(errEl);
+      _coachHistory.pop();
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return;
+    }
+    const reply = data.candidates[0].content.parts[0].text;
+    _coachHistory.push({ role: 'model', parts: [{ text: reply }] });
+    const formatted = escapeHtml(reply)
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/\n\n/g, '</p><p style="margin:8px 0 0">')
+      .replace(/\n/g, '<br>');
+    const replyEl = document.createElement('div');
+    replyEl.style.cssText = 'display:flex;justify-content:flex-start';
+    replyEl.innerHTML = `<div style="max-width:92%;background:var(--surface2);border:1px solid var(--border);border-radius:14px 14px 14px 3px;padding:12px 14px;font-size:14px;line-height:1.6;word-break:break-word"><p style="margin:0">${formatted}</p></div>`;
+    messagesEl.appendChild(replyEl);
+  } catch(e) {
+    thinkingEl.remove();
+    const errEl = document.createElement('div');
+    errEl.style.cssText = 'color:#f87171;font-size:13px;padding:4px 0';
+    errEl.textContent = '⚠️ Network error — check your connection and try again.';
+    messagesEl.appendChild(errEl);
+    _coachHistory.pop();
+  }
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
 function renderLiftHistory() {
   const workouts = getLiftWorkouts().slice().sort((a,b) => {
     const dc = b.date.localeCompare(a.date);
@@ -2877,7 +3197,7 @@ function renderLiftHistory() {
     const sets = w.exercises.map(ex =>
       `<div style="margin-bottom:8px">
         <div style="font-weight:600;font-size:13px;color:var(--text);margin-bottom:3px">${escapeHtml(ex.name)}</div>
-        <div style="font-size:12px;color:var(--muted)">${ex.sets.map((s,i)=>i+1+': '+s.weight+'x'+s.reps).join(' &nbsp;·&nbsp; ')}</div>
+        <div style="font-size:12px;color:var(--muted)">${ex.sets.map((s,i)=>`${i+1}: ${s.weight}×${s.reps}`).join(' &nbsp;·&nbsp; ')}</div>
       </div>`
     ).join('');
     return `<div class="card" style="margin-bottom:12px">
@@ -2971,9 +3291,11 @@ function handleDriveToken(resp) {
   driveAccessToken = resp.access_token;
   driveTokenExpiry = Date.now() + (Number(resp.expires_in) || 3600) * 1000 - 60000;
   localStorage.setItem('ht_drive_connected', '1');
-  setDriveStatus('☁️ Drive: syncing…');
   scheduleProactiveTokenRefresh();
-  driveInitialSync();
+  if (!driveHasSynced) {
+    setDriveStatus('☁️ Drive: syncing…');
+    driveInitialSync();
+  }
 }
 
 // Refresh the token shortly before it expires so a long-running open tab
@@ -3138,6 +3460,7 @@ async function driveInitialSync() {
         else applyAllAppData(remote);
         localStorage.setItem('ht_last_modified', String(remoteTs));
         setDriveStatus('☁️ Drive: synced ✓');
+        driveHasSynced = true;
         driveBusy = false;
         location.reload();
         return;
@@ -3147,6 +3470,7 @@ async function driveInitialSync() {
       localStorage.setItem('ht_drive_file_id', fileId);
     }
     await pushToDrive();
+    driveHasSynced = true;
   } catch (e) {
     console.warn('Drive initial sync failed', e);
     setDriveStatus('☁️ Drive: error, tap to retry');
@@ -3176,7 +3500,7 @@ async function pushToDrive() {
   }
 }
 </script>
-<script defer>
+<script>
 // ===== TEMP DIAGNOSTIC RUNNER: the big app script above is type="text/plain"
 // so the browser won't auto-parse/execute it. Instead we eval() it here
 // inside a try/catch, so that even a SyntaxError anywhere in that ~100KB
@@ -3197,5 +3521,53 @@ async function pushToDrive() {
   }
 })();
 </script>
+
+<!-- Edit Entry Modal -->
+<div id="edit-entry-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:9000;align-items:center;justify-content:center;padding:16px">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;padding:24px;box-shadow:0 8px 40px rgba(0,0,0,.5)">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:2px">Editing entry</div>
+        <div id="edit-entry-label" style="font-size:16px;font-weight:600;color:var(--text)"></div>
+      </div>
+      <button onclick="closeEditModal()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:4px;line-height:1">×</button>
+    </div>
+    <input type="hidden" id="edit-date">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="field"><label>Weight (lbs)</label><input type="number" id="edit-weight" step="0.1" placeholder="—"></div>
+      <div class="field"><label>Body Fat %</label><input type="number" id="edit-bf" step="0.1" placeholder="—"></div>
+      <div class="field"><label>Visceral Fat %</label><input type="number" id="edit-vf" step="0.1" placeholder="—"></div>
+      <div class="field"><label>Subcut. Fat %</label><input type="number" id="edit-sf" step="0.1" placeholder="—"></div>
+      <div class="field"><label>Muscle Mass %</label><input type="number" id="edit-mm" step="0.1" placeholder="—"></div>
+      <div class="field"><label>Skeletal Muscle (lbs)</label><input type="number" id="edit-sm" step="0.1" placeholder="—"></div>
+      <div class="field"><label>Recovery (1–10)</label><input type="number" id="edit-recovery" step="1" min="1" max="10" placeholder="—"></div>
+      <div class="field"><label>Waist (in)</label><input type="number" id="edit-waist" step="0.1" placeholder="—"></div>
+      <div class="field"><label>Chest (in)</label><input type="number" id="edit-chest" step="0.1" placeholder="—"></div>
+      <div class="field"><label>Hips (in)</label><input type="number" id="edit-hips" step="0.1" placeholder="—"></div>
+      <div class="field"><label>Arm (in)</label><input type="number" id="edit-arm" step="0.1" placeholder="—"></div>
+      <div class="field"><label>Thigh (in)</label><input type="number" id="edit-thigh" step="0.1" placeholder="—"></div>
+    </div>
+    <div class="field" style="margin-top:4px">
+      <label>Workout</label>
+      <select id="edit-workout">
+        <option value="">— None —</option>
+        <option value="full">Full Body</option>
+        <option value="upper">Upper Body</option>
+        <option value="lower">Lower Body</option>
+        <option value="cardio">Cardio</option>
+        <option value="rest">Rest</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Notes</label>
+      <input type="text" id="edit-notes" placeholder="Optional notes">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:20px;align-items:center">
+      <button class="btn btn-primary" onclick="saveEditEntry()" style="flex:1">Save Changes</button>
+      <button class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+    </div>
+    <div id="edit-msg" style="margin-top:10px;font-size:13px;text-align:center"></div>
+  </div>
+</div>
 </body>
 </html>
