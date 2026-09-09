@@ -1032,7 +1032,7 @@ const GOAL = {
   bodyFat: 12.0,
   date: '2027-01-31'
 };
-const GOAL_DATE = new Date('2026-10-31');
+const GOAL_DATE = new Date('2027-01-31');
 const START_DATE = new Date('2026-05-28');
 const INBODY_GOAL = { bodyFat: 12.0 };
 const VISCERAL_HEALTHY_MAX = 10;
@@ -1664,31 +1664,26 @@ function renderDashboard() {
   const sfDelta = lostSF != null ? (lostSF > 0 ? `↓ ${lostSF}% lost` : lostSF < 0 ? `↑ ${Math.abs(lostSF)}% gained` : 'No change') : 'Log subcut. fat to track';
   const sfCls = lostSF != null ? (lostSF > 0 ? 'good' : lostSF < 0 ? 'bad' : 'neutral') : 'neutral';
 
-  // InBody-derived stats (from latest InBody scan)
-  const inbodyScans = getInBody().slice().sort((a,b)=>a.date.localeCompare(b.date));
-  const latestIB = inbodyScans[inbodyScans.length - 1];
-  const ibFatMass   = latestIB?.bodyFatMass ?? null;
-  const ibLeanMass  = latestIB?.leanBodyMass ?? null;
-  const ibWeight    = latestIB?.weight ?? null;
-  const ibBF        = latestIB?.pbf ?? null;
-  const ibLeanPct   = ibBF != null ? (100 - ibBF).toFixed(1) : null;
-  // Goal weight at 12% BF keeping current lean mass constant
-  const goalBFPct   = GOAL.bodyFat / 100;
-  const goalWeightAtTarget = ibLeanMass != null ? (ibLeanMass / (1 - goalBFPct)).toFixed(1) : null;
-  const fatToLose   = ibFatMass != null && goalWeightAtTarget != null
-    ? Math.max(0, (ibFatMass - (parseFloat(goalWeightAtTarget) * goalBFPct))).toFixed(1)
+  // Derived body comp from latest daily log entry
+  const goalBFPct    = GOAL.bodyFat / 100;
+  const dlFatMass    = currW > 0 && currBF > 0 ? parseFloat((currW * currBF / 100).toFixed(1)) : null;
+  const dlLeanMass   = dlFatMass != null ? parseFloat((currW - dlFatMass).toFixed(1)) : null;
+  const dlLeanPct    = currBF > 0 ? parseFloat((100 - currBF).toFixed(1)) : null;
+  const baselineLean = BASELINE.weight * (1 - BASELINE.bodyFat / 100);
+  const goalWeightAtTarget = dlLeanMass != null ? (dlLeanMass / (1 - goalBFPct)).toFixed(1) : null;
+  const fatToLose    = dlFatMass != null && goalWeightAtTarget != null
+    ? Math.max(0, dlFatMass - parseFloat(goalWeightAtTarget) * goalBFPct).toFixed(1)
     : null;
-  const ibScanDate  = latestIB?.date ? new Date(latestIB.date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
 
   const stats = [
-    { icon:'⚖️',  label:'Current Weight',  num: fmt(currW,1),  unit:'lbs', sub:`Start: ${BASELINE.weight} lbs<br>Goal: ${GOAL.weight} lbs`,  delta: lostW > 0 ? `↓ ${lostW} lbs lost` : 'At baseline',      cls: lostW > 0 ? 'good':'neutral', progress:pctW,  accent:'accent-blue'   },
-    { icon:'🔥',  label:'Body Fat %',       num: ibBF!=null ? fmt(ibBF,1) : fmt(currBF,1), unit:'%', sub:`Goal: ${GOAL.bodyFat}% · Start: ${BASELINE.bodyFat}%`, delta: ibBF!=null ? `↓ ${(BASELINE.bodyFat-ibBF).toFixed(1)}% lost` : (lostBF>0?`↓ ${lostBF}% lost`:'At baseline'), cls:'good', progress:pctBF, accent:'accent-orange' },
-    { icon:'🏋️', label:'Body Fat Mass',    num: ibFatMass!=null ? fmt(ibFatMass,1):'—', unit:'lbs', sub: ibFatMass!=null ? `As of ${ibScanDate} InBody scan`:'Log InBody scan', delta: ibFatMass!=null ? `${fatToLose} lbs to goal`:'—', cls: ibFatMass!=null?'good':'neutral', progress:null, accent:'accent-orange' },
-    { icon:'💚',  label:'Lean Body Mass %', num: ibLeanPct!=null ? ibLeanPct:'—', unit:'%', sub: ibLeanPct!=null ? `${(100-GOAL.bodyFat).toFixed(0)}% at goal · as of ${ibScanDate}`:'Log InBody scan', delta: ibLeanPct!=null ? `${(ibLeanPct-(100-BASELINE.bodyFat)).toFixed(1)}% gained`:'—', cls: ibLeanPct!=null?'good':'neutral', progress:null, accent:'accent-green' },
-    { icon:'💪',  label:'Lean Body Mass',   num: ibLeanMass!=null ? fmt(ibLeanMass,1):'—', unit:'lbs', sub: ibLeanMass!=null ? `Goal: ${goalWeightAtTarget ? goalWeightAtTarget+' lbs total weight' : '—'}`:'Log InBody scan', delta: ibLeanMass!=null ? `↑ ${(ibLeanMass-(BASELINE.weight*(1-BASELINE.bodyFat/100))).toFixed(1)} lbs gained`:'—', cls: ibLeanMass!=null?'good':'neutral', progress:null, accent:'accent-green' },
-    { icon:'🎯',  label:'Goal Weight @12%', num: goalWeightAtTarget!=null ? goalWeightAtTarget:'—', unit:'lbs', sub:`Keeping ${ibLeanMass!=null?fmt(ibLeanMass,1):'—'} lbs lean mass`, delta: fatToLose!=null ? `${fatToLose} lbs fat to lose`:'—', cls:'neutral', progress:null, accent:'accent-purple' },
-    { icon:'📊',  label:'BF% Progress',     num: Math.round(pctBF), unit:'%', sub:'toward 12% BF goal', delta:pctBF>=100?'✓ Goal reached!':`${remBF>0?remBF+'% to go':'Done!'}`, cls:pctBF>=100?'good':'neutral', progress:pctBF, accent:'accent-orange' },
-    { icon:'📉',  label:'Fat Left to Lose', num: fatToLose!=null ? fatToLose:'—', unit:'lbs', sub:`To reach ${GOAL.bodyFat}% body fat`, delta:`${daysLeft} days until ${new Date(GOAL.date).toLocaleDateString('en-US',{month:'short',year:'numeric'})}`, cls: fatToLose!=null&&parseFloat(fatToLose)<10?'good':'neutral', progress:null, accent:'accent-muted' },
+    { icon:'⚖️',  label:'Current Weight',   num: fmt(currW,1),   unit:'lbs', sub:`Start: ${BASELINE.weight} lbs · Goal: ${GOAL.weight} lbs`, delta: lostW>0 ? `↓ ${lostW} lbs lost` : 'At baseline', cls: lostW>0?'good':'neutral', progress:pctW,  accent:'accent-blue'   },
+    { icon:'🔥',  label:'Body Fat %',        num: fmt(currBF,1),  unit:'%',   sub:`Goal: ${GOAL.bodyFat}% · Start: ${BASELINE.bodyFat}%`,     delta: lostBF>0 ? `↓ ${lostBF}% lost` : 'At baseline', cls: lostBF>0?'good':'neutral', progress:pctBF, accent:'accent-orange'  },
+    { icon:'🏋️', label:'Body Fat Mass',     num: dlFatMass!=null ? fmt(dlFatMass,1):'—',  unit:'lbs', sub:`${fatToLose!=null?fatToLose+' lbs left to lose':'Log BF% to track'}`, delta: dlFatMass!=null ? `↓ ${(BASELINE.weight*BASELINE.bodyFat/100 - dlFatMass).toFixed(1)} lbs lost` : '—', cls: dlFatMass!=null?'good':'neutral', progress:null, accent:'accent-orange' },
+    { icon:'💚',  label:'Lean Body Mass %',  num: dlLeanPct!=null ? fmt(dlLeanPct,1):'—',  unit:'%',   sub:`${(100-GOAL.bodyFat).toFixed(0)}% at goal`, delta: dlLeanPct!=null ? `↑ ${(dlLeanPct-(100-BASELINE.bodyFat)).toFixed(1)}% gained` : '—', cls: dlLeanPct!=null?'good':'neutral', progress:null, accent:'accent-green'  },
+    { icon:'💪',  label:'Lean Body Mass',    num: dlLeanMass!=null ? fmt(dlLeanMass,1):'—', unit:'lbs', sub:`Started: ${baselineLean.toFixed(1)} lbs`, delta: dlLeanMass!=null ? `↑ ${(dlLeanMass-baselineLean).toFixed(1)} lbs gained` : '—', cls: dlLeanMass!=null?'good':'neutral', progress:null, accent:'accent-green'  },
+    { icon:'🎯',  label:'Goal Weight @12%',  num: goalWeightAtTarget!=null ? goalWeightAtTarget:'—', unit:'lbs', sub:`Keeping ${dlLeanMass!=null?fmt(dlLeanMass,1):'—'} lbs lean mass`, delta: fatToLose!=null ? `${fatToLose} lbs fat to lose` : '—', cls:'neutral', progress:null, accent:'accent-purple' },
+    { icon:'📊',  label:'BF% Progress',      num: Math.round(pctBF), unit:'%', sub:'toward 12% BF goal', delta: pctBF>=100?'✓ Goal reached!':`${remBF>0?remBF+'% to go':'Done!'}`, cls: pctBF>=100?'good':'neutral', progress:pctBF, accent:'accent-orange' },
+    { icon:'📉',  label:'Fat Left to Lose',  num: fatToLose!=null ? fatToLose:'—', unit:'lbs', sub:`To reach ${GOAL.bodyFat}% body fat`, delta:`${daysLeft} days until Jan 2027`, cls: fatToLose!=null&&parseFloat(fatToLose)<10?'good':'neutral', progress:null, accent:'accent-muted' },
   ];
   document.getElementById('headline-stats').innerHTML = stats.map(s => `
     <div class="stat ${s.accent}">
