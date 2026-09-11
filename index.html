@@ -1162,7 +1162,7 @@ if (window.navigator.standalone) {
     if (!target) return;
     rendered = true;
     var div = document.createElement('div');
-    div.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#b00020;color:#fff;font-size:11px;line-height:1.4;padding:10px;z-index:999999;white-space:pre-wrap;max-height:60vh;overflow:auto;font-family:monospace;';
+    div.style.cssText = 'position:fixed;top:0;left:0;right:0;background:#b00020;color:#fff;font-size:11px;line-height:1.4;padding:10px;padding-top:max(10px,env(safe-area-inset-top,10px));z-index:999999;white-space:pre-wrap;max-height:60vh;overflow:auto;font-family:monospace;';
     div.textContent = lines.join('\n\n');
     target.appendChild(div);
   }
@@ -3960,8 +3960,7 @@ function endSession() {
   workouts.push({ date, type: session.type, duration, source: 'session', exercises });
   saveLiftWorkouts(workouts);
   markLocalChange();
-  // Force immediate push — don't rely on debounce in case user closes app
-  pushToFirestore();
+  // Drive sync is triggered automatically by saveLiftWorkouts via scheduleDriveSync()
 
   clearActiveSession();
   showLiftPage('lifthistory');
