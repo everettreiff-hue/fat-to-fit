@@ -3234,9 +3234,9 @@ function renderDashboard() {
     { icon:'⚖️',  label:'Current Weight',   num: fmt(currW,1),   unit:'lbs', sub:`Start: ${BASELINE.weight} lbs · Goal: ${goalWeightAtTarget ?? '—'} lbs`, delta: lostW>0 ? `↓ ${lostW} lbs lost` : 'At baseline', cls: lostW>0?'good':'neutral', progress:pctW,  accent:'accent-blue'   },
     { icon:'🔥',  label:'Body Fat %',        num: fmt(currBF,1),  unit:'%',   sub:`Goal: ${GOAL.bodyFat}% · Start: ${BASELINE.bodyFat}%`,     delta: lostBF>0 ? `↓ ${lostBF}% lost` : 'At baseline', cls: lostBF>0?'good':'neutral', progress:pctBF, accent:'accent-orange'  },
     { icon:'🏋️', label:'Body Fat Mass',     num: dlFatMass!=null ? fmt(dlFatMass,1):'—',  unit:'lbs', sub:`${fatToLose!=null?fatToLose+' lbs left to lose':'Log BF% to track'}`, delta: dlFatMass!=null ? `↓ ${(BASELINE.weight*BASELINE.bodyFat/100 - dlFatMass).toFixed(1)} lbs lost` : '—', cls: dlFatMass!=null?'good':'neutral', progress:null, accent:'accent-orange' },
-    { icon:'💚',  label:'Lean Body Mass %',  num: dlLeanPct!=null ? fmt(dlLeanPct,1):'—',  unit:'%',   sub:`${(100-GOAL.bodyFat).toFixed(0)}% at goal`, delta: dlLeanPct!=null ? `↑ ${(dlLeanPct-(100-BASELINE.bodyFat)).toFixed(1)}% gained` : '—', cls: dlLeanPct!=null?'good':'neutral', progress:null, accent:'accent-green'  },
-    { icon:'💪',  label:'Lean Body Mass',    num: dlLeanMass!=null ? fmt(dlLeanMass,1):'—', unit:'lbs', sub:`Started: ${baselineLean.toFixed(1)} lbs`, delta: dlLeanMass!=null ? `↑ ${(dlLeanMass-baselineLean).toFixed(1)} lbs gained` : '—', cls: dlLeanMass!=null?'good':'neutral', progress:null, accent:'accent-green'  },
-    { icon:'🎯',  label:'Goal Weight @12%',  num: goalWeightAtTarget!=null ? goalWeightAtTarget:'—', unit:'lbs', sub:`Keeping ${dlLeanMass!=null?fmt(dlLeanMass,1):'—'} lbs lean mass`, delta: fatToLose!=null ? `${fatToLose} lbs fat to lose` : '—', cls:'neutral', progress:null, accent:'accent-purple' },
+    { icon:'💚',  label:'Fat-Free Mass %',   num: dlLeanPct!=null ? fmt(dlLeanPct,1):'—',  unit:'%',   sub:`${(100-GOAL.bodyFat).toFixed(0)}% at goal`, delta: dlLeanPct!=null ? `↑ ${(dlLeanPct-(100-BASELINE.bodyFat)).toFixed(1)}% gained` : '—', cls: dlLeanPct!=null?'good':'neutral', progress:null, accent:'accent-green'  },
+    { icon:'💪',  label:'Fat-Free Mass (FFM)',num: dlLeanMass!=null ? fmt(dlLeanMass,1):'—', unit:'lbs', sub:`Started: ${baselineLean.toFixed(1)} lbs (FFM = wt − fat)`, delta: dlLeanMass!=null ? `↑ ${(dlLeanMass-baselineLean).toFixed(1)} lbs gained` : '—', cls: dlLeanMass!=null?'good':'neutral', progress:null, accent:'accent-green'  },
+    { icon:'🎯',  label:'Goal Weight @12%',  num: goalWeightAtTarget!=null ? goalWeightAtTarget:'—', unit:'lbs', sub:`Keeping ${dlLeanMass!=null?fmt(dlLeanMass,1):'—'} lbs FFM`, delta: fatToLose!=null ? `${fatToLose} lbs fat to lose` : '—', cls:'neutral', progress:null, accent:'accent-purple' },
     { icon:'📊',  label:'BF% Progress',      num: Math.round(pctBF), unit:'%', sub:'toward 12% BF goal', delta: pctBF>=100?'✓ Goal reached!':`${remBF>0?remBF+'% to go':'Done!'}`, cls: pctBF>=100?'good':'neutral', progress:pctBF, accent:'accent-orange' },
     { icon:'📉',  label:'Fat Left to Lose',  num: fatToLose!=null ? fatToLose:'—', unit:'lbs', sub:`To reach ${GOAL.bodyFat}% body fat`, delta:`${daysLeft} days until Jan 2027`, cls: fatToLose!=null&&parseFloat(fatToLose)<10?'good':'neutral', progress:null, accent:'accent-muted' },
   ];
@@ -4088,7 +4088,7 @@ function renderInBodyCharts(scans) {
     type:'line',
     data:{ labels, datasets:[
       { label:'Weight', data:scans.map(s=>s.weight), borderColor:'#4f8ef7', backgroundColor:'rgba(79,142,247,.1)', borderWidth:2.5, pointRadius:4, fill:false, tension:.3, spanGaps:true },
-      { label:'Lean Body Mass', data:scans.map(s=>s.leanBodyMass), borderColor:'#34d399', backgroundColor:'rgba(52,211,153,.1)', borderWidth:2.5, pointRadius:4, fill:false, tension:.3, spanGaps:true },
+      { label:'Fat-Free Mass (FFM)', data:scans.map(s=>s.weight&&s.pbf?parseFloat((s.weight*(1-s.pbf/100)).toFixed(1)):s.leanBodyMass), borderColor:'#34d399', backgroundColor:'rgba(52,211,153,.1)', borderWidth:2.5, pointRadius:4, fill:false, tension:.3, spanGaps:true },
       { label:'Body Fat Mass', data:scans.map(s=>s.bodyFatMass), borderColor:'#f59e0b', backgroundColor:'rgba(245,158,11,.1)', borderWidth:2.5, pointRadius:4, fill:false, tension:.3, spanGaps:true },
     ]},
     options:{ responsive:true, maintainAspectRatio:false, interaction:{mode:'index',intersect:false},
@@ -4325,7 +4325,7 @@ async function generateBodyCompReport() {
     inbodyStr||'None',
     '',
     'DEXA SCAN (gold standard, Aug 13 2026 — DexaFit Atlanta — most accurate, weight this heaviest at 50%):',
-    'Body Fat: 22.9% | Weight: 194.2 lbs | Lean Mass: 143.3 lbs | Fat Mass: 44.4 lbs',
+    'Body Fat: 22.9% | Weight: 194.2 lbs | Fat Mass: 44.4 lbs | FFM (wt−fat): 149.8 lbs | Soft Lean Tissue (DEXA only, excl. bone): 143.3 lbs',
     'Visceral Fat: 1.51 lbs | A/G Ratio: 1.21 | ALMI: 8.5 kg/m² | FFMI: 20.1 kg/m²',
     'Segmental Fat: Arms 18.9%/4.6 lbs, Trunk 26.1%/26.0 lbs, Legs 20.0%/11.8 lbs',
     '',
@@ -4338,7 +4338,7 @@ async function generateBodyCompReport() {
     'Use EXACTLY these section headers (## prefix):',
     '## EXECUTIVE SUMMARY',
     '## BODY FAT PERCENTAGE',
-    '## LEAN BODY MASS',
+    '## FAT-FREE MASS (FFM)',
     '## SKELETAL MUSCLE MASS',
     '## VISCERAL FAT',
     '## BODY MASS INDEX',
@@ -4349,7 +4349,9 @@ async function generateBodyCompReport() {
     '## CONFIDENCE ASSESSMENT',
     '## RECOMMENDATIONS',
     '',
-    'For BF%, LBM, SMM, VF, BMI, BMR the FIRST line MUST be:',
+    'STANDARD DEFINITION: Fat-Free Mass (FFM) = total body weight − fat mass. Use this definition consistently across ALL sources. Do NOT use "Lean Body Mass" (LBM) as it varies by device. DEXA Soft Lean Tissue (143.3 lbs) excludes bone (~6.5 lbs); FFM (149.8 lbs) is the correct cross-device comparison figure.',
+    '',
+    'For BF%, FFM, SMM, VF, BMI, BMR the FIRST line MUST be:',
     'Best estimate: X | Confidence range: X-X',
     '(numbers only, no units in range values)',
     '',
@@ -4400,7 +4402,7 @@ function parseAIEstimates(text) {
     return m ? [parseFloat(m[1]),parseFloat(m[2])] : null;
   }
   // Use more specific headers to avoid cross-section false matches
-  var bfB=sec('BODY FAT'), lbmB=sec('LEAN BODY MASS'), smmB=sec('SKELETAL MUSCLE MASS');
+  var bfB=sec('BODY FAT'), lbmB=sec('FAT-FREE MASS'), smmB=sec('SKELETAL MUSCLE MASS');
   var vfB=sec('VISCERAL FAT'), bmiB=sec('BODY MASS INDEX'), bmrB=sec('BASAL METABOLIC');
   var bfR=rng(bfB),vfR=rng(vfB),lbmR=rng(lbmB),smmR=rng(smmB);
   return {
@@ -4423,7 +4425,7 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
   function delta(now,then,dec){if(now==null||then==null)return null;return (+(now-then)).toFixed(dec!=null?dec:1);}
   var wtDelta=delta(latestWt,first.weight,1);
   var bfDelta=delta(aiEst.bf,firstIB?firstIB.pbf:first.bodyFat,1);
-  var lbmDelta=delta(aiEst.lbm,firstIB?firstIB.leanBodyMass:null,1);
+  var lbmDelta=delta(aiEst.lbm,firstIB&&firstIB.weight&&firstIB.pbf?parseFloat((firstIB.weight*(1-firstIB.pbf/100)).toFixed(1)):null,1);
   var smmDelta=delta(aiEst.smm,firstIB?firstIB.smm:null,1);
   var vfDelta=delta(aiEst.vf,firstIB?firstIB.visceralFat:null,1);
 
@@ -4438,11 +4440,12 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
   var wtData=sorted.map(function(e){return {x:ts(e.date),y:e.weight};});
   var bfData=sorted.filter(function(e){return e.bodyFat!=null;}).map(function(e){return {x:ts(e.date),y:e.bodyFat};});
   var smmData=sorted.filter(function(e){return e.skeletalMuscle!=null;}).map(function(e){return {x:ts(e.date),y:e.skeletalMuscle};});
-  var lbmData=humeEntries.map(function(e){return {x:ts(e.date),y:e.leanMass};});
+  // FFM = weight - fat mass (standard cross-device definition)
+  var lbmData=sorted.filter(function(e){return e.weight!=null&&e.bodyFat!=null;}).map(function(e){return {x:ts(e.date),y:parseFloat((e.weight*(1-e.bodyFat/100)).toFixed(1))};});
   var ibWt=ibSorted.map(function(s){return {x:ts(s.date),y:s.weight};});
   var ibBfPts=ibSorted.map(function(s){return {x:ts(s.date),y:s.pbf};});
   var ibSMMp=ibSorted.map(function(s){return {x:ts(s.date),y:s.smm};});
-  var ibLBMp=ibSorted.map(function(s){return {x:ts(s.date),y:s.leanBodyMass};});
+  var ibLBMp=ibSorted.filter(function(s){return s.weight&&s.pbf;}).map(function(s){return {x:ts(s.date),y:parseFloat((s.weight*(1-s.pbf/100)).toFixed(1))};});
   var humeWt=humeEntries.map(function(e){return {x:ts(e.date),y:e.weight};});
   var humeBfPts=humeEntries.map(function(e){return {x:ts(e.date),y:e.bodyFat};});
   var humeSMMp=humeEntries.map(function(e){return {x:ts(e.date),y:e.skeletalMuscle};});
@@ -4482,7 +4485,7 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
   var statsHtml=
     statCard('Weight',latestWt?latestWt.toFixed(1):null,'lbs',wtDelta,false,'daily scale')+
     statCard('Body Fat',aiEst.bf?aiEst.bf.toFixed(1):null,'%',bfDelta,false,'AI best estimate')+
-    statCard('Lean Mass',aiEst.lbm?aiEst.lbm.toFixed(1):null,'lbs',lbmDelta,true,'AI best estimate')+
+    statCard('Fat-Free Mass',aiEst.lbm?aiEst.lbm.toFixed(1):null,'lbs',lbmDelta,true,'AI best estimate (wt−fat)')+
     statCard('Skeletal Muscle',aiEst.smm?aiEst.smm.toFixed(1):null,'lbs',smmDelta,true,'AI best estimate')+
     statCard('Visceral Fat',aiEst.vf?aiEst.vf.toFixed(1):null,'lvl',vfDelta,false,'AI best estimate')+
     statCard('BMI',aiEst.bmi?aiEst.bmi.toFixed(1):null,'',null,false,'AI best estimate')+
@@ -4521,7 +4524,7 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
   ].join('');
 
   var legendHtml='<div class="legend"><div class="legend-item"><div class="ldot" style="background:#94a3b8"></div>Hume Scale</div><div class="legend-item"><div class="ldot" style="background:#f59e0b"></div>InBody</div><div class="legend-item"><div class="ldot" style="background:#38bdf8"></div>Hume (Body Pod)</div></div>';
-  var legendLBM='<div class="legend"><div class="legend-item"><div class="ldot" style="background:#a78bfa"></div>Hume (Body Pod)</div><div class="legend-item"><div class="ldot" style="background:#f59e0b"></div>InBody</div></div>';
+  var legendLBM='<div class="legend"><div class="legend-item"><div class="ldot" style="background:#a78bfa"></div>Daily (wt−fat)</div><div class="legend-item"><div class="ldot" style="background:#f59e0b"></div>InBody (wt−fat)</div></div>';
 
   var reportHTML=[
     '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Body Composition Report</title>',
@@ -4538,7 +4541,7 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
     '<div class="charts-grid">',
     '<div class="chart-card"><div class="chart-title">Weight (lbs)</div><canvas id="c-wt" height="160"></canvas>'+legendHtml+'</div>',
     '<div class="chart-card"><div class="chart-title">Body Fat %</div><canvas id="c-bf" height="160"></canvas>'+legendHtml+'</div>',
-    '<div class="chart-card"><div class="chart-title">Lean Body Mass (lbs)</div><canvas id="c-lbm" height="160"></canvas>'+legendLBM+'</div>',
+    '<div class="chart-card"><div class="chart-title">Fat-Free Mass / FFM (lbs)</div><canvas id="c-lbm" height="160"></canvas>'+legendLBM+'</div>',
     '<div class="chart-card"><div class="chart-title">Skeletal Muscle (lbs)</div><canvas id="c-smm" height="160"></canvas>'+legendHtml+'</div>',
     '</div>',
     '<div class="ai-sec"><div class="sec-title">Full AI Analysis</div>'+aiHtml+'</div>',
