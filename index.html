@@ -374,7 +374,7 @@ if (window.navigator.standalone) {
   <div class="brand">⚡ Everett</div>
   <button class="active" onclick="showPage('dashboard')">Dashboard</button>
   <button onclick="showPage('log')">Log Entry</button>
-  <button onclick="showPage('inbody')">InBody</button>
+  <button onclick="showPage('inbody')">Body Comp</button>
   <button onclick="showPage('dexa')">DEXA</button>
   <button onclick="showPage('charts')">Charts</button>
   <button onclick="showPage('history')">History</button>
@@ -389,7 +389,7 @@ if (window.navigator.standalone) {
 <nav class="bottom-nav" style="display:none">
   <button class="active" onclick="showPage('dashboard')"><span class="nav-icon">📊</span>Dashboard</button>
   <button onclick="showPage('log')"><span class="nav-icon">✏️</span>Log</button>
-  <button onclick="showPage('inbody')"><span class="nav-icon">⚖️</span>InBody</button>
+  <button onclick="showPage('inbody')"><span class="nav-icon">⚖️</span>Body Comp</button>
   <button onclick="showPage('dexa')"><span class="nav-icon">🦴</span>DEXA</button>
   <button onclick="showPage('charts')"><span class="nav-icon">📈</span>Charts</button>
   <button onclick="showPage('history')"><span class="nav-icon">🕘</span>History</button>
@@ -563,13 +563,13 @@ if (window.navigator.standalone) {
 
 <!-- ===== INBODY ===== -->
 <div id="page-inbody" class="page">
-  <div class="section-title">InBody Scans</div>
-  <div class="alert alert-info">InBody scans use bioelectrical impedance and are far more accurate than a home scale — use these as your main benchmark every ~6 weeks. Daily scale entries (Log tab) are tracked separately so one doesn't skew the other.</div>
+  <div class="section-title">Body Comp Scans</div>
+  <div class="alert alert-info">Logged from your <strong>Hume body scale</strong> — tracks weight, body fat %, lean mass, skeletal muscle, visceral fat, and segmental analysis via bioelectrical impedance. Use these as your main benchmark. Compare to DEXA every few months for the most accurate picture (Hume typically reads ~4% lower than DEXA).</div>
 
   <div class="projection" id="ib-banner" style="margin-bottom:24px"></div>
 
   <div class="card" style="margin-bottom:24px">
-    <h3>Log New InBody Scan</h3>
+    <h3>Log New Hume Scale Scan</h3>
     <div class="form-grid">
       <div class="field"><label>Date</label><input type="date" id="ib-date"></div>
       <div class="field"><label>Time</label><input type="time" id="ib-time"></div>
@@ -668,6 +668,7 @@ if (window.navigator.standalone) {
   </div>
 
   <div class="section-group"><span class="section-group-label">Latest Scan — Segmental Analysis</span><div class="section-group-line"></div></div>
+
   <div class="grid grid-2" style="margin-bottom:24px">
     <div class="card">
       <h3>Segmental Lean Analysis (% of Ideal)</h3>
@@ -728,7 +729,7 @@ if (window.navigator.standalone) {
     </div>
   </div>
   <div class="card">
-    <div style="font-size:12px;color:var(--muted);text-align:center">InBody reads ~4% lower than DEXA. At this scan, InBody showed 18.9% vs DEXA 22.9% — a consistent 4% offset to keep in mind when reading InBody results.</div>
+    <div style="font-size:12px;color:var(--muted);text-align:center">Hume scale reads ~4% lower than DEXA. On Jul 29 Hume showed 18.9% vs DEXA 22.9% on Aug 13 — a consistent offset to keep in mind when comparing results.</div>
   </div>
 </div>
 
@@ -853,7 +854,7 @@ if (window.navigator.standalone) {
     </div>
     <div class="card">
       <h3>Reset All Data</h3>
-      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Permanently delete all logged entries, InBody scans, and photos. This cannot be undone — save a JSON backup first.</p>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Permanently delete all logged entries, body comp scans, and photos. This cannot be undone — save a JSON backup first.</p>
       <button class="btn btn-danger" onclick="resetData()">🗑 Reset All Data</button>
     </div>
   </div>
@@ -1126,13 +1127,13 @@ if (window.navigator.standalone) {
     <div style="display:flex;flex-wrap:wrap;gap:6px">
       <button class="btn btn-sm btn-secondary" onclick="coachQuickPrompt('Analyze my recent workouts and give me specific progressive overload targets for my next session — actual weights and reps to aim for.')">📊 Next Session Plan</button>
       <button class="btn btn-sm btn-secondary" onclick="coachQuickPrompt('Look at my workout history across all exercises and identify where I\'m progressing well and where I\'m stalling or need to focus more.')">⚡ Identify Weak Points</button>
-      <button class="btn btn-sm btn-secondary" onclick="coachQuickPrompt('Review my body composition trends alongside my workout data and tell me how my training is affecting my physique goals. Am I on track?')">🏃 Body Comp Review</button>
+      <button class="btn btn-sm btn-secondary" onclick="coachQuickPrompt('Give me a full body composition review using all my scan data. Cover: (1) fat loss progress — rate per week, how far from goal, projected date to reach 12% body fat; (2) muscle retention — am I gaining or losing lean mass as I cut; (3) segmental analysis — which body segments are lagging or over-fat; (4) visceral fat and hydration trends; (5) what the DEXA vs Hume scale offset means for my true current body fat; (6) one or two specific things I should adjust in training or nutrition based on the numbers.')">🏃 Body Comp Review</button>
       <button class="btn btn-sm btn-secondary" onclick="coachQuickPrompt('Based on my training history, suggest an optimal weekly split and volume for my goals.')">📅 Weekly Plan</button>
     </div>
   </div>
   <div class="card" style="margin-bottom:12px;padding:0;overflow:hidden">
     <div id="coach-messages" style="min-height:220px;max-height:55vh;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px">
-      <div id="coach-welcome" style="text-align:center;color:var(--muted);font-size:13px;padding:24px 16px;line-height:1.6">🤖 <strong style="color:var(--text)">AI Coach</strong><br>I have full access to your workout history and body composition data. Ask me anything — I'll give you specific, data-driven advice.</div>
+      <div id="coach-welcome" style="text-align:center;color:var(--muted);font-size:13px;padding:24px 16px;line-height:1.6">🤖 <strong style="color:var(--text)">AI Coach</strong><br>I have full access to your workout history, Hume scale scans, DEXA data, and daily body comp logs. Ask me anything — I'll give you specific, data-driven advice.</div>
     </div>
     <div style="padding:10px 12px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:flex-end">
       <textarea id="coach-input" placeholder="Ask your coach…" rows="2" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface2);color:var(--text);font-size:14px;resize:none;font-family:inherit;line-height:1.4" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendCoachMessage();}"></textarea>
@@ -2828,7 +2829,7 @@ function renderInBodySegCharts(latest) {
 
 function renderInBodyHistory(scans) {
   const el = document.getElementById('ib-history-table');
-  if (!scans.length) { el.innerHTML = '<p style="color:var(--muted);font-size:13px;padding:8px 0">No InBody scans logged yet.</p>'; return; }
+  if (!scans.length) { el.innerHTML = '<p style="color:var(--muted);font-size:13px;padding:8px 0">No body comp scans logged yet.</p>'; return; }
   const rev = [...scans].reverse();
   el.innerHTML = `<table>
     <thead><tr><th>Date</th><th>Weight</th><th>Body Fat %</th><th>Fat Mass</th><th>Lean Mass</th><th>SMM</th><th>BMI</th><th>Visceral</th><th>BMR</th><th>ECW/TBW</th><th></th></tr></thead>
@@ -3261,7 +3262,7 @@ function showChangeApiKey() {
 function clearCoachChat() {
   _coachHistory = [];
   const el = document.getElementById('coach-messages');
-  el.innerHTML = '<div id="coach-welcome" style="text-align:center;color:var(--muted);font-size:13px;padding:24px 16px;line-height:1.6">🤖 <strong style="color:var(--text)">AI Coach</strong><br>I have full access to your workout history and body composition data. Ask me anything — I\'ll give you specific, data-driven advice.</div>';
+  el.innerHTML = '<div id="coach-welcome" style="text-align:center;color:var(--muted);font-size:13px;padding:24px 16px;line-height:1.6">🤖 <strong style="color:var(--text)">AI Coach</strong><br>I have full access to your workout history, Hume scale scans, DEXA data, and daily body comp logs. Ask me anything — I\'ll give you specific, data-driven advice.</div>';
 }
 
 function coachQuickPrompt(text) {
@@ -3272,8 +3273,10 @@ function coachQuickPrompt(text) {
 function buildCoachSystemPrompt() {
   const entries = getData().sort((a,b) => a.date.localeCompare(b.date));
   const workouts = getLiftWorkouts().sort((a,b) => a.date.localeCompare(b.date));
+  const scans = getInBody().slice().sort((a,b) => a.date.localeCompare(b.date));
   const latest = entries.length ? entries[entries.length - 1] : null;
   const recent = workouts.slice(-20);
+  const latestScan = scans.length ? scans[scans.length - 1] : null;
 
   let sys = `You are a personal fitness coach embedded in the user's private health tracking app. You have full access to their real data below. Be specific, data-driven, and actionable. Reference actual numbers from their data when giving advice. Keep responses concise but thorough. Use **bold** for key numbers and exercise names.
 
@@ -3282,7 +3285,7 @@ USER GOALS:
 - Target: ${GOAL.date} | Weight: ${GOAL.weight} lbs | Body Fat: ${GOAL.bodyFat}%`;
 
   if (latest) {
-    sys += `\n\nCURRENT STATS (${latest.date}):`;
+    sys += `\n\nCURRENT DAILY LOG STATS (${latest.date}):`;
     if (latest.weight != null) sys += `\n- Weight: ${latest.weight} lbs`;
     if (latest.bodyFat != null) sys += `\n- Body Fat: ${latest.bodyFat}%`;
     if (latest.muscleMass != null) sys += `\n- Muscle Mass: ${latest.muscleMass}%`;
@@ -3293,11 +3296,58 @@ USER GOALS:
 
   if (entries.length > 1) {
     const first = entries[0];
-    sys += `\n\nPROGRESS SINCE START (${first.date} → ${latest.date}):`;
+    sys += `\n\nDAILY LOG PROGRESS (${first.date} → ${latest.date}):`;
     if (first.weight != null && latest.weight != null) sys += `\n- Weight: ${first.weight} → ${latest.weight} lbs (${(latest.weight - first.weight > 0 ? '+' : '')}${(latest.weight - first.weight).toFixed(1)})`;
     if (first.bodyFat != null && latest.bodyFat != null) sys += `\n- Body Fat: ${first.bodyFat} → ${latest.bodyFat}% (${(latest.bodyFat - first.bodyFat > 0 ? '+' : '')}${(latest.bodyFat - first.bodyFat).toFixed(1)})`;
     if (first.muscleMass != null && latest.muscleMass != null) sys += `\n- Muscle Mass: ${first.muscleMass} → ${latest.muscleMass}% (${(latest.muscleMass - first.muscleMass > 0 ? '+' : '')}${(latest.muscleMass - first.muscleMass).toFixed(1)})`;
   }
+
+  // ===== HUME SCALE / BODY COMPOSITION SCAN HISTORY =====
+  if (scans.length) {
+    sys += `\n\nBODY COMPOSITION SCAN HISTORY (${scans.length} scans via Hume scale):`;
+    scans.forEach((s, i) => {
+      const prev = i > 0 ? scans[i-1] : null;
+      const d = (field, goodDown) => {
+        if (!prev || prev[field] == null || s[field] == null) return '';
+        const diff = s[field] - prev[field];
+        const sign = diff > 0 ? '+' : '';
+        return ` (${sign}${diff.toFixed(1)} vs prev)`;
+      };
+      sys += `\n\n  Scan ${i+1}: ${s.date}`;
+      if (s.weight != null)       sys += `\n    Weight: ${s.weight} lbs${d('weight', true)}`;
+      if (s.pbf != null)          sys += `\n    Body Fat %: ${s.pbf}%${d('pbf', true)}`;
+      if (s.bodyFatMass != null)  sys += `\n    Fat Mass: ${s.bodyFatMass} lbs${d('bodyFatMass', true)}`;
+      if (s.leanBodyMass != null) sys += `\n    Lean Body Mass: ${s.leanBodyMass} lbs${d('leanBodyMass', false)}`;
+      if (s.smm != null)          sys += `\n    Skeletal Muscle Mass: ${s.smm} lbs${d('smm', false)}`;
+      if (s.visceralFat != null)  sys += `\n    Visceral Fat Level: ${s.visceralFat} (healthy: <10)${d('visceralFat', true)}`;
+      if (s.bmr != null)          sys += `\n    BMR: ${s.bmr} kcal`;
+      if (s.ecwTbw != null)       sys += `\n    ECW/TBW (hydration): ${s.ecwTbw} (healthy: 0.360–0.380)`;
+      if (s.segLean && s.segLeanPct) {
+        sys += `\n    Segmental Lean (% of ideal): Right Arm ${s.segLeanPct.ra}%, Left Arm ${s.segLeanPct.la}%, Trunk ${s.segLeanPct.tr}%, Right Leg ${s.segLeanPct.rl}%, Left Leg ${s.segLeanPct.ll}%`;
+      }
+      if (s.segFat && s.segFatPct) {
+        sys += `\n    Segmental Fat (% of standard): Right Arm ${s.segFatPct.ra}%, Left Arm ${s.segFatPct.la}%, Trunk ${s.segFatPct.tr}%, Right Leg ${s.segFatPct.rl}%, Left Leg ${s.segFatPct.ll}%`;
+      }
+      if (s.notes) sys += `\n    Notes: ${s.notes}`;
+    });
+
+    if (latestScan) {
+      const firstScan = scans[0];
+      sys += `\n\nBODY COMP SCAN SUMMARY (${firstScan.date} → ${latestScan.date}):`;
+      if (firstScan.weight != null && latestScan.weight != null) sys += `\n- Weight: ${firstScan.weight} → ${latestScan.weight} lbs (${(latestScan.weight - firstScan.weight).toFixed(1)})`;
+      if (firstScan.pbf != null && latestScan.pbf != null) sys += `\n- Body Fat %: ${firstScan.pbf} → ${latestScan.pbf}% (${(latestScan.pbf - firstScan.pbf).toFixed(1)})`;
+      if (firstScan.bodyFatMass != null && latestScan.bodyFatMass != null) sys += `\n- Fat Mass: ${firstScan.bodyFatMass} → ${latestScan.bodyFatMass} lbs (${(latestScan.bodyFatMass - firstScan.bodyFatMass).toFixed(1)})`;
+      if (firstScan.leanBodyMass != null && latestScan.leanBodyMass != null) sys += `\n- Lean Body Mass: ${firstScan.leanBodyMass} → ${latestScan.leanBodyMass} lbs (+${(latestScan.leanBodyMass - firstScan.leanBodyMass).toFixed(1)})`;
+      if (firstScan.smm != null && latestScan.smm != null) sys += `\n- Skeletal Muscle Mass: ${firstScan.smm} → ${latestScan.smm} lbs (+${(latestScan.smm - firstScan.smm).toFixed(1)})`;
+    }
+  }
+
+  // ===== DEXA SCAN (most recent, if logged) =====
+  sys += `\n\nDEXA SCAN (Aug 13, 2026 — DexaFit Atlanta — gold standard, most accurate):`;
+  sys += `\n- Body Fat: 22.9% | Weight: 194.2 lbs | Lean Mass: 143.3 lbs | Fat Mass: 44.4 lbs`;
+  sys += `\n- Visceral Fat: 1.51 lbs (target: 1.00) | A/G Ratio: 1.21 | ALMI: 8.5 kg/m² | FFMI: 20.1 kg/m²`;
+  sys += `\n- Segmental Fat: Arms 18.9%/4.6 lbs, Trunk 26.1%/26.0 lbs, Legs 20.0%/11.8 lbs`;
+  sys += `\n- Note: Hume scale reads ~4% lower than DEXA (Hume showed 18.9% on Jul 29 vs DEXA 22.9% on Aug 13). Use DEXA as true baseline.`;
 
   if (recent.length) {
     sys += `\n\nWORKOUT HISTORY (last ${recent.length} sessions):`;
