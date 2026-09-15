@@ -1484,7 +1484,7 @@ if (window.navigator.standalone) {
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
       <div>
         <div style="font-weight:700;font-size:15px;margin-bottom:3px">📄 Body Composition Report</div>
-        <div style="font-size:12px;color:var(--muted)">AI analyzes all your data — InBody, Hume, daily logs — and generates a full PDF report with best-estimate numbers and confidence ranges.</div>
+        <div style="font-size:12px;color:var(--muted)">AI analyzes all your data — Hume scale scans, DEXA baseline, daily logs — and generates a full PDF report with best-estimate numbers and confidence ranges.</div>
       </div>
       <button class="btn btn-primary" id="gen-report-btn" onclick="generateBodyCompReport()" style="white-space:nowrap;flex-shrink:0">Generate PDF Report</button>
     </div>
@@ -4293,7 +4293,7 @@ async function generateBodyCompReport() {
     return '['+e.date+'] '+p.join(', ');
   }
   function fmtIB(s) {
-    var p=['[InBody '+s.date+']'];
+    var p=['[Hume Scale '+s.date+']'];
     if(s.weight)      p.push('Wt:'+s.weight);
     if(s.pbf)         p.push('BF%:'+s.pbf);
     if(s.bodyFatMass) p.push('BFMass:'+s.bodyFatMass);
@@ -4302,8 +4302,12 @@ async function generateBodyCompReport() {
     if(s.visceralFat) p.push('VFLvl:'+s.visceralFat);
     if(s.bmi)         p.push('BMI:'+s.bmi);
     if(s.bmr)         p.push('BMR:'+s.bmr);
-    if(s.segLean)     p.push('SegLean:'+[s.segLean.ra,s.segLean.la,s.segLean.tr,s.segLean.rl,s.segLean.ll].join('/'));
-    if(s.segFat)      p.push('SegFatMass:'+[s.segFat.ra,s.segFat.la,s.segFat.tr,s.segFat.rl,s.segFat.ll].join('/'));
+    if(s.ecwTbw)      p.push('ECW/TBW:'+s.ecwTbw);
+    if(s.segLean)     p.push('SegLean(lbs):'+[s.segLean.ra,s.segLean.la,s.segLean.tr,s.segLean.rl,s.segLean.ll].join('/'));
+    if(s.segLeanPct)  p.push('SegLeanPct:'+[s.segLeanPct.ra,s.segLeanPct.la,s.segLeanPct.tr,s.segLeanPct.rl,s.segLeanPct.ll].join('/'));
+    if(s.segFat)      p.push('SegFatMass(lbs):'+[s.segFat.ra,s.segFat.la,s.segFat.tr,s.segFat.rl,s.segFat.ll].join('/'));
+    if(s.segFatPct)   p.push('SegFatPct:'+[s.segFatPct.ra,s.segFatPct.la,s.segFatPct.tr,s.segFatPct.rl,s.segFatPct.ll].join('/'));
+    if(s.notes)       p.push('Notes:'+s.notes);
     return p.join(', ');
   }
 
@@ -4313,13 +4317,20 @@ async function generateBodyCompReport() {
   var promptLines = [
     'You are an expert body composition analyst. Report for 33-year-old male, 6ft 0in.',
     '',
-    'INBODY SCAN DATA (highest accuracy):',
+    'HUME SCALE SCAN DATA (bioelectrical impedance — primary data source):',
     inbodyStr||'None',
     '',
-    'RECENT DAILY LOG (30 days):',
+    'DEXA SCAN BASELINE (gold standard, Aug 13 2026 — DexaFit Atlanta):',
+    'Body Fat: 22.9% | Weight: 194.2 lbs | Lean Mass: 143.3 lbs | Fat Mass: 44.4 lbs',
+    'Visceral Fat: 1.51 lbs | A/G Ratio: 1.21 | ALMI: 8.5 kg/m² | FFMI: 20.1 kg/m²',
+    'Segmental Fat: Arms 18.9%/4.6 lbs, Trunk 26.1%/26.0 lbs, Legs 20.0%/11.8 lbs',
+    'Note: Hume scale typically reads ~4% lower than DEXA — apply correction when estimating true BF%.',
+    '',
+    'RECENT DAILY LOG (30 days, consumer scale — trend direction only):',
     recentEntries,
     '',
-    'Weighting: InBody = 60%, Hume Body Pod = 30%, daily logs = 10%.',
+    'Data weighting: DEXA = 50% (gold standard — weight this most heavily), Hume scale = 40%, daily logs = 10%.',
+    'DEXA is the most accurate measurement and should anchor all estimates. The Hume scale replaced an older consumer scale in early August 2026.',
     '',
     'Use EXACTLY these section headers (## prefix):',
     '## EXECUTIVE SUMMARY',
@@ -4438,7 +4449,7 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
     segSrc={ra:latestIB.segLean.ra,la:latestIB.segLean.la,tr:latestIB.segLean.tr,rl:latestIB.segLean.rl,ll:latestIB.segLean.ll,
             raF:latestIB.segFat?latestIB.segFat.ra:null,laF:latestIB.segFat?latestIB.segFat.la:null,
             trF:latestIB.segFat?latestIB.segFat.tr:null,rlF:latestIB.segFat?latestIB.segFat.rl:null,
-            llF:latestIB.segFat?latestIB.segFat.ll:null,src:'InBody '+latestIB.date};
+            llF:latestIB.segFat?latestIB.segFat.ll:null,src:'Hume Scale '+latestIB.date};
   } else {
     // search ALL entries (not just weight-filtered) so segmental data isn't missed
     var allEntries=entries.slice().sort(function(a,b){return a.date.localeCompare(b.date);});
@@ -4506,19 +4517,19 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
     '@media print{.print-btn{display:none!important}.cover,.sec,.chart-card,.ai-sec{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-shadow:none;page-break-inside:avoid}body{padding-bottom:120px!important}.wrap{padding-bottom:120px!important}}'
   ].join('');
 
-  var legendHtml='<div class="legend"><div class="legend-item"><div class="ldot" style="background:#94a3b8"></div>Daily</div><div class="legend-item"><div class="ldot" style="background:#f59e0b"></div>InBody</div><div class="legend-item"><div class="ldot" style="background:#38bdf8"></div>Hume</div></div>';
-  var legendLBM='<div class="legend"><div class="legend-item"><div class="ldot" style="background:#a78bfa"></div>Hume</div><div class="legend-item"><div class="ldot" style="background:#f59e0b"></div>InBody</div></div>';
+  var legendHtml='<div class="legend"><div class="legend-item"><div class="ldot" style="background:#94a3b8"></div>Daily</div><div class="legend-item"><div class="ldot" style="background:#f59e0b"></div>Hume Scale</div><div class="legend-item"><div class="ldot" style="background:#38bdf8"></div>Hume</div></div>';
+  var legendLBM='<div class="legend"><div class="legend-item"><div class="ldot" style="background:#a78bfa"></div>Hume</div><div class="legend-item"><div class="ldot" style="background:#f59e0b"></div>Hume Scale</div></div>';
 
   var reportHTML=[
     '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Body Composition Report</title>',
     '<style>'+css+'<\/style></head><body>',
     '<div class="cover"><div class="sub">Personal Health Report</div><h1>Body Composition Analysis</h1>',
-    '<div style="font-size:13px;opacity:.7;margin-top:8px">InBody &middot; Hume Body Pod &middot; Daily Tracking</div>',
+    '<div style="font-size:13px;opacity:.7;margin-top:8px">Hume Scale &middot; DEXA &middot; Daily Tracking</div>',
     '<div class="date">Generated '+reportDate+'</div></div>',
     '<div class="wrap">',
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:24px 0 18px">'+statsHtml+'</div>',
     '<div class="sec"><div class="sec-title">Current Status</div>'+bfGauge+vfGauge+bmiGauge,
-    '<div style="font-size:11px;color:#94a3b8;margin-top:4px">Marker = AI best estimate &bull; White band = confidence range &bull; InBody 60% / Hume 30% / Daily 10%</div></div>',
+    '<div style="font-size:11px;color:#94a3b8;margin-top:4px">Marker = AI best estimate &bull; White band = confidence range &bull; DEXA 50% / Hume Scale 40% / Daily 10%</div></div>',
     '<div class="sec" id="seg-section"><div class="sec-title">Segmental Body Composition</div><div id="seg-content"><em style="color:#94a3b8">No segmental data available.</em></div></div>',
     '<div class="sec-title" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#64748b;margin-bottom:12px">Progress Over Time</div>',
     '<div class="charts-grid">',
@@ -4568,7 +4579,7 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
     // Freeze charts as PNGs before print mode begins. Responsive canvas elements
     // can be cleared during Chrome's print-layout resize, producing blank PDFs.
     'function freezeCharts(){if(_chartsFrozen)return true;var canvases=Array.prototype.slice.call(document.querySelectorAll("canvas"));if(!canvases.length)return false;var images=[];try{canvases.forEach(function(c){var img=document.createElement("img");img.src=c.toDataURL("image/png",1.0);img.alt=c.parentNode.querySelector(".chart-title")?c.parentNode.querySelector(".chart-title").textContent+" chart":"Progress chart";img.style.cssText="width:100%;height:auto;display:block";images.push([c,img]);});_charts.forEach(function(ch){try{ch.destroy();}catch(e){}});_charts=[];images.forEach(function(pair){pair[0].parentNode.replaceChild(pair[1],pair[0]);});_chartsFrozen=true;setPrintState(true,"&#x1F5A8; Save as PDF");return true;}catch(ex){setPrintState(false,"Chart export failed - reload report");return false;}}',
-    'function finishReport(){initCharts();initSeg();requestAnimationFrame(function(){requestAnimationFrame(function(){setTimeout(freezeCharts,80);});});}',
+    'function finishReport(){initCharts();initSeg();requestAnimationFrame(function(){requestAnimationFrame(function(){setTimeout(freezeCharts,1500);});});}',
     'function chartLoadFailed(){initSeg();setPrintState(false,"Charts unavailable - reload report");}',
     'function bootReport(){try{if(window.opener&&window.opener.Chart)window.Chart=window.opener.Chart;}catch(e){}if(typeof Chart!=="undefined"){finishReport();return;}var js=document.createElement("script");js.src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js";js.onload=finishReport;js.onerror=chartLoadFailed;document.body.appendChild(js);}',
     'window.printReport=function(){if(!_chartsFrozen){setPrintState(false,"Preparing charts&hellip;");return;}window.print();};',
