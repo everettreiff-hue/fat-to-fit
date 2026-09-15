@@ -1484,7 +1484,7 @@ if (window.navigator.standalone) {
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
       <div>
         <div style="font-weight:700;font-size:15px;margin-bottom:3px">📄 Body Composition Report</div>
-        <div style="font-size:12px;color:var(--muted)">AI analyzes all your data — Hume scale scans, DEXA baseline, daily logs — and generates a full PDF report with best-estimate numbers and confidence ranges.</div>
+        <div style="font-size:12px;color:var(--muted)">AI analyzes all your data — InBody scans, DEXA baseline, Hume Scale daily logs — and generates a weighted PDF report with best-estimate numbers and confidence ranges.</div>
       </div>
       <button class="btn btn-primary" id="gen-report-btn" onclick="generateBodyCompReport()" style="white-space:nowrap;flex-shrink:0">Generate PDF Report</button>
     </div>
@@ -4293,7 +4293,7 @@ async function generateBodyCompReport() {
     return '['+e.date+'] '+p.join(', ');
   }
   function fmtIB(s) {
-    var p=['[Hume Scale '+s.date+']'];
+    var p=['[InBody '+s.date+']'];
     if(s.weight)      p.push('Wt:'+s.weight);
     if(s.pbf)         p.push('BF%:'+s.pbf);
     if(s.bodyFatMass) p.push('BFMass:'+s.bodyFatMass);
@@ -4317,20 +4317,19 @@ async function generateBodyCompReport() {
   var promptLines = [
     'You are an expert body composition analyst. Report for 33-year-old male, 6ft 0in.',
     '',
-    'HUME SCALE SCAN DATA (bioelectrical impedance — primary data source):',
+    'INBODY SCANS (professional BIA, ~every 6 weeks — high accuracy):',
     inbodyStr||'None',
     '',
-    'DEXA SCAN BASELINE (gold standard, Aug 13 2026 — DexaFit Atlanta):',
+    'DEXA SCAN (gold standard, Aug 13 2026 — DexaFit Atlanta — most accurate, weight this heaviest at 50%):',
     'Body Fat: 22.9% | Weight: 194.2 lbs | Lean Mass: 143.3 lbs | Fat Mass: 44.4 lbs',
     'Visceral Fat: 1.51 lbs | A/G Ratio: 1.21 | ALMI: 8.5 kg/m² | FFMI: 20.1 kg/m²',
     'Segmental Fat: Arms 18.9%/4.6 lbs, Trunk 26.1%/26.0 lbs, Legs 20.0%/11.8 lbs',
-    'Note: Hume scale typically reads ~4% lower than DEXA — apply correction when estimating true BF%.',
     '',
-    'RECENT DAILY LOG (30 days, consumer scale — trend direction only):',
+    'HUME SCALE DAILY LOG (home bioimpedance scale, used almost daily — 20% weight, trend direction):',
     recentEntries,
     '',
-    'Data weighting: DEXA = 50% (gold standard — weight this most heavily), Hume scale = 40%, daily logs = 10%.',
-    'DEXA is the most accurate measurement and should anchor all estimates. The Hume scale replaced an older consumer scale in early August 2026.',
+    'DATA WEIGHTING: DEXA = 50% (gold standard, anchor all estimates here), InBody = 30% (professional scans, high accuracy), Hume Scale = 20% (daily home scale, use for trend/rate of change).',
+    'Calculate a proper weighted average across all three sources for every metric. InBody typically reads ~4% lower BF% than DEXA; calibrate accordingly.',
     '',
     'Use EXACTLY these section headers (## prefix):',
     '## EXECUTIVE SUMMARY',
@@ -4449,7 +4448,7 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
     segSrc={ra:latestIB.segLean.ra,la:latestIB.segLean.la,tr:latestIB.segLean.tr,rl:latestIB.segLean.rl,ll:latestIB.segLean.ll,
             raF:latestIB.segFat?latestIB.segFat.ra:null,laF:latestIB.segFat?latestIB.segFat.la:null,
             trF:latestIB.segFat?latestIB.segFat.tr:null,rlF:latestIB.segFat?latestIB.segFat.rl:null,
-            llF:latestIB.segFat?latestIB.segFat.ll:null,src:'Hume Scale '+latestIB.date};
+            llF:latestIB.segFat?latestIB.segFat.ll:null,src:'InBody '+latestIB.date};
   } else {
     // search ALL entries (not just weight-filtered) so segmental data isn't missed
     var allEntries=entries.slice().sort(function(a,b){return a.date.localeCompare(b.date);});
@@ -4517,19 +4516,19 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
     '@media print{.print-btn{display:none!important}.cover,.sec,.chart-card,.ai-sec{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-shadow:none;page-break-inside:avoid}body{padding-bottom:120px!important}.wrap{padding-bottom:120px!important}}'
   ].join('');
 
-  var legendHtml='<div class="legend"><div class="legend-item"><div class="ldot" style="background:#94a3b8"></div>Daily</div><div class="legend-item"><div class="ldot" style="background:#f59e0b"></div>Hume Scale</div><div class="legend-item"><div class="ldot" style="background:#38bdf8"></div>Hume</div></div>';
-  var legendLBM='<div class="legend"><div class="legend-item"><div class="ldot" style="background:#a78bfa"></div>Hume</div><div class="legend-item"><div class="ldot" style="background:#f59e0b"></div>Hume Scale</div></div>';
+  var legendHtml='<div class="legend"><div class="legend-item"><div class="ldot" style="background:#94a3b8"></div>Hume Scale</div><div class="legend-item"><div class="ldot" style="background:#f59e0b"></div>InBody</div><div class="legend-item"><div class="ldot" style="background:#38bdf8"></div>Hume (Body Pod)</div></div>';
+  var legendLBM='<div class="legend"><div class="legend-item"><div class="ldot" style="background:#a78bfa"></div>Hume (Body Pod)</div><div class="legend-item"><div class="ldot" style="background:#f59e0b"></div>InBody</div></div>';
 
   var reportHTML=[
     '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Body Composition Report</title>',
     '<style>'+css+'<\/style></head><body>',
     '<div class="cover"><div class="sub">Personal Health Report</div><h1>Body Composition Analysis</h1>',
-    '<div style="font-size:13px;opacity:.7;margin-top:8px">Hume Scale &middot; DEXA &middot; Daily Tracking</div>',
+    '<div style="font-size:13px;opacity:.7;margin-top:8px">InBody &middot; DEXA &middot; Hume Scale</div>',
     '<div class="date">Generated '+reportDate+'</div></div>',
     '<div class="wrap">',
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:24px 0 18px">'+statsHtml+'</div>',
     '<div class="sec"><div class="sec-title">Current Status</div>'+bfGauge+vfGauge+bmiGauge,
-    '<div style="font-size:11px;color:#94a3b8;margin-top:4px">Marker = AI best estimate &bull; White band = confidence range &bull; DEXA 50% / Hume Scale 40% / Daily 10%</div></div>',
+    '<div style="font-size:11px;color:#94a3b8;margin-top:4px">Marker = AI best estimate &bull; White band = confidence range &bull; DEXA 50% / InBody 30% / Hume Scale 20%</div></div>',
     '<div class="sec" id="seg-section"><div class="sec-title">Segmental Body Composition</div><div id="seg-content"><em style="color:#94a3b8">No segmental data available.</em></div></div>',
     '<div class="sec-title" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#64748b;margin-bottom:12px">Progress Over Time</div>',
     '<div class="charts-grid">',
