@@ -4585,7 +4585,7 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
     // Freeze charts as PNGs before print mode begins. Responsive canvas elements
     // can be cleared during Chrome's print-layout resize, producing blank PDFs.
     'function freezeCharts(){if(_chartsFrozen)return true;var canvases=Array.prototype.slice.call(document.querySelectorAll("canvas"));if(!canvases.length)return false;var images=[];try{canvases.forEach(function(c){var img=document.createElement("img");img.src=c.toDataURL("image/png",1.0);img.alt=c.parentNode.querySelector(".chart-title")?c.parentNode.querySelector(".chart-title").textContent+" chart":"Progress chart";img.style.cssText="width:100%;height:auto;display:block";images.push([c,img]);});_charts.forEach(function(ch){try{ch.destroy();}catch(e){}});_charts=[];images.forEach(function(pair){pair[0].parentNode.replaceChild(pair[1],pair[0]);});_chartsFrozen=true;setPrintState(true,"&#x1F5A8; Save as PDF");return true;}catch(ex){setPrintState(false,"Chart export failed - reload report");return false;}}',
-    'function finishReport(){initCharts();initSeg();requestAnimationFrame(function(){requestAnimationFrame(function(){setTimeout(freezeCharts,1500);});});}',
+    'function finishReport(){try{initCharts();}catch(ex){console.error("initCharts failed",ex);}try{initSeg();}catch(ex){console.error("initSeg failed",ex);}requestAnimationFrame(function(){requestAnimationFrame(function(){setTimeout(freezeCharts,2000);});});setTimeout(function(){if(!_chartsFrozen){freezeCharts();if(!_chartsFrozen)setPrintState(true,"&#x1F5A8; Save as PDF (charts unavailable)");}},8000);}',
     'function chartLoadFailed(){initSeg();setPrintState(false,"Charts unavailable - reload report");}',
     'function bootReport(){try{if(window.opener&&window.opener.Chart)window.Chart=window.opener.Chart;}catch(e){}if(typeof Chart!=="undefined"){finishReport();return;}var js=document.createElement("script");js.src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js";js.onload=finishReport;js.onerror=chartLoadFailed;document.body.appendChild(js);}',
     'window.printReport=function(){if(!_chartsFrozen){setPrintState(false,"Preparing charts&hellip;");return;}window.print();};',
@@ -4595,8 +4595,14 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
     '</body></html>'
   ].join('');
 
-  var w = window.open('', '_blank', 'width=1100,height=900,scrollbars=yes');
-  if (w) { w.document.write(reportHTML); w.document.close(); }
+  // Use Blob URL instead of document.write — avoids Chrome's unreliable
+  // document.write on about:blank popups where the DOM may not be ready
+  // when inline scripts fire, breaking getElementById and the chart RAF chain.
+  var blob = new Blob([reportHTML], {type: 'text/html; charset=utf-8'});
+  var blobUrl = URL.createObjectURL(blob);
+  var w = window.open(blobUrl, '_blank', 'width=1100,height=900,scrollbars=yes');
+  // Revoke after a minute — the window has its own copy in memory by then
+  setTimeout(function(){ URL.revokeObjectURL(blobUrl); }, 60000);
   return w;
 }
 
