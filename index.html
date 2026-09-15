@@ -4480,8 +4480,10 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
 
   // Format "2026-05-29" → "May 29, 2026"
   function fmtDateLong(d){if(!d)return '';var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];var p=d.split('-');return months[parseInt(p[1],10)-1]+' '+parseInt(p[2],10)+', '+p[0];}
-  var startDate = first.date ? fmtDateLong(first.date) : 'first entry';
-  var startWt   = first.weight ? first.weight.toFixed(1) : null;
+  // Use BASELINE date as the canonical start (May 28, 2026) rather than
+  // the first weight-logged entry in ht_entries, which may be weeks later.
+  var startDate = fmtDateLong(BASELINE.date);
+  var startWt   = BASELINE.weight ? BASELINE.weight.toFixed(1) : (first.weight ? first.weight.toFixed(1) : null);
 
   function statCard(label,val,unit,dlt,posGood,note){
     var dHtml='';if(dlt!=null){var d=parseFloat(dlt),arrow=d>0?'\u25b2':'\u25bc',col=(posGood?d>=0:d<=0)?'#16a34a':'#dc2626';dHtml='<div style="font-size:11px;color:'+col+';margin-top:3px">'+arrow+' '+Math.abs(d).toFixed(1)+' '+unit+' from start</div>';}
@@ -4502,6 +4504,54 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
 
   var CHART_JSON=JSON.stringify({wtData:wtData,bfData:bfData,smmData:smmData,lbmData:lbmData,ibWt:ibWt,ibBf:ibBfPts,ibSMM:ibSMMp,ibLBM:ibLBMp,humeWt:humeWt,humeBf:humeBfPts,humeSMM:humeSMMp});
   var SEG_JSON=JSON.stringify(segSrc||{});
+
+  // Pre-render charts in the MAIN window (where Chart.js is already loaded)
+  // and embed as PNG data URLs in the report. This avoids CDN/popup/blob-origin issues.
+  function preRenderCharts(chartData) {
+    var container = document.createElement('div');
+    container.style.cssText = 'position:fixed;left:-9999px;top:0;width:600px;height:280px;visibility:hidden';
+    document.body.appendChild(container);
+    var results = {};
+    function mkLine(data, col, lbl) {
+      return {type:'line',label:lbl,data:data,borderColor:col,backgroundColor:col+'44',fill:false,tension:0.3,pointRadius:2,borderWidth:1.5,showLine:true,spanGaps:true,order:3};
+    }
+    function mkPts(data, col, r, lbl) {
+      return {type:'scatter',label:lbl,data:data,borderColor:col,backgroundColor:col,pointRadius:r,borderWidth:0,order:1};
+    }
+    var chartDefs = [
+      {id:'wt', sets:[mkLine(chartData.wtData,'#94a3b8','Daily'),mkPts(chartData.ibWt,'#f59e0b',8,'InBody'),mkPts(chartData.humeWt,'#38bdf8',5,'Hume')]},
+      {id:'bf', sets:[mkLine(chartData.bfData,'#94a3b8','Daily'),mkPts(chartData.ibBf,'#f59e0b',8,'InBody'),mkPts(chartData.humeBf,'#38bdf8',5,'Hume')]},
+      {id:'lbm', sets:[mkLine(chartData.lbmData,'#a78bfa','Hume'),mkPts(chartData.ibLBM,'#f59e0b',8,'InBody')]},
+      {id:'smm', sets:[mkLine(chartData.smmData,'#94a3b8','Daily'),mkPts(chartData.ibSMM,'#f59e0b',8,'InBody'),mkPts(chartData.humeSMM,'#38bdf8',5,'Hume')]}
+    ];
+    function fmtDate(ms){var d=new Date(ms);return (d.getMonth()+1)+'/'+d.getDate();}
+    try {
+      chartDefs.forEach(function(def) {
+        var canvas = document.createElement('canvas');
+        canvas.width = 560; canvas.height = 220;
+        container.appendChild(canvas);
+        var ch = new Chart(canvas, {
+          type: 'scatter',
+          data: {datasets: def.sets},
+          options: {
+            responsive: false,
+            animation: false,
+            plugins: {legend:{display:false}, tooltip:{enabled:false}},
+            scales: {
+              x: {type:'linear', ticks:{callback:fmtDate, color:'#94a3b8', font:{size:9}, maxRotation:35}, grid:{color:'#f1f5f9'}},
+              y: {ticks:{color:'#94a3b8', font:{size:12}}, grid:{color:'#f1f5f9'}}
+            }
+          }
+        });
+        results[def.id] = canvas.toDataURL('image/png', 1.0);
+        ch.destroy();
+        container.removeChild(canvas);
+      });
+    } catch(e) { console.error('pre-render failed', e); }
+    document.body.removeChild(container);
+    return results;
+  }
+  var chartImgs = (typeof Chart !== 'undefined') ? preRenderCharts(JSON.parse(CHART_JSON)) : {};
 
   var css=[
     '*{box-sizing:border-box;margin:0;padding:0}',
@@ -4532,6 +4582,16 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
   var legendHtml='<div class="legend"><div class="legend-item"><div class="ldot" style="background:#94a3b8"></div>Hume Scale</div><div class="legend-item"><div class="ldot" style="background:#f59e0b"></div>InBody</div><div class="legend-item"><div class="ldot" style="background:#38bdf8"></div>Hume (Body Pod)</div></div>';
   var legendLBM='<div class="legend"><div class="legend-item"><div class="ldot" style="background:#a78bfa"></div>Daily (wt−fat)</div><div class="legend-item"><div class="ldot" style="background:#f59e0b"></div>InBody (wt−fat)</div></div>';
 
+  // Build chart content: pre-rendered PNGs if available, canvas fallback otherwise
+  function chartContent(id, legendH) {
+    var img = chartImgs[id];
+    if (img) {
+      return '<img src="'+img+'" alt="'+id+' chart" style="width:100%;height:auto;display:block">';
+    }
+    return '<canvas id="c-'+id+'" height="160"></canvas>';
+  }
+  var chartsPreRendered = Object.keys(chartImgs).length > 0;
+
   var reportHTML=[
     '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Body Composition Report</title>',
     '<style>'+css+'<\/style></head><body>',
@@ -4546,23 +4606,16 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
     '<div class="sec" id="seg-section"><div class="sec-title">Segmental Body Composition</div><div id="seg-content"><em style="color:#94a3b8">No segmental data available.</em></div></div>',
     '<div class="sec-title" style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:#64748b;margin-bottom:12px">Progress Over Time</div>',
     '<div class="charts-grid">',
-    '<div class="chart-card"><div class="chart-title">Weight (lbs)</div><canvas id="c-wt" height="160"></canvas>'+legendHtml+'</div>',
-    '<div class="chart-card"><div class="chart-title">Body Fat %</div><canvas id="c-bf" height="160"></canvas>'+legendHtml+'</div>',
-    '<div class="chart-card"><div class="chart-title">Fat-Free Mass / FFM (lbs)</div><canvas id="c-lbm" height="160"></canvas>'+legendLBM+'</div>',
-    '<div class="chart-card"><div class="chart-title">Skeletal Muscle (lbs)</div><canvas id="c-smm" height="160"></canvas>'+legendHtml+'</div>',
+    '<div class="chart-card"><div class="chart-title">Weight (lbs)</div>'+chartContent('wt',legendHtml)+legendHtml+'</div>',
+    '<div class="chart-card"><div class="chart-title">Body Fat %</div>'+chartContent('bf',legendHtml)+legendHtml+'</div>',
+    '<div class="chart-card"><div class="chart-title">Fat-Free Mass / FFM (lbs)</div>'+chartContent('lbm',legendLBM)+legendLBM+'</div>',
+    '<div class="chart-card"><div class="chart-title">Skeletal Muscle (lbs)</div>'+chartContent('smm',legendHtml)+legendHtml+'</div>',
     '</div>',
     '<div class="ai-sec"><div class="sec-title">Full AI Analysis</div>'+aiHtml+'</div>',
     '</div>',
-    '<button class="print-btn" id="print-report-btn" onclick="printReport()" disabled>Preparing charts&hellip;</button>',
+    '<button class="print-btn" id="print-report-btn" onclick="window.print()">'+(chartsPreRendered?'&#x1F5A8; Save as PDF':'&#x1F5A8; Save as PDF')+'</button>',
     '<script>(function(){',
-    'var _d='+CHART_JSON+';',
     'var _s='+SEG_JSON+';',
-    'var _charts=[];var _chartsFrozen=false;',
-    'function fmtDate(ms){var d=new Date(ms);return (d.getMonth()+1)+"/"+d.getDate();}',
-    'function mk(id,sets){var c=document.getElementById(id);if(!c)return;try{_charts.push(new Chart(c,{type:"scatter",data:{datasets:sets},options:{responsive:true,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(ctx){return ctx.dataset.label+" "+ctx.parsed.y;}}}},scales:{x:{type:"linear",ticks:{callback:fmtDate,color:"#94a3b8",font:{size:9},maxRotation:35},grid:{color:"#f1f5f9"}},y:{ticks:{color:"#94a3b8",font:{size:12}},grid:{color:"#f1f5f9"}}},animation:false}}));}catch(ex){var ed=document.createElement("div");ed.style.color="red";ed.textContent="Chart error: "+ex.message;c.parentNode.appendChild(ed);}}',
-    'function line(data,col,lbl){return {type:"line",label:lbl,data:data,borderColor:col,backgroundColor:col+"44",fill:false,tension:0.3,pointRadius:2,borderWidth:1.5,showLine:true,spanGaps:true,order:3};}',
-    'function pts(data,col,r,lbl){return {type:"scatter",label:lbl,data:data,borderColor:col,backgroundColor:col,pointRadius:r,borderWidth:0,order:1};}',
-    'function initCharts(){mk("c-wt",[line(_d.wtData,"#94a3b8","Daily"),pts(_d.ibWt,"#f59e0b",8,"InBody"),pts(_d.humeWt,"#38bdf8",5,"Hume")]);mk("c-bf",[line(_d.bfData,"#94a3b8","Daily"),pts(_d.ibBf,"#f59e0b",8,"InBody"),pts(_d.humeBf,"#38bdf8",5,"Hume")]);mk("c-lbm",[line(_d.lbmData,"#a78bfa","Hume"),pts(_d.ibLBM,"#f59e0b",8,"InBody")]);mk("c-smm",[line(_d.smmData,"#94a3b8","Daily"),pts(_d.ibSMM,"#f59e0b",8,"InBody"),pts(_d.humeSMM,"#38bdf8",5,"Hume")]);}',
     'function segColor(lean,fat){if(lean==null)return "#1e3a2f";var p=lean/(lean+(fat||0));return p>0.88?"#15803d":p>0.82?"#16a34a":p>0.76?"#d97706":p>0.70?"#ea580c":"#dc2626";}',
     'function initSeg(){var s=_s;var hasData=s&&s.ra!=null;var neutral="#94a3b8";var raC=hasData?segColor(s.ra,s.raF):neutral,laC=hasData?segColor(s.la,s.laF):neutral,trC=hasData?segColor(s.tr,s.trF):neutral,rlC=hasData?segColor(s.rl,s.rlF):neutral,llC=hasData?segColor(s.ll,s.llF):neutral;',
     'function el(tag,attrs){var e=document.createElementNS("http://www.w3.org/2000/svg",tag);Object.keys(attrs).forEach(function(k){e.setAttribute(k,attrs[k]);});return e;}',
@@ -4588,16 +4641,7 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
     'var w=document.createElement("div");w.style.cssText="display:flex;gap:24px;align-items:flex-start";w.appendChild(svg);w.appendChild(tw);sc.appendChild(w);',
     '}else{var noNote=document.createElement("div");noNote.style.cssText="margin-top:10px;font-size:11px;color:#94a3b8;text-align:center";noNote.textContent="No segmental data logged. To add: InBody tab \u2192 expand Segmental Lean/Fat section when saving a scan.";var ww=document.createElement("div");ww.style.cssText="display:flex;flex-direction:column;align-items:center";ww.appendChild(svg);ww.appendChild(noNote);sc.appendChild(ww);}',
     '}',
-    'function setPrintState(ready,text){var b=document.getElementById("print-report-btn");if(!b)return;b.disabled=!ready;b.innerHTML=text;}',
-    // Freeze charts as PNGs before print mode begins. Responsive canvas elements
-    // can be cleared during Chrome's print-layout resize, producing blank PDFs.
-    'function freezeCharts(){if(_chartsFrozen)return true;var canvases=Array.prototype.slice.call(document.querySelectorAll("canvas"));if(!canvases.length)return false;var images=[];try{canvases.forEach(function(c){var img=document.createElement("img");img.src=c.toDataURL("image/png",1.0);img.alt=c.parentNode.querySelector(".chart-title")?c.parentNode.querySelector(".chart-title").textContent+" chart":"Progress chart";img.style.cssText="width:100%;height:auto;display:block";images.push([c,img]);});_charts.forEach(function(ch){try{ch.destroy();}catch(e){}});_charts=[];images.forEach(function(pair){pair[0].parentNode.replaceChild(pair[1],pair[0]);});_chartsFrozen=true;setPrintState(true,"&#x1F5A8; Save as PDF");return true;}catch(ex){setPrintState(false,"Chart export failed - reload report");return false;}}',
-    'function finishReport(){try{initCharts();}catch(ex){console.error("initCharts failed",ex);}try{initSeg();}catch(ex){console.error("initSeg failed",ex);}requestAnimationFrame(function(){requestAnimationFrame(function(){setTimeout(freezeCharts,2000);});});setTimeout(function(){if(!_chartsFrozen){freezeCharts();if(!_chartsFrozen)setPrintState(true,"&#x1F5A8; Save as PDF (charts unavailable)");}},8000);}',
-    'function chartLoadFailed(){initSeg();setPrintState(false,"Charts unavailable - reload report");}',
-    'function bootReport(){try{if(window.opener&&window.opener.Chart)window.Chart=window.opener.Chart;}catch(e){}if(typeof Chart!=="undefined"){finishReport();return;}var js=document.createElement("script");js.src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js";js.onload=finishReport;js.onerror=chartLoadFailed;document.body.appendChild(js);}',
-    'window.printReport=function(){if(!_chartsFrozen){setPrintState(false,"Preparing charts&hellip;");return;}window.print();};',
-    'window.addEventListener("beforeprint",function(){if(!_chartsFrozen)freezeCharts();});',
-    'bootReport();',
+    'initSeg();',
     '})();<\/script>',
     '</body></html>'
   ].join('');
