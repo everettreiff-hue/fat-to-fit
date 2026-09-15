@@ -4478,12 +4478,18 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
   var vfGauge=gauge('Visceral Fat',aiEst.vf?+aiEst.vf.toFixed(1):null,vfLo,vfHi,[{label:'Healthy',from:1,to:10,color:'#16a34a'},{label:'Excess',from:10,to:15,color:'#d97706'},{label:'High Risk',from:15,to:20,color:'#dc2626'}],'');
   var bmiGauge=aiEst.bmi?gauge('BMI',+aiEst.bmi.toFixed(1),+(aiEst.bmi-0.5).toFixed(1),+(aiEst.bmi+0.5).toFixed(1),[{label:'Under',from:10,to:18.5,color:'#7c3aed'},{label:'Normal',from:18.5,to:25,color:'#16a34a'},{label:'Overweight',from:25,to:30,color:'#d97706'},{label:'Obese',from:30,to:40,color:'#dc2626'}],''):'';
 
+  // Format "2026-05-29" → "May 29, 2026"
+  function fmtDateLong(d){if(!d)return '';var months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];var p=d.split('-');return months[parseInt(p[1],10)-1]+' '+parseInt(p[2],10)+', '+p[0];}
+  var startDate = first.date ? fmtDateLong(first.date) : 'first entry';
+  var startWt   = first.weight ? first.weight.toFixed(1) : null;
+
   function statCard(label,val,unit,dlt,posGood,note){
     var dHtml='';if(dlt!=null){var d=parseFloat(dlt),arrow=d>0?'\u25b2':'\u25bc',col=(posGood?d>=0:d<=0)?'#16a34a':'#dc2626';dHtml='<div style="font-size:11px;color:'+col+';margin-top:3px">'+arrow+' '+Math.abs(d).toFixed(1)+' '+unit+' from start</div>';}
     return '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.04)"><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#64748b;margin-bottom:5px">'+label+'</div><div style="font-size:24px;font-weight:800;color:#0f172a;line-height:1">'+(val!=null?val:'\u2014')+'<span style="font-size:13px;font-weight:400;color:#94a3b8"> '+unit+'</span></div>'+dHtml+(note?'<div style="font-size:10px;color:#94a3b8;margin-top:3px">'+note+'</div>':'')+'</div>';
   }
   var statsHtml=
-    statCard('Weight',latestWt?latestWt.toFixed(1):null,'lbs',wtDelta,false,'daily scale')+
+    statCard('Starting Weight',startWt,'lbs',null,false,startDate)+
+    statCard('Weight',latestWt?latestWt.toFixed(1):null,'lbs',wtDelta,false,'current')+
     statCard('Body Fat',aiEst.bf?aiEst.bf.toFixed(1):null,'%',bfDelta,false,'AI best estimate')+
     statCard('Fat-Free Mass',aiEst.lbm?aiEst.lbm.toFixed(1):null,'lbs',lbmDelta,true,'AI best estimate (wt−fat)')+
     statCard('Skeletal Muscle',aiEst.smm?aiEst.smm.toFixed(1):null,'lbs',smmDelta,true,'AI best estimate')+
@@ -4531,7 +4537,8 @@ function openReportWindow(reportDate, entries, inbody, aiEst, aiText) {
     '<style>'+css+'<\/style></head><body>',
     '<div class="cover"><div class="sub">Personal Health Report</div><h1>Body Composition Analysis</h1>',
     '<div style="font-size:13px;opacity:.7;margin-top:8px">InBody &middot; DEXA &middot; Hume Scale</div>',
-    '<div class="date">Generated '+reportDate+'</div></div>',
+    '<div style="font-size:13px;opacity:.85;margin-top:12px;font-weight:600">'+startDate+' &rarr; '+reportDate+'</div>',
+    '<div class="date" style="margin-top:6px">Generated '+reportDate+'</div></div>',
     '<div class="wrap">',
     '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:24px 0 18px">'+statsHtml+'</div>',
     '<div class="sec"><div class="sec-title">Current Status</div>'+bfGauge+vfGauge+bmiGauge,
